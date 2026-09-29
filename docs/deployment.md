@@ -14,8 +14,8 @@ Redis não é necessário (ver [ADR 006](adr/006-cache-without-redis.md)).
 ## Imagens
 
 ```bash
-docker build --target api -t eleicoes-api .
-docker build --target worker -t eleicoes-worker .
+docker build --build-arg APP=api -t eleicoes-api .
+docker build --build-arg APP=worker -t eleicoes-worker .
 docker build --target web --build-arg NEXT_PUBLIC_API_URL=https://api.election.lucianookdp.dev -t eleicoes-web .
 ```
 

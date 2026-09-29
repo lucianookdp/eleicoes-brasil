@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { displayName, fmtPct } from '@/lib/format';
 import { useOverview, useSeries, useTimeline, useTimelineAt } from '@/lib/queries';
+import { electionHref } from '@/lib/rounds';
 import { TILES } from '@/lib/tiles';
 import { EvolutionChart } from './evolution-chart';
 import { CandidateList, RaceBar } from './results';
@@ -197,7 +198,7 @@ export function HistoryView() {
               {replays.map((r) => (
                 <li key={r.slug}>
                   <Link
-                    href={`/elections/${r.electionSlug}?turno=${r.round}`}
+                    href={electionHref(r)}
                     className="inline-flex min-h-10 items-center rounded-lg border border-line px-3 text-[14px] hover:border-line-strong"
                   >
                     Abrir replay do {r.round}º turno

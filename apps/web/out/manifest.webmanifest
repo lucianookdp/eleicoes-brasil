@@ -1,0 +1,16 @@
+{
+  "name": "Eleições Brasil",
+  "short_name": "Eleições",
+  "description": "Apuração das eleições brasileiras em tempo real, com dados oficiais do TSE.",
+  "lang": "pt-BR",
+  "start_url": "/eleicoes-brasil/",
+  "scope": "/eleicoes-brasil/",
+  "display": "standalone",
+  "background_color": "#0f1519",
+  "theme_color": "#0f1519",
+  "icons": [
+    { "src": "/eleicoes-brasil/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/eleicoes-brasil/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/eleicoes-brasil/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

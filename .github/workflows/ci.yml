@@ -72,7 +72,7 @@ jobs:
           DEMO_OFFSET_MINUTES=10 DEMO_WAIT_SECONDS=0 node apps/worker/dist/demo/server.js &
           MIGRATIONS_DIR=packages/database/drizzle APP_MODE=DEVELOPMENT ELECTION_ROUND=demo-1 TSE_POLL_INTERVAL=3 TSE_REQUESTS_PER_SECOND=50 node apps/worker/dist/main.js &
           node apps/api/dist/main.js &
-          pnpm --filter @eleicoes/web start &
+          npx serve@14 -l 3000 apps/web/out &
           npx wait-on -t 90000 http://localhost:3000 http://localhost:4000/api/health
           sleep 45
         env:

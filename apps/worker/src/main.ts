@@ -98,7 +98,5 @@ while (!stopping) {
   }
   // Fixed rate: a cycle starts every TSE_POLL_INTERVAL seconds (or right away if the last one
   // took longer), so detection latency does not grow with cycle duration.
-  await new Promise((r) =>
-    setTimeout(r, Math.max(250, wait - (Date.now() - started))),
-  );
+  await new Promise((r) => setTimeout(r, Math.max(250, wait - (Date.now() - started))));
 }

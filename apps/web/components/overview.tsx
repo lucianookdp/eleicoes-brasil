@@ -48,7 +48,7 @@ const TAB_KEY = 'eleicoes:overview-tab';
  * On phones the blocks stack in that order; on desktop 1–2 sit left and the tabs right.
  */
 export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
-  const { round } = useRound();
+  const { round, href } = useRound();
   const { data, error, refetch } = useOverview(
     round.slug,
     initial?.round.slug === round.slug ? initial : null,
@@ -171,7 +171,7 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
               <>
                 <ActivityFeed events={events.data ?? []} max={18} dense />
                 <Link
-                  href={`/elections/${round.electionSlug}/operations?turno=${round.round}`}
+                  href={href('/operations')}
                   className="mt-3 inline-flex min-h-10 items-center text-[13.5px] text-info"
                 >
                   Abrir painel ao vivo

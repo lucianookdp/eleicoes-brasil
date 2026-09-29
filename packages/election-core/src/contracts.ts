@@ -251,7 +251,10 @@ export interface SearchHitDTO {
   kind: 'state' | 'city' | 'candidate' | 'party' | 'office';
   label: string;
   detail: string;
-  href: string;
+  /** Place inside the election ("", "/states/sp", "/states/sp/cities/71072", "/compare"). */
+  path: string;
+  /** Extra query parameters, e.g. { cargo: "governador" }. */
+  params?: Record<string, string>;
 }
 
 export interface CompareDTO {

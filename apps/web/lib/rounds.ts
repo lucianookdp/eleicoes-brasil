@@ -1,6 +1,14 @@
 import type { ElectionSummary, RoundSummary } from '@eleicoes/election-core';
 
-/** URL "/elections/2026?turno=2" ↔ API round "2026-2". */
+/**
+ * The site is exported as static files (GitHub Pages), so every page is a fixed route and the
+ * election, state and city travel as query parameters:
+ *   /eleicao/?e=2026&t=1                       overview
+ *   /eleicao/estado/?e=2026&t=1&uf=sp          state
+ *   /eleicao/municipio/?e=2026&t=1&uf=sp&c=71072
+ * Components describe places with election-relative paths ("/states/sp") and `electionHref`
+ * turns them into URLs, so the mapping lives only here.
+ */
 export const roundSlug = (electionSlug: string, turno: number) => `${electionSlug}-${turno}`;
 
 export function pickRound(
@@ -29,6 +37,33 @@ export function defaultElection(elections: ElectionSummary[]): ElectionSummary |
   );
 }
 
-export function electionHref(round: Pick<RoundSummary, 'electionSlug' | 'round'>, path = '') {
-  return `/elections/${round.electionSlug}${path}?turno=${round.round}`;
+const SECTIONS: Record<string, string> = {
+  '': '/eleicao/',
+  '/states': '/eleicao/estados/',
+  '/operations': '/eleicao/ao-vivo/',
+  '/historico': '/eleicao/historico/',
+  '/compare': '/eleicao/comparar/',
+};
+
+/** "/states/sp/cities/71072" (+ round) → "/eleicao/municipio/?e=2026&t=1&uf=sp&c=71072". */
+export function electionHref(
+  round: Pick<RoundSummary, 'electionSlug' | 'round'>,
+  path = '',
+  extra?: Record<string, string>,
+) {
+  const params = new URLSearchParams({ e: round.electionSlug, t: String(round.round) });
+  let route = SECTIONS[path];
+  if (!route) {
+    const m = /^\/states\/([a-z]{2})(?:\/cities\/(\d{5}))?$/.exec(path);
+    if (m) {
+      params.set('uf', m[1]!);
+      if (m[2]) params.set('c', m[2]);
+      route = m[2] ? '/eleicao/municipio/' : '/eleicao/estado/';
+    } else route = '/eleicao/';
+  }
+  for (const [k, v] of Object.entries(extra ?? {})) params.set(k, v);
+  return `${route}?${params}`;
 }
+
+/** Section routes, for highlighting the current tab. */
+export const SECTION_ROUTES = SECTIONS;

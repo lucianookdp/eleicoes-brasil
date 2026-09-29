@@ -7,7 +7,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 import { useOverview } from '@/lib/queries';
 import { RealtimeProvider, useRealtime } from '@/lib/realtime';
-import { electionHref, pickRound } from '@/lib/rounds';
+import { electionHref, pickRound, SECTION_ROUTES } from '@/lib/rounds';
 import {
   IconClose,
   IconCompare,
@@ -29,7 +29,7 @@ interface RoundContextValue {
   round: RoundSummary;
   elections: ElectionSummary[];
   meta: ApiMeta | null;
-  href: (path?: string) => string;
+  href: (path?: string, extra?: Record<string, string>) => string;
 }
 
 const RoundCtx = createContext<RoundContextValue | null>(null);
@@ -52,7 +52,7 @@ export function ElectionShell({
   children: ReactNode;
 }) {
   const params = useSearchParams();
-  const round = pickRound(elections, electionSlug, params.get('turno'));
+  const round = pickRound(elections, electionSlug, params.get('t'));
   const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
@@ -79,7 +79,7 @@ export function ElectionShell({
     );
   }
 
-  const href = (path = '') => electionHref(round, path);
+  const href = (path = '', extra?: Record<string, string>) => electionHref(round, path, extra);
   return (
     <RoundCtx.Provider value={{ round, elections, meta, href }}>
       <RealtimeProvider roundSlug={round.slug}>
@@ -127,10 +127,8 @@ function useNav() {
 }
 
 function useActive() {
-  const pathname = usePathname();
-  const { round } = useRound();
-  const root = `/elections/${round.electionSlug}`;
-  return (path: string) => (path === '' ? pathname === root : pathname.startsWith(`${root}${path}`));
+  const pathname = usePathname().replace(/\/$/, '');
+  return (path: string) => SECTION_ROUTES[path]?.replace(/\/$/, '') === pathname;
 }
 
 function Header({ onSearch }: { onSearch: () => void }) {

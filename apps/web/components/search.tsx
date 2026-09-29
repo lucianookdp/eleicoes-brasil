@@ -17,7 +17,7 @@ const KIND: Record<SearchHitDTO['kind'], string> = {
 
 /** Global search: states, cities, candidates, parties and offices. Keyboard first. */
 export function SearchPalette({ onClose }: { onClose: () => void }) {
-  const { round } = useRound();
+  const { round, href } = useRound();
   const router = useRouter();
   const [q, setQ] = useState('');
   const [debounced, setDebounced] = useState('');
@@ -46,7 +46,7 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
   const go = (hit: SearchHitDTO | undefined) => {
     if (!hit) return;
     onClose();
-    router.push(hit.href);
+    router.push(href(hit.path, hit.params));
   };
 
   return (
@@ -98,7 +98,7 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
         >
           {hits.map((h, i) => (
             <div
-              key={`${h.kind}-${h.href}-${h.label}`}
+              key={`${h.kind}-${h.path}-${h.label}-${i}`}
               id={`${listId}-${i}`}
               role="option"
               tabIndex={-1}

@@ -3,7 +3,7 @@ import { expect, type Page, test } from '@playwright/test';
 /** Main reading path of the product, on the fictitious demo election. */
 
 async function openDemo(page: Page) {
-  await page.goto('/elections/demo?turno=1');
+  await page.goto('/eleicao/?e=demo&t=1');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('demonstrativa');
 }
 
@@ -37,7 +37,7 @@ test('selects a state, changes office and opens a city', async ({ page }) => {
 });
 
 test('opens the historical timeline', async ({ page }) => {
-  await page.goto('/elections/demo/historico?turno=1');
+  await page.goto('/eleicao/historico/?e=demo&t=1');
   await expect(page.getByRole('heading', { name: 'Histórico da apuração' })).toBeVisible();
   const slider = page.getByRole('slider', { name: 'Momento da apuração' });
   await expect(slider).toBeVisible();
@@ -47,7 +47,7 @@ test('opens the historical timeline', async ({ page }) => {
 });
 
 test('opens live operations', async ({ page }) => {
-  await page.goto('/elections/demo/operations?turno=1');
+  await page.goto('/eleicao/ao-vivo/?e=demo&t=1');
   await expect(page.getByRole('heading', { name: 'Ao vivo' })).toBeVisible();
   await expect(page.getByText(/Coletor:/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Ritmo da apuração' })).toBeVisible();
@@ -64,4 +64,10 @@ test('global search finds a city', async ({ page, isMobile }) => {
   await page.getByPlaceholder('Estado, município, candidato, partido ou cargo').fill('recife');
   await page.getByRole('option', { name: /Recife/ }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Recife' })).toBeVisible();
+});
+
+test('old-style links still work', async ({ page }) => {
+  await page.goto('/elections/demo/states/sp?turno=1');
+  await expect(page).toHaveURL(/\/eleicao\/estado\/\?e=demo&t=1&uf=sp/);
+  await expect(page.getByRole('heading', { level: 1, name: 'São Paulo' })).toBeVisible();
 });

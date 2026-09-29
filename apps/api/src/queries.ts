@@ -788,8 +788,6 @@ export class Queries {
     const round = await this.round(slug);
     const key = searchKey(q);
     if (key.length < 2) return [];
-    const base = `/elections/${round.electionSlug}`;
-    const turno = `?turno=${round.round}`;
     const hits: SearchHitDTO[] = [];
     for (const s of DOMESTIC_STATES) {
       if (searchKey(s.name).includes(key) || s.code.toLowerCase() === key) {
@@ -797,7 +795,7 @@ export class Queries {
           kind: 'state',
           label: s.name,
           detail: s.code,
-          href: `${base}/states/${s.code.toLowerCase()}${turno}`,
+          path: `/states/${s.code.toLowerCase()}`,
         });
       }
     }
@@ -807,7 +805,8 @@ export class Queries {
           kind: 'office',
           label: o.name,
           detail: 'Cargo',
-          href: `${base}${turno}&cargo=${o.slug}`,
+          path: '',
+          params: { cargo: o.slug },
         });
     }
     const like = `%${key}%`;
@@ -841,7 +840,7 @@ export class Queries {
         kind: 'city',
         label: titleCase(c.name),
         detail: stateName(c.uf),
-        href: `${base}/states/${c.uf.toLowerCase()}/cities/${c.code}${turno}`,
+        path: `/states/${c.uf.toLowerCase()}/cities/${c.code}`,
       });
     }
     for (const c of candidateRows) {
@@ -850,7 +849,8 @@ export class Queries {
         kind: 'candidate',
         label: titleCase(c.ballotName),
         detail: `${c.number} · ${c.party} · ${c.office}${c.uf ? ` · ${c.uf}` : ''}`,
-        href: `${base}${where}${turno}&cargo=${c.officeSlug}`,
+        path: where,
+        params: { cargo: c.officeSlug },
       });
     }
     for (const p of partyRows) {
@@ -858,7 +858,7 @@ export class Queries {
         kind: 'party',
         label: p.abbreviation,
         detail: `${p.number} · ${p.name}`,
-        href: `${base}/compare${turno}`,
+        path: '/compare',
       });
     }
     return hits.slice(0, 20);
