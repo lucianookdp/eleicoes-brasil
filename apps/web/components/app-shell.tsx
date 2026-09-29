@@ -16,9 +16,29 @@ import { Skeleton } from './ui';
  */
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <Suspense fallback={<BasicShell>{children}</BasicShell>}>
+    <Suspense fallback={<StaticFallback>{children}</StaticFallback>}>
       <Inner>{children}</Inner>
     </Suspense>
+  );
+}
+
+/**
+ * What the static HTML contains before the browser takes over: plain pages (about, how it
+ * works) render fully; election pages depend on the URL and the API, so they show a skeleton.
+ */
+function StaticFallback({ children }: { children: ReactNode }) {
+  const onElectionPage = usePathname().startsWith('/eleicao');
+  return (
+    <BasicShell>
+      {onElectionPage ? (
+        <div className="grid gap-4">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-56" />
+        </div>
+      ) : (
+        children
+      )}
+    </BasicShell>
   );
 }
 
