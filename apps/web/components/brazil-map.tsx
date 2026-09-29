@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { displayName, fmtCompact, fmtPct } from '@/lib/format';
-import { useRealtime } from '@/lib/realtime';
 import { useRound } from './shell';
 import { Segmented } from './ui';
 
@@ -32,7 +31,6 @@ function fill(s: StateRowDTO | undefined, mode: Mode): string {
 export function BrazilMap({ states, allowLeader = true }: { states: StateRowDTO[]; allowLeader?: boolean }) {
   const { href } = useRound();
   const router = useRouter();
-  const { recent } = useRealtime();
   const [mode, setMode] = useState<Mode>('progress');
   const [active, setActive] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string | null>(null);
@@ -70,7 +68,6 @@ export function BrazilMap({ states, allowLeader = true }: { states: StateRowDTO[
           {MAP.locations.map((loc) => {
             const s = byUf.get(loc.id);
             const pct = s?.progress?.countedPct;
-            const updated = (recent.get(loc.id) ?? 0) > Date.now() - 3000;
             return (
               <path
                 key={loc.id}
@@ -81,7 +78,7 @@ export function BrazilMap({ states, allowLeader = true }: { states: StateRowDTO[
                 fill={fill(s, mode)}
                 stroke={active === loc.id || pinned === loc.id ? 'var(--ink)' : 'var(--ground)'}
                 strokeWidth={active === loc.id || pinned === loc.id ? 1.6 : 0.8}
-                className={`cursor-pointer outline-none transition-[fill] duration-500 focus-visible:stroke-[var(--info)] focus-visible:[stroke-width:2.5] ${updated ? 'animate-pulse' : ''}`}
+                className="cursor-pointer outline-none transition-[fill] duration-700 focus-visible:stroke-[var(--info)] focus-visible:[stroke-width:2.5]"
                 onPointerEnter={(e) => e.pointerType === 'mouse' && setActive(loc.id)}
                 onPointerLeave={(e) => e.pointerType === 'mouse' && setActive(null)}
                 onFocus={() => setActive(loc.id)}

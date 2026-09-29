@@ -2,16 +2,14 @@
 
 import type { ProgressDTO, StateRowDTO, VoteTotals } from '@eleicoes/election-core';
 import { formatClock, percent } from '@eleicoes/election-core';
-import Link from 'next/link';
 import { useState } from 'react';
 import { fmtCompact, fmtInt, fmtPct } from '@/lib/format';
-import { useRound } from './shell';
 import { Stat } from './ui';
 
 const REGION_ORDER = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul', 'Exterior'];
 
 /**
- * "How much is counted": one big figure, one line of context, the state ribbon, and the
+ * "How much is counted": one big figure, one bar, the five regions, and the
  * turnout details (folded on phones so the first screen stays calm).
  */
 export function CountingHero({
@@ -61,7 +59,23 @@ export function CountingHero({
               : `das seções totalizadas · ${fmtInt(progress.sectionsCounted)} de ${fmtInt(progress.sectionsTotal)} (faltam ${fmtInt(pending)})`}
       </p>
 
-      {states && states.length > 0 && started && <StateRibbon states={states} />}
+      {started && (
+        <div
+          className="mt-3 h-2.5 overflow-hidden rounded-full bg-line"
+          role="progressbar"
+          aria-label="Seções totalizadas no total"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round((progress.countedPct ?? 0) * 100) / 100}
+        >
+          <div
+            className="bar h-full rounded-full bg-live"
+            style={{ width: `${progress.countedPct ?? 0}%` }}
+          />
+        </div>
+      )}
+
+      {states && states.length > 0 && started && <RegionBreakdown states={states} />}
 
       {started && (
         <button
@@ -107,68 +121,34 @@ export function CountingHero({
   );
 }
 
-/** The national total split into states (width = sections, fill = counted), ordered by region. */
-function StateRibbon({ states }: { states: StateRowDTO[] }) {
-  const { href } = useRound();
-  const withData = states.filter((s) => s.progress?.sectionsTotal);
-  const total = withData.reduce((sum, s) => sum + (s.progress?.sectionsTotal ?? 0), 0);
-  if (total === 0) return null;
-  const ordered = [...withData].sort(
-    (a, b) =>
-      REGION_ORDER.indexOf(a.region) - REGION_ORDER.indexOf(b.region) ||
-      a.name.localeCompare(b.name, 'pt-BR'),
-  );
+/** Counted share per region: five labelled bars, readable at a glance on a phone. */
+function RegionBreakdown({ states }: { states: StateRowDTO[] }) {
+  const regions = REGION_ORDER.filter((r) => r !== 'Exterior')
+    .map((region) => {
+      const list = states.filter((s) => s.region === region && s.progress?.sectionsTotal);
+      const total = list.reduce((sum, s) => sum + (s.progress!.sectionsTotal ?? 0), 0);
+      const counted = list.reduce((sum, s) => sum + (s.progress!.sectionsCounted ?? 0), 0);
+      return { region, pct: percent(counted, total) };
+    })
+    .filter((r) => r.pct != null);
+  if (regions.length === 0) return null;
   return (
-    <div className="mt-4">
-      <div
-        className="flex h-7 gap-[2px] sm:h-8"
-        role="list"
-        aria-label="Apuração por estado, agrupada por região"
-      >
-        {ordered.map((s) => {
-          const share = (s.progress!.sectionsTotal! / total) * 100;
-          const pct = s.progress!.countedPct ?? 0;
-          return (
-            <Link
-              key={s.uf}
-              role="listitem"
-              href={href(`/states/${s.uf.toLowerCase()}`)}
-              title={`${s.name}: ${fmtPct(pct)} apurado`}
-              aria-label={`${s.name}: ${fmtPct(pct)} apurado`}
-              className="group relative flex min-w-[3px] overflow-hidden rounded-[3px] bg-line"
-              style={{ flexBasis: `${share}%`, flexGrow: 0, flexShrink: 1 }}
-            >
-              <span
-                className="bar absolute inset-y-0 left-0 bg-live/80 group-hover:bg-live"
-                style={{ width: `${pct}%` }}
-              />
-              {share > 4 && (
-                <span className="relative z-10 m-auto hidden text-[10.5px] font-semibold text-ink sm:inline">
-                  {s.uf}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-      </div>
-      <div className="mt-1 flex gap-[2px] text-[11.5px] text-muted" aria-hidden>
-        {REGION_ORDER.map((region) => {
-          const share =
-            ordered
-              .filter((s) => s.region === region)
-              .reduce((sum, s) => sum + s.progress!.sectionsTotal!, 0) / total;
-          if (share === 0) return null;
-          return (
-            <span
-              key={region}
-              className="truncate border-l border-line-strong pl-1"
-              style={{ flexBasis: `${share * 100}%` }}
-            >
-              {share > 0.1 ? region : ''}
-            </span>
-          );
-        })}
-      </div>
-    </div>
+    <ul
+      className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-5"
+      aria-label="Apuração por região"
+    >
+      {regions.map((r) => (
+        <li
+          key={r.region}
+          className="grid grid-cols-[6.5rem_minmax(0,1fr)_3.5rem] items-center gap-2 text-[13px] lg:grid-cols-1 lg:gap-1"
+        >
+          <span className="text-ink-2">{r.region}</span>
+          <span className="h-1.5 overflow-hidden rounded-full bg-line lg:order-3" aria-hidden>
+            <span className="bar block h-full rounded-full bg-live/80" style={{ width: `${r.pct}%` }} />
+          </span>
+          <span className="text-right font-medium lg:order-2 lg:text-left">{fmtPct(r.pct, 1)}</span>
+        </li>
+      ))}
+    </ul>
   );
 }

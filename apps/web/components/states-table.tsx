@@ -5,7 +5,6 @@ import { formatClock } from '@eleicoes/election-core';
 import Link from 'next/link';
 import { useState } from 'react';
 import { displayName, fmtCompact, fmtInt, fmtPct } from '@/lib/format';
-import { useRealtime } from '@/lib/realtime';
 import { useRound } from './shell';
 import { ProgressBar } from './ui';
 
@@ -46,10 +45,8 @@ export function StatesTable({
   compact?: boolean;
 }) {
   const { href } = useRound();
-  const { recent } = useRealtime();
   const [sort, setSort] = useState<SortKey>('name');
   const rows = [...states].sort(SORTS[sort].fn);
-  const flash = (uf: string) => (recent.get(uf.toLowerCase()) ?? 0) > Date.now() - 3000;
 
   return (
     <div>
@@ -88,10 +85,7 @@ export function StatesTable({
             {rows.map((s) => {
               const p = s.progress;
               return (
-                <tr
-                  key={`${s.uf}-${flash(s.uf) ? 'f' : ''}`}
-                  className={`border-b border-line/70 hover:bg-surface-2 ${flash(s.uf) ? 'flash' : ''}`}
-                >
+                <tr key={s.uf} className="border-b border-line/70 hover:bg-surface-2">
                   <td className="py-2 pr-2 font-mono text-[13px] text-muted">{s.uf}</td>
                   <td className="py-2 pr-4">
                     <Link
@@ -157,7 +151,7 @@ export function StatesTable({
         {rows.map((s) => {
           const p = s.progress;
           return (
-            <li key={s.uf} className={flash(s.uf) ? 'flash' : ''}>
+            <li key={s.uf}>
               <Link
                 href={href(`/states/${s.uf.toLowerCase()}`)}
                 className="grid min-h-14 grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 py-2.5"

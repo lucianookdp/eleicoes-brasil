@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Logo } from '@/components/icons';
 
 export const metadata: Metadata = { title: 'Sobre os dados' };
 
@@ -56,10 +55,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
 
 export default function AboutPage() {
   return (
-    <main className="mx-auto max-w-2xl px-4 pb-24 pt-8 sm:px-6">
-      <Link href="/" className="mb-8 inline-flex items-center gap-2 font-semibold">
-        <Logo /> Eleições Brasil
-      </Link>
+    <div className="max-w-2xl pb-8 pt-3">
       <h1 className="text-[28px] font-semibold tracking-tight">Sobre os dados</h1>
       <p className="mt-2 text-ink-2">
         O que você vê aqui, de onde vem e como interpretar. Para um resumo visual, veja{' '}
@@ -80,6 +76,6 @@ export default function AboutPage() {
           </section>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

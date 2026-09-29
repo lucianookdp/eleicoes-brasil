@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { fmtInt, fmtPct } from '@/lib/format';
 import { useCities, useResult, useSeries, useStateDetail } from '@/lib/queries';
-import { useRealtime } from '@/lib/realtime';
 import { CountingHero } from './counting';
 import { EvolutionChart } from './evolution-chart';
 import { ResultPanel, useOfficeParam } from './results';
@@ -95,7 +94,6 @@ const CITY_SORTS = [
 
 function Cities({ uf, total }: { uf: string; total: number }) {
   const { round, href } = useRound();
-  const { recent } = useRealtime();
   const [q, setQ] = useState('');
   const [debounced, setDebounced] = useState('');
   const [sort, setSort] = useState('default');
@@ -150,9 +148,8 @@ function Cities({ uf, total }: { uf: string; total: number }) {
       <ul className={`grid gap-x-6 sm:grid-cols-2 xl:grid-cols-3 ${isFetching ? 'opacity-70' : ''}`}>
         {(data?.items ?? []).map((c) => {
           const p = c.progress;
-          const flash = (recent.get(uf.toLowerCase()) ?? 0) > Date.now() - 3000;
           return (
-            <li key={c.code} className={`border-b border-line ${flash ? 'flash' : ''}`}>
+            <li key={c.code} className="border-b border-line">
               <Link
                 href={href(`/states/${uf.toLowerCase()}/cities/${c.code}`)}
                 className="block py-3 hover:bg-surface-2/60"

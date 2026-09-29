@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { Logo } from '@/components/icons';
 
 export const metadata: Metadata = {
   title: 'Como funciona',
@@ -101,10 +100,7 @@ const QUESTIONS = [
 
 export default function HowItWorksPage() {
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-24 pt-8 sm:px-6">
-      <Link href="/" className="mb-8 inline-flex items-center gap-2 font-semibold">
-        <Logo /> Eleições Brasil
-      </Link>
+    <div className="max-w-5xl pb-8 pt-3">
       <h1 className="text-[28px] font-semibold tracking-tight sm:text-[34px]">Como funciona</h1>
       <p className="mt-2 max-w-2xl text-[16px] text-ink-2">
         O caminho de um voto, da urna até a sua tela. Todos os dados vêm do Tribunal Superior Eleitoral; nós
@@ -175,6 +171,6 @@ export default function HowItWorksPage() {
           .
         </p>
       </section>
-    </main>
+    </div>
   );
 }

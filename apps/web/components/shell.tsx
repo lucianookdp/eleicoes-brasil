@@ -54,6 +54,7 @@ export function ElectionShell({
   const params = useSearchParams();
   const round = pickRound(elections, electionSlug, params.get('t'));
   const [searchOpen, setSearchOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -69,13 +70,13 @@ export function ElectionShell({
 
   if (!round) {
     return (
-      <main className="mx-auto max-w-xl px-4 py-24">
+      <BasicShell>
         <h1 className="text-2xl font-semibold">Eleição não encontrada</h1>
         <p className="mt-2 text-ink-2">Não há dados para “{electionSlug}” neste servidor.</p>
         <Link href="/" className="mt-6 inline-block text-info underline">
           Voltar ao início
         </Link>
-      </main>
+      </BasicShell>
     );
   }
 
@@ -90,7 +91,7 @@ export function ElectionShell({
           Pular para o conteúdo
         </a>
         <Header onSearch={() => setSearchOpen(true)} />
-        {round.demo && (
+        {round.demo && pathname.startsWith('/eleicao') && (
           <div
             className="border-b border-warn/30 bg-warn-soft px-4 py-1.5 text-center text-[13px] text-warn"
             role="note"
@@ -98,9 +99,9 @@ export function ElectionShell({
             Eleição demonstrativa com candidatos e partidos fictícios. Estes números não são resultados reais.
           </div>
         )}
-        <div id="conteudo" className="mx-auto w-full max-w-[1320px] px-4 pb-28 pt-5 sm:px-6 lg:pb-12">
+        <main id="conteudo" className="mx-auto w-full max-w-[1320px] px-4 pb-28 pt-5 sm:px-6 lg:pb-12">
           {children}
-        </div>
+        </main>
         <Footer />
         <BottomNav onSearch={() => setSearchOpen(true)} />
         {searchOpen && <SearchPalette onClose={() => setSearchOpen(false)} />}
@@ -378,6 +379,12 @@ function Footer() {
   const { meta, round } = useRound();
   const adapter = meta?.adapters.find((a) => round.adapter?.startsWith(a.id));
   return (
+    <SiteFooter version={meta?.app.version} adapter={adapter ? `${adapter.id} ${adapter.version}` : null} />
+  );
+}
+
+function SiteFooter({ version, adapter }: { version?: string; adapter?: string | null }) {
+  return (
     <footer className="border-t border-line pb-24 lg:pb-0">
       <div className="mx-auto flex max-w-[1320px] flex-col gap-2 px-4 py-6 text-[13px] text-muted sm:px-6 md:flex-row md:items-start md:justify-between">
         <div className="max-w-2xl">
@@ -395,10 +402,39 @@ function Footer() {
           </p>
         </div>
         <p className="shrink-0 font-mono text-[12px]">
-          Eleições Brasil v{meta?.app.version ?? '—'}
-          {adapter && ` · adapter ${adapter.id} ${adapter.version}`}
+          Eleições Brasil{version ? ` v${version}` : ''}
+          {adapter && ` · adapter ${adapter}`}
         </p>
       </div>
     </footer>
+  );
+}
+
+/**
+ * Header and footer without an election: used while the election list loads, when the API is
+ * unreachable, and for pages that must render even then (about, how it works).
+ */
+export function BasicShell({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <header className="sticky top-0 z-30 border-b border-line bg-ground/90 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-[1320px] items-center gap-3 px-4 sm:px-6">
+          <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+            <Logo />
+            <span>Eleições Brasil</span>
+          </Link>
+          <nav aria-label="Seções" className="ml-auto flex items-center gap-1 text-[14px]">
+            <Link href="/" className="rounded-md px-2.5 py-1.5 text-ink-2 hover:bg-surface-2 hover:text-ink">
+              Apuração
+            </Link>
+            <ThemeToggle className="flex" />
+          </nav>
+        </div>
+      </header>
+      <main id="conteudo" className="mx-auto w-full max-w-[1320px] px-4 pb-16 pt-5 sm:px-6">
+        {children}
+      </main>
+      <SiteFooter />
+    </>
   );
 }
