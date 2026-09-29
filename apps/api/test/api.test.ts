@@ -62,17 +62,15 @@ suite('API (integration)', () => {
       sectionsCounted: 40,
       sectionsCountedPct: 40,
     };
-    await db
-      .insert(areaProgress)
-      .values({
-        roundId: r!.id,
-        areaKey: 'br',
-        areaType: 'country',
-        status: 'in-progress',
-        countedPct: 40,
-        progress,
-        updatedAt: now,
-      });
+    await db.insert(areaProgress).values({
+      roundId: r!.id,
+      areaKey: 'br',
+      areaType: 'country',
+      status: 'in-progress',
+      countedPct: 40,
+      progress,
+      updatedAt: now,
+    });
     const candidate = (key: string, name: string, party: string, votes: number, percent: number) => ({
       key,
       number: key,

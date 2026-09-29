@@ -143,9 +143,10 @@ export class Queries {
   }
 
   async ingestion(roundId: string, roundStatus: string): Promise<IngestionStatus> {
+    // A cycle still running says nothing about health yet: judge by the last finished one.
     const [last] = await this.sql<{ startedAt: Date; status: string; mode: string; error: string | null }[]>`
       select started_at as "startedAt", status, mode, error from collector_cycles
-      where round_id = ${roundId} order by started_at desc limit 1`;
+      where round_id = ${roundId} and status <> 'running' order by started_at desc limit 1`;
     const [ok] = await this.sql<{ at: Date }[]>`
       select coalesce(finished_at, started_at) as at from collector_cycles
       where round_id = ${roundId} and status in ('ok', 'degraded') order by started_at desc limit 1`;
@@ -827,7 +828,7 @@ export class Queries {
         kind: 'party',
         label: p.abbreviation,
         detail: `${p.number} · ${p.name}`,
-        href: `/compare${turno}&eleicao=${round.slug}`,
+        href: `${base}/compare${turno}`,
       });
     }
     return hits.slice(0, 20);

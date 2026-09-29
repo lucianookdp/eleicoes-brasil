@@ -61,14 +61,12 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
 
   app.setErrorHandler(async (err, req, reply) => {
     if (err instanceof ZodError) {
-      return reply
-        .status(400)
-        .send({
-          error: {
-            code: 'invalid_request',
-            message: err.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
-          },
-        });
+      return reply.status(400).send({
+        error: {
+          code: 'invalid_request',
+          message: err.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+        },
+      });
     }
     if (err instanceof NotFoundError)
       return reply.status(404).send({ error: { code: 'not_found', message: err.message } });

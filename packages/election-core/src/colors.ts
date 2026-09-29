@@ -10,7 +10,7 @@ const PARTY_COLORS: Record<string, string> = {
   PSD: '#E0B43A',
   MISSÃO: '#14B8A6',
   MISSAO: '#14B8A6',
-  PRTB: '#8BC34A',
+  PRTB: '#C569D8',
   AVANTE: '#29B6F6',
   DC: '#A1887F',
   PCB: '#B23A48',
@@ -40,7 +40,7 @@ const PARTY_COLORS: Record<string, string> = {
   PTS: '#F28C28',
   PAM: '#14B8A6',
   PPR: '#E0B43A',
-  PSM: '#9C8BD9',
+  PSM: '#C569D8',
 };
 
 /** Distinct fallbacks for parties without a colour or when two candidates collide. */

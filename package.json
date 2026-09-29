@@ -4,7 +4,7 @@
   "private": true,
   "description": "Acompanhamento em tempo real da totalização das eleições brasileiras com dados públicos oficiais do TSE.",
   "license": "MIT",
-  "packageManager": "pnpm@10.18.0",
+  "packageManager": "pnpm@12.4.2",
   "engines": {
     "node": ">=22"
   },
