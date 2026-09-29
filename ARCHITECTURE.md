@@ -130,6 +130,6 @@ exercitado de verdade sem depender do dia da eleição.
 ## 8. Segurança e operação
 
 API read-only, sem autenticação na V1. Helmet (headers + CSP), CORS restrito, rate limit por IP,
-validação Zod de todo parâmetro, SQL só via Drizzle (parametrizado), logs Pino sem dados
+validação Zod de todo parâmetro, SQL sempre parametrizado (Drizzle ou templates do postgres.js), logs Pino sem dados
 pessoais. Cada ciclo do collector tem `cycleId` nos logs. Métricas de ingestão (requisições,
 200/304/erros, latência média e p95) ficam em `collector_cycles` e alimentam `/operations`.

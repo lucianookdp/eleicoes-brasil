@@ -102,6 +102,8 @@ export interface ResultDTO {
   progress: ProgressDTO;
   votes: VoteTotals;
   candidates: CandidateDTO[];
+  /** Candidates in the full result; `candidates` may be truncated for large proportional races. */
+  candidatesTotal: number;
   parties: PartyResult[];
   seats: number | null;
   final: boolean;
