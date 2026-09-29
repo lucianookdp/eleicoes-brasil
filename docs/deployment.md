@@ -2,9 +2,13 @@
 
 A aplicação é um Postgres e três processos Node. Nada depende de um provedor específico.
 
+Em uso hoje: **web** no GitHub Pages (workflow `pages.yml`, variáveis de repositório
+`NEXT_PUBLIC_API_URL` e `NEXT_PUBLIC_BASE_PATH`), **api**, **worker**, **demo** e **Postgres** no
+Railway (projeto `eleicoes-brasil`; cada serviço usa o `Dockerfile` da raiz com a variável `APP`).
+
 | Componente | Sugestão barata | Alternativas |
 | --- | --- | --- |
-| web | Vercel (projeto `apps/web`) | qualquer host de Node ou a imagem `web` |
+| web | GitHub Pages (exportação estática) | qualquer CDN de arquivos estáticos, ou a imagem `web` (nginx) |
 | api | Railway / Fly.io (imagem `api`) | VM, Render, Cloud Run |
 | worker | mesmo provedor da API (imagem `worker`), **uma única instância** | — |
 | PostgreSQL | Neon / Supabase / Railway | qualquer Postgres 14+ |

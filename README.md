@@ -7,6 +7,8 @@ Mais do que reproduzir a página de resultados: além dos votos, mostra a evolu�
 totalização — ritmo da apuração, o que mudou entre atualizações, frescor dos dados por estado e
 a saúde da própria coleta — e guarda tudo para rever depois (“como estava às 19:32?”).
 
+**No ar:** https://lucianookdp.github.io/eleicoes-brasil/ · API: https://api-production-39d40.up.railway.app/api/health
+
 > Projeto independente. Não é um serviço oficial da Justiça Eleitoral. Resultados parciais
 > refletem apenas as seções totalizadas e podem mudar até o fim da apuração.
 
@@ -28,7 +30,8 @@ a saúde da própria coleta — e guarda tudo para rever depois (“como estava 
 
 `TSE → Collector → TSEAdapter2026 (Zod) → PostgreSQL → API (Fastify) → SSE → Next.js`
 
-O navegador nunca acessa o TSE. Detalhes em [ARCHITECTURE.md](ARCHITECTURE.md) e em
+O navegador nunca acessa o TSE. O site é estático (GitHub Pages); API, coletor e Postgres rodam
+no Railway. Detalhes em [ARCHITECTURE.md](ARCHITECTURE.md) e em
 [docs/](docs). Decisões registradas em [docs/adr](docs/adr). Plano em [ROADMAP.md](ROADMAP.md).
 
 ```
