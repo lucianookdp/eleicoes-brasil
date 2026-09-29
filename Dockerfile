@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7
+
 # API and collector images come from the default stage, chosen by the APP build argument:
 #   docker build --build-arg APP=api -t eleicoes-api .
 #   docker build --build-arg APP=worker -t eleicoes-worker .
@@ -18,7 +18,7 @@ COPY packages/config/package.json packages/config/
 COPY packages/database/package.json packages/database/
 COPY packages/election-core/package.json packages/election-core/
 COPY packages/tse-client/package.json packages/tse-client/
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
