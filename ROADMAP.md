@@ -9,44 +9,45 @@ Datas que guiam a V1:
 
 Legenda: ✅ feito · 🟡 em andamento · ⬜ pendente
 
-## Phase 0 — Foundation 🟡
+## Phase 0 — Foundation ✅
 - Monorepo pnpm + Turborepo, TypeScript estrito, Biome (lint + format)
 - Pacotes `config`, `election-core`, `tse-client`, `database`
 - Docker Compose (Postgres + api + worker + web), Dockerfiles
 - GitHub Actions: lint → typecheck → test → build
 
-## Phase 1 — TSE Integration ⬜
+## Phase 1 — TSE Integration ✅
 - Cliente HTTP: rate limiter, limite de concorrência, timeout, retry com backoff + jitter,
   circuit breaker, ETag/Last-Modified → 304
 - Schemas Zod de EA11, EA12, EA14, EA15, EA16, EA20 (tolerantes a campos novos)
 - `TSEAdapter2026` + registro de adapters
 - Números em texto (`"123"`, `"48,43"`) normalizados; datas BRT → UTC
 
-## Phase 2 — Election Core ⬜
+## Phase 2 — Election Core ✅
 - Entidades de domínio, contratos da API, UFs, cores de candidatos
 - Schema do banco, migrações, repositórios
 
-## Phase 3 — Collector ⬜
+## Phase 3 — Collector ✅
 - Polling inteligente EA14 → EA15 → EA20 só do que mudou
 - Snapshots por mudança, eventos de atividade, métricas por ciclo
 - Ingestão degradada sem derrubar o worker
 
-## Phase 4 — API ⬜
+## Phase 4 — API ✅
 - REST (`/api/elections/...`), SSE, cache em memória invalidado por `NOTIFY`
 - Helmet, CORS, rate limit, validação
 
-## Phase 5 — UI ⬜
+## Phase 5 — UI ✅
 - Nacional (overview, candidatos, mapa, tabela de estados), estado, município, busca, favoritos
 - Mobile-first com navegação inferior, PWA
 
-## Phase 6 — Operations ⬜
+## Phase 6 — Operations ✅
 - Live activity, taxa de processamento, ingestão (200/304/erros, p95), frescor por UF, saúde do worker, heatmap
 
-## Phase 7 — Historical ⬜
+## Phase 7 — Historical ✅
 - Timeline (“como estava às 19:32?”), gráfico de evolução, `pnpm replay --speed 10`
 
-## Phase 8 — Production Hardening ⬜
-- ⬜ Testes unitários (parsers, adapter, cálculos), integração (API), E2E Playwright
+## Phase 8 — Production Hardening 🟡
+- ✅ Testes unitários (parsers, adapter, cálculos), integração (API, demo + adapter), E2E Playwright desktop e mobile
+- ✅ Docker (imagem única com 3 alvos), docker compose, GitHub Actions
 - ⬜ Validar adapter no simulado de 29/09 e ajustar schemas
 - ⬜ Deploy (Railway/Fly para api+worker, Vercel para web, Neon para Postgres)
 - ⬜ Subdomínio `election.lucianookdp.dev`
