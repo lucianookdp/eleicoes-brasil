@@ -111,7 +111,10 @@ export class DemoModel {
   readonly offices: DemoOffice[];
   private readonly candidates = new Map<string, DemoCandidate[]>();
 
-  constructor(fixturePath = join(import.meta.dirname, '../../../../fixtures/election-demo/election.json')) {
+  constructor(
+    fixturePath = process.env.DEMO_FIXTURE ??
+      join(import.meta.dirname, '../../../../fixtures/election-demo/election.json'),
+  ) {
     this.fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as Fixture;
     const { federal, state } = this.fixture.elections;
 

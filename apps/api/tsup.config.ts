@@ -5,6 +5,11 @@ export default defineConfig({
   format: 'esm',
   target: 'node22',
   platform: 'node',
-  noExternal: [/^@eleicoes\//],
+  // Everything bundled: the container needs no node_modules.
+  noExternal: [/.*/],
+  external: ['pino-pretty'],
+  banner: {
+    js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);",
+  },
   clean: true,
 });

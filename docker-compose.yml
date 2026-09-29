@@ -1,0 +1,62 @@
+# Full stack on one machine: `docker compose up`
+# By default it runs the fictitious demo election. For the TSE simulation or the real
+# election, set APP_MODE and ELECTION_ROUND (see .env.example) and remove demo-tse.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: eleicoes
+      POSTGRES_PASSWORD: eleicoes
+      POSTGRES_DB: eleicoes
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eleicoes"]
+      interval: 3s
+      retries: 20
+
+  demo-tse:
+    build: { context: ., target: worker }
+    command: ["node", "dist/demo/server.js"]
+    environment:
+      DEMO_TSE_PORT: 4010
+      DEMO_DURATION_MINUTES: ${DEMO_DURATION_MINUTES:-30}
+
+  worker:
+    build: { context: ., target: worker }
+    depends_on:
+      postgres: { condition: service_healthy }
+      demo-tse: { condition: service_started }
+    environment:
+      DATABASE_URL: postgres://eleicoes:eleicoes@postgres:5432/eleicoes
+      APP_MODE: ${APP_MODE:-DEVELOPMENT}
+      ELECTION_ROUND: ${ELECTION_ROUND:-demo-1}
+      TSE_BASE_URL: ${TSE_BASE_URL:-http://demo-tse:4010}
+      TSE_REQUESTS_PER_SECOND: ${TSE_REQUESTS_PER_SECOND:-20}
+      TSE_CONCURRENCY: ${TSE_CONCURRENCY:-8}
+      TSE_POLL_INTERVAL: ${TSE_POLL_INTERVAL:-10}
+    restart: unless-stopped
+
+  api:
+    build: { context: ., target: api }
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgres://eleicoes:eleicoes@postgres:5432/eleicoes
+      CORS_ORIGINS: http://localhost:3000
+    ports: ["4000:4000"]
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      target: web
+      args: { NEXT_PUBLIC_API_URL: http://localhost:4000 }
+    depends_on: [api]
+    environment:
+      API_URL: http://api:4000
+    ports: ["3000:3000"]
+    restart: unless-stopped
+
+volumes:
+  pgdata:

@@ -5,10 +5,38 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
-      "env": ["NEXT_PUBLIC_*", "API_URL"]
+      "env": ["NEXT_PUBLIC_*", "API_URL", "NODE_ENV"]
     },
-    "typecheck": { "dependsOn": ["^typecheck"], "outputs": [] },
-    "test": { "outputs": [] },
-    "dev": { "cache": false, "persistent": true }
-  }
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "outputs": []
+    },
+    "test": {
+      "outputs": []
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  },
+  "globalPassThroughEnv": [
+    "DATABASE_URL",
+    "TEST_DATABASE_URL",
+    "APP_MODE",
+    "ELECTION_ROUND",
+    "TSE_*",
+    "DEMO_*",
+    "REPLAY_*",
+    "COLLECT_CITY_RESULTS",
+    "CITY_RESULT_OFFICES",
+    "MAX_RESULT_FETCHES_PER_CYCLE",
+    "MIGRATIONS_DIR",
+    "HOST",
+    "PORT",
+    "CORS_ORIGINS",
+    "API_RATE_LIMIT_PER_MINUTE",
+    "CACHE_TTL_SECONDS",
+    "ENABLE_*",
+    "LOG_LEVEL"
+  ]
 }
