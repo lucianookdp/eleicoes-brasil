@@ -22,6 +22,13 @@ if (env.APP_MODE === 'REPLAY') {
   process.exit(0);
 }
 
+if (env.APP_MODE === 'DEVELOPMENT' && env.DEMO_EMBEDDED) {
+  // One process for the whole demo (handy on a single hosted service).
+  const { startDemoServer } = await import('./demo/server');
+  startDemoServer({ port: env.DEMO_TSE_PORT, durationMinutes: env.DEMO_DURATION_MINUTES, waitSeconds: 60 });
+  log.info({ port: env.DEMO_TSE_PORT }, 'embedded fictitious TSE server started');
+}
+
 const round = findRound(env.ELECTION_ROUND);
 if (!round) {
   log.fatal(

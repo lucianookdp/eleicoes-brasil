@@ -43,6 +43,8 @@ export const workerEnvSchema = z.object({
   MAX_RESULT_FETCHES_PER_CYCLE: z.coerce.number().int().positive().default(400),
   /** REPLAY mode: playback speed multiplier (10 = ten times faster than it happened). */
   REPLAY_SPEED: z.coerce.number().positive().default(10),
+  /** DEVELOPMENT only: start the fictitious TSE server inside the collector process. */
+  DEMO_EMBEDDED: bool.default(false),
   /** Port for the local fictitious TSE server used by `pnpm dev:demo`. */
   DEMO_TSE_PORT: z.coerce.number().int().default(4010),
   /** How long (minutes) the fictitious counting takes from 0% to 100%. */
