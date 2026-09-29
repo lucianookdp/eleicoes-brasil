@@ -36,6 +36,11 @@ const STATE_LABEL: Record<IngestionStatus['state'], { label: string; cls: string
     cls: 'text-muted bg-surface-2',
     hint: 'Nenhuma coleta em andamento para esta eleição.',
   },
+  waiting: {
+    label: 'Aguardando o TSE',
+    cls: 'text-info bg-surface-2',
+    hint: 'O TSE ainda não publicou os arquivos desta eleição. Conferimos a cada minuto.',
+  },
 };
 
 /**

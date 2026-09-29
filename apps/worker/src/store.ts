@@ -447,7 +447,7 @@ export class Store {
   async finishCycle(
     id: string,
     stats: CycleStats,
-    status: 'ok' | 'degraded' | 'failed',
+    status: 'ok' | 'degraded' | 'failed' | 'waiting',
     error: string | null,
   ) {
     const sorted = [...stats.latencies].sort((a, b) => a - b);

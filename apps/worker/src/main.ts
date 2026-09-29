@@ -86,8 +86,10 @@ process.on('SIGTERM', shutdown);
 void collector.drainCities();
 while (!stopping) {
   const started = Date.now();
+  let wait = env.TSE_POLL_INTERVAL * 1000;
   try {
-    await collector.runCycle();
+    // Source not published yet: check once a minute (repeated 404s can get an IP blocked).
+    if ((await collector.runCycle()) === 'waiting') wait = 60_000;
   } catch (err) {
     // runCycle handles its own errors; this only catches database outages.
     log.error({ err }, 'cycle crashed; retrying after the poll interval');
@@ -97,6 +99,6 @@ while (!stopping) {
   // Fixed rate: a cycle starts every TSE_POLL_INTERVAL seconds (or right away if the last one
   // took longer), so detection latency does not grow with cycle duration.
   await new Promise((r) =>
-    setTimeout(r, Math.max(250, env.TSE_POLL_INTERVAL * 1000 - (Date.now() - started))),
+    setTimeout(r, Math.max(250, wait - (Date.now() - started))),
   );
 }

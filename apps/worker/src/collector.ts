@@ -96,7 +96,8 @@ export class Collector {
 
   // ------------------------------------------------------------------ headline cycle
 
-  async runCycle(): Promise<void> {
+  /** Returns the cycle status; "waiting" means the source has not published this round yet. */
+  async runCycle(): Promise<'ok' | 'degraded' | 'failed' | 'waiting'> {
     const cycleId = randomUUID();
     const log = this.log.child({ cycleId });
     const started = Date.now();
@@ -115,8 +116,17 @@ export class Collector {
       await this.recordFailure(log, err, what, target);
     };
 
+    let waiting = false;
     try {
-      const config = await this.provider.getElectionConfig();
+      let config: ElectionConfig;
+      try {
+        config = await this.provider.getElectionConfig();
+      } catch (err) {
+        // Before election day the official configuration may not exist yet (HTTP 404).
+        if (!(err instanceof ProviderNotFoundError)) throw err;
+        waiting = true;
+        throw err;
+      }
       if (!this.configLoaded) await this.loadConfig(config);
 
       const codes = [...new Set(this.offices.map((o) => o.providerElectionCode))];
@@ -190,8 +200,10 @@ export class Collector {
         );
       }
     } catch (err) {
-      fatal = err instanceof Error ? err.message : String(err);
-      await fail(err, 'cycle');
+      if (!waiting) {
+        fatal = err instanceof Error ? err.message : String(err);
+        await fail(err, 'cycle');
+      }
     }
 
     // Municipal results stored by the background drain since the last cycle.
@@ -202,7 +214,7 @@ export class Collector {
     if (this.backgroundErrors > 0) degraded = true;
     this.backgroundErrors = 0;
 
-    const status = fatal ? 'failed' : degraded ? 'degraded' : 'ok';
+    const status = waiting ? 'waiting' : fatal ? 'failed' : degraded ? 'degraded' : 'ok';
     await this.store.finishCycle(cycleId, this.stats, status, fatal);
     notifications.push({ type: 'ingestion.status', changes: { status } });
     await this.store.notify(notifications, new Date().toISOString());
@@ -218,6 +230,7 @@ export class Collector {
       },
       'cycle finished',
     );
+    return status;
   }
 
   // ------------------------------------------------------------------ background drain

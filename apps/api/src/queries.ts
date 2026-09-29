@@ -160,13 +160,15 @@ export class Queries {
     if (!last) return { state: 'idle', mode: null, lastCycleAt: null, lastSuccessAt: null, lastError: null };
     const age = Date.now() - new Date(last.startedAt).getTime();
     const state =
-      age > 120_000
+      age > (last.status === 'waiting' ? 180_000 : 120_000)
         ? roundStatus === 'final' || last.mode === 'REPLAY'
           ? 'idle'
           : 'offline'
-        : last.status === 'ok'
-          ? 'healthy'
-          : 'degraded';
+        : last.status === 'waiting'
+          ? 'waiting'
+          : last.status === 'ok'
+            ? 'healthy'
+            : 'degraded';
     return {
       state,
       mode: last.mode,

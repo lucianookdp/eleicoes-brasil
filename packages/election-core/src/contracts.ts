@@ -63,7 +63,7 @@ export interface RoundDetail extends RoundSummary {
   offices: OfficeInfo[];
 }
 
-export type IngestionState = 'healthy' | 'degraded' | 'offline' | 'idle';
+export type IngestionState = 'healthy' | 'degraded' | 'offline' | 'idle' | 'waiting';
 
 export interface IngestionStatus {
   state: IngestionState;

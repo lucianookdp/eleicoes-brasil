@@ -289,7 +289,7 @@ export const collectorCycles = pgTable(
     errors: integer('errors').notNull().default(0),
     avgLatencyMs: doublePrecision('avg_latency_ms'),
     p95LatencyMs: doublePrecision('p95_latency_ms'),
-    status: text('status').$type<'running' | 'ok' | 'degraded' | 'failed'>().notNull(),
+    status: text('status').$type<'running' | 'ok' | 'degraded' | 'failed' | 'waiting'>().notNull(),
     error: text('error'),
   },
   (t) => [index('collector_cycles_time').on(t.roundId, t.startedAt)],
