@@ -1,0 +1,57 @@
+{
+  "$comment": "Eleição demonstrativa. Candidatos e partidos são FICTÍCIOS (números 91–96, não usados por partidos reais). Estados e nomes de municípios são reais; códigos de município e eleitorado são aproximados e não oficiais.",
+  "pleito": "900001",
+  "cycle": "ele2026",
+  "date": "04/10/2026",
+  "elections": { "federal": "900010", "state": "900012" },
+  "seed": 2026,
+  "parties": [
+    { "n": "91", "sg": "PEX", "nm": "Partido Exemplo" },
+    { "n": "92", "sg": "PMD", "nm": "Partido Modelo" },
+    { "n": "93", "sg": "PTS", "nm": "Partido Teste" },
+    { "n": "94", "sg": "PAM", "nm": "Partido Amostra" },
+    { "n": "95", "sg": "PPR", "nm": "Partido Protótipo" },
+    { "n": "96", "sg": "PSM", "nm": "Partido Simulado" }
+  ],
+  "president": [
+    { "n": "91", "party": "91", "name": "Ana Exemplo", "vice": "Rui Ensaio", "base": 37, "bias": { "Nordeste": 14, "Norte": 5, "Sul": -9, "Centro-Oeste": -6 }, "capital": -4 },
+    { "n": "92", "party": "92", "name": "Bruno Modelo", "vice": "Lia Rascunho", "base": 36, "bias": { "Sul": 11, "Centro-Oeste": 9, "Nordeste": -12, "Sudeste": 2 }, "capital": 5 },
+    { "n": "93", "party": "93", "name": "Carla Teste", "vice": "Otávio Piloto", "base": 12, "bias": { "Sudeste": 3 }, "capital": 3 },
+    { "n": "94", "party": "94", "name": "Diego Amostra", "vice": "Sara Maquete", "base": 7, "bias": { "Sul": 2 }, "capital": 1 },
+    { "n": "95", "party": "95", "name": "Elisa Protótipo", "vice": "Caio Esboço", "base": 5, "bias": {}, "capital": 0 },
+    { "n": "96", "party": "96", "name": "Fábio Simulado", "vice": "Nina Rascunho", "base": 3, "bias": {}, "capital": 0 }
+  ],
+  "names": {
+    "first": ["Adriana", "Bernardo", "Camila", "Daniel", "Eduarda", "Felipe", "Gabriela", "Henrique", "Isabela", "Joaquim", "Karina", "Lucas", "Mariana", "Nicolas", "Olívia", "Paulo", "Renata", "Samuel", "Tatiana", "Vinícius", "Yasmin", "Otávio", "Helena", "Murilo"],
+    "last": ["Exemplo", "Modelo", "Amostra", "Ensaio", "Protótipo", "Rascunho", "Simulado", "Teste", "Piloto", "Maquete", "Esboço", "Demonstração"]
+  },
+  "states": {
+    "AC": [["Rio Branco", 290], ["Cruzeiro do Sul", 60], ["Sena Madureira", 28], ["Tarauacá", 25], ["Feijó", 22], ["Brasiléia", 17]],
+    "AL": [["Maceió", 670], ["Arapiraca", 160], ["Rio Largo", 55], ["Palmeira dos Índios", 55], ["Penedo", 45], ["União dos Palmares", 45]],
+    "AP": [["Macapá", 330], ["Santana", 80], ["Laranjal do Jari", 30], ["Oiapoque", 20], ["Mazagão", 15]],
+    "AM": [["Manaus", 1500], ["Parintins", 80], ["Itacoatiara", 70], ["Manacapuru", 70], ["Coari", 50], ["Tefé", 45], ["Tabatinga", 40]],
+    "BA": [["Salvador", 1950], ["Feira de Santana", 420], ["Vitória da Conquista", 250], ["Camaçari", 210], ["Juazeiro", 150], ["Itabuna", 150], ["Lauro de Freitas", 140], ["Ilhéus", 140], ["Barreiras", 110], ["Porto Seguro", 100]],
+    "CE": [["Fortaleza", 1800], ["Caucaia", 250], ["Juazeiro do Norte", 190], ["Maracanaú", 160], ["Sobral", 140], ["Crato", 90], ["Itapipoca", 90], ["Maranguape", 80]],
+    "DF": [["Brasília", 2200]],
+    "ES": [["Vitória", 250], ["Vila Velha", 350], ["Serra", 340], ["Cariacica", 270], ["Cachoeiro de Itapemirim", 150], ["Linhares", 120], ["Guarapari", 95], ["Colatina", 90]],
+    "GO": [["Goiânia", 1050], ["Aparecida de Goiânia", 360], ["Anápolis", 280], ["Rio Verde", 160], ["Luziânia", 150], ["Águas Lindas de Goiás", 120], ["Valparaíso de Goiás", 110], ["Trindade", 90]],
+    "MA": [["São Luís", 750], ["Imperatriz", 190], ["São José de Ribamar", 130], ["Timon", 120], ["Caxias", 120], ["Codó", 90], ["Paço do Lumiar", 90], ["Açailândia", 80]],
+    "MT": [["Cuiabá", 450], ["Várzea Grande", 200], ["Rondonópolis", 170], ["Sinop", 110], ["Tangará da Serra", 70], ["Cáceres", 70], ["Sorriso", 70], ["Lucas do Rio Verde", 45]],
+    "MS": [["Campo Grande", 640], ["Dourados", 160], ["Três Lagoas", 90], ["Corumbá", 75], ["Ponta Porã", 65], ["Naviraí", 40], ["Nova Andradina", 38]],
+    "MG": [["Belo Horizonte", 1950], ["Uberlândia", 520], ["Contagem", 460], ["Juiz de Fora", 420], ["Betim", 300], ["Montes Claros", 290], ["Uberaba", 250], ["Ribeirão das Neves", 230], ["Governador Valadares", 200], ["Ipatinga", 190]],
+    "PA": [["Belém", 1050], ["Ananindeua", 380], ["Santarém", 220], ["Marabá", 170], ["Parauapebas", 150], ["Castanhal", 130], ["Abaetetuba", 110], ["Cametá", 100]],
+    "PB": [["João Pessoa", 560], ["Campina Grande", 290], ["Santa Rita", 100], ["Patos", 80], ["Bayeux", 75], ["Sousa", 55], ["Cabedelo", 55]],
+    "PR": [["Curitiba", 1350], ["Londrina", 400], ["Maringá", 300], ["Ponta Grossa", 250], ["Cascavel", 230], ["São José dos Pinhais", 230], ["Foz do Iguaçu", 190], ["Colombo", 170], ["Guarapuava", 130]],
+    "PE": [["Recife", 1200], ["Jaboatão dos Guararapes", 480], ["Olinda", 280], ["Caruaru", 260], ["Paulista", 250], ["Petrolina", 230], ["Cabo de Santo Agostinho", 150], ["Camaragibe", 110], ["Garanhuns", 100]],
+    "PI": [["Teresina", 620], ["Parnaíba", 110], ["Picos", 60], ["Piripiri", 50], ["Floriano", 45], ["Campo Maior", 35]],
+    "RJ": [["Rio de Janeiro", 5000], ["São Gonçalo", 700], ["Duque de Caxias", 650], ["Nova Iguaçu", 590], ["Niterói", 390], ["Campos dos Goytacazes", 380], ["Belford Roxo", 350], ["São João de Meriti", 330], ["Petrópolis", 240], ["Volta Redonda", 210]],
+    "RN": [["Natal", 560], ["Mossoró", 190], ["Parnamirim", 170], ["São Gonçalo do Amarante", 75], ["Macaíba", 60], ["Ceará-Mirim", 55], ["Caicó", 50]],
+    "RS": [["Porto Alegre", 1050], ["Caxias do Sul", 350], ["Canoas", 250], ["Pelotas", 250], ["Santa Maria", 200], ["Gravataí", 200], ["Viamão", 180], ["Novo Hamburgo", 180], ["São Leopoldo", 160], ["Passo Fundo", 150]],
+    "RO": [["Porto Velho", 350], ["Ji-Paraná", 90], ["Ariquemes", 75], ["Vilhena", 70], ["Cacoal", 60], ["Rolim de Moura", 40]],
+    "RR": [["Boa Vista", 280], ["Rorainópolis", 20], ["Caracaraí", 15], ["Mucajaí", 12], ["Alto Alegre", 12], ["Pacaraima", 10]],
+    "SC": [["Florianópolis", 370], ["Joinville", 450], ["Blumenau", 280], ["São José", 190], ["Itajaí", 170], ["Chapecó", 170], ["Criciúma", 160], ["Palhoça", 140], ["Jaraguá do Sul", 130], ["Lages", 120]],
+    "SP": [["São Paulo", 9300], ["Guarulhos", 950], ["Campinas", 850], ["São Bernardo do Campo", 650], ["Santo André", 560], ["Osasco", 550], ["Sorocaba", 530], ["São José dos Campos", 520], ["Ribeirão Preto", 520], ["Santos", 360], ["Mauá", 330], ["Mogi das Cruzes", 330], ["Jundiaí", 320], ["Piracicaba", 310], ["Diadema", 300], ["Bauru", 280]],
+    "SE": [["Aracaju", 450], ["Nossa Senhora do Socorro", 120], ["Lagarto", 75], ["Itabaiana", 70], ["São Cristóvão", 60], ["Estância", 50]],
+    "TO": [["Palmas", 220], ["Araguaína", 120], ["Gurupi", 65], ["Porto Nacional", 40], ["Paraíso do Tocantins", 35], ["Colinas do Tocantins", 25]]
+  }
+}

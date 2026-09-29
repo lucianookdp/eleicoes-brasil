@@ -1,0 +1,27 @@
+{
+  "name": "@eleicoes/worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/main.ts",
+    "start": "node dist/main.js",
+    "build": "tsup",
+    "replay": "tsx src/replay.ts",
+    "demo:tse": "tsx src/demo/server.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@eleicoes/config": "workspace:*",
+    "@eleicoes/database": "workspace:*",
+    "@eleicoes/election-core": "workspace:*",
+    "@eleicoes/tse-client": "workspace:*",
+    "drizzle-orm": "^0.45.3",
+    "pino": "^10.3.1"
+  },
+  "devDependencies": {
+    "pino-pretty": "^13.1.1",
+    "tsup": "^8.5.1"
+  }
+}

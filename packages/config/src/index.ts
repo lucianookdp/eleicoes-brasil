@@ -41,6 +41,8 @@ export const workerEnvSchema = z.object({
   CITY_RESULT_OFFICES: z.enum(['all', 'majoritarian']).default('all'),
   /** Upper bound of result files fetched per cycle, so one cycle never starves the next. */
   MAX_RESULT_FETCHES_PER_CYCLE: z.coerce.number().int().positive().default(600),
+  /** REPLAY mode: playback speed multiplier (10 = ten times faster than it happened). */
+  REPLAY_SPEED: z.coerce.number().positive().default(10),
   /** Port for the local fictitious TSE server used by `pnpm dev:demo`. */
   DEMO_TSE_PORT: z.coerce.number().int().default(4010),
   /** How long (minutes) the fictitious counting takes from 0% to 100%. */
