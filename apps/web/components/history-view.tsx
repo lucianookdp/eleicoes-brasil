@@ -49,8 +49,16 @@ export function HistoryView() {
 
       {timeline.error && <ErrorNotice error={timeline.error} retry={() => timeline.refetch()} />}
       {timeline.data && points.length < 2 && (
-        <EmptyState title="Ainda não há histórico suficiente.">
-          O histórico começa a ser gravado com as primeiras parciais da apuração.
+        <EmptyState
+          title={
+            round.environment === 'dados-abertos'
+              ? 'Esta eleição tem apenas o resultado final.'
+              : 'Ainda não há histórico suficiente.'
+          }
+        >
+          {round.environment === 'dados-abertos'
+            ? 'Ela foi importada dos Dados Abertos do TSE, que publicam só os números finais, sem o registro minuto a minuto da apuração.'
+            : 'O histórico começa a ser gravado com as primeiras parciais da apuração.'}
         </EmptyState>
       )}
       {!timeline.data && !timeline.error && <Skeleton className="h-40" />}

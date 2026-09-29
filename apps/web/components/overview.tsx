@@ -31,6 +31,7 @@ export function RoundTitle({ compact = false }: { compact?: boolean }) {
         {round.round}º turno · {DATE.format(new Date(`${round.date}T12:00:00Z`))}
         {round.environment === 'simulado2026' && ' · simulação oficial do TSE'}
         {round.environment === 'replay' && ' · reprodução de uma apuração gravada'}
+        {round.environment === 'dados-abertos' && ' · resultado final (Dados Abertos do TSE)'}
       </p>
     </div>
   );
