@@ -63,14 +63,16 @@ export function CountingHero({
 
       {states && states.length > 0 && started && <StateRibbon states={states} />}
 
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="mt-3 flex min-h-10 items-center gap-1 text-[13px] text-info sm:hidden"
-      >
-        {open ? 'Ocultar comparecimento e votos' : 'Ver comparecimento e votos'}
-      </button>
+      {started && (
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="mt-3 flex min-h-10 items-center gap-1 text-[13px] text-info sm:hidden"
+        >
+          {open ? 'Ocultar comparecimento e votos' : 'Ver comparecimento e votos'}
+        </button>
+      )}
       <dl
         className={`${open ? 'grid' : 'hidden'} mt-3 grid-cols-3 gap-x-4 gap-y-3 border-t border-line pt-3 sm:mt-4 sm:grid sm:grid-cols-3 lg:grid-cols-6`}
       >

@@ -118,7 +118,13 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
                   </span>
                 )}
               </div>
-              {!headlineOffice && (
+              {data.round.offices.length === 0 && (
+                <EmptyState title="O TSE ainda não publicou os arquivos desta eleição.">
+                  Os cargos, candidatos e resultados aparecem aqui automaticamente assim que a divulgação
+                  oficial começar.
+                </EmptyState>
+              )}
+              {data.round.offices.length > 0 && !headlineOffice && (
                 <EmptyState title="Nesta eleição os cargos são disputados por estado ou município.">
                   Escolha um estado no mapa ou na lista.
                 </EmptyState>
