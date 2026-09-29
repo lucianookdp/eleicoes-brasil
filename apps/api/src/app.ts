@@ -56,7 +56,8 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
   await app.register(rateLimit, {
     max: env.API_RATE_LIMIT_PER_MINUTE,
     timeWindow: '1 minute',
-    allowList: (req) => req.url === '/api/health',
+    // Health checks and the long-lived realtime stream do not count.
+    allowList: (req) => req.url === '/api/health' || req.url.startsWith('/api/realtime/'),
   });
 
   app.setErrorHandler(async (err, req, reply) => {
@@ -80,9 +81,37 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
     reply.status(404).send({ error: { code: 'not_found', message: 'Route not found' } }),
   );
 
-  const live = (reply: FastifyReply) =>
-    reply.header('cache-control', 'public, max-age=5, stale-while-revalidate=30');
-  const cached = <T>(round: string, key: string, load: () => Promise<T>) => cache.get(round, key, load);
+  /**
+   * Data version per round = timestamp of the latest worker event this instance received.
+   * Clients add `?v=<version>` after each realtime event, so every reader asks for the same URL
+   * and a CDN can answer almost all of them. A versioned URL is cached long only when this
+   * instance already has that version; otherwise it could store stale data under a new key.
+   */
+  const versions = new Map<string, number>();
+  const live = (reply: FastifyReply) => {
+    const id = (reply.request.params as { id?: string } | undefined)?.id;
+    const v = Number((reply.request.query as { v?: string } | undefined)?.v);
+    const known = id ? (versions.get(id) ?? 0) : 0;
+    if (id) reply.header('x-data-version', String(known));
+    reply.header(
+      'cache-control',
+      v > 0 && v <= known
+        ? 'public, max-age=60, s-maxage=3600'
+        : 'public, max-age=3, s-maxage=3, stale-while-revalidate=30',
+    );
+  };
+  /** Sends a cached, pre-compressed body with its ETag (304 when the client already has it). */
+  const send = async (reply: FastifyReply, round: string, key: string, load: () => Promise<unknown>) => {
+    const entry = await cache.get(round, key, load);
+    reply
+      .header('etag', entry.etag)
+      .header('vary', 'accept-encoding')
+      .type('application/json; charset=utf-8');
+    if (reply.request.headers['if-none-match'] === entry.etag) return reply.status(304).send();
+    const { data, encoding } = entry.encoded(reply.request.headers['accept-encoding']);
+    if (encoding) reply.header('content-encoding', encoding);
+    return reply.send(data);
+  };
 
   app.get('/api/health', async () => {
     await sql`select 1`;
@@ -103,13 +132,13 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
 
   app.get('/api/elections', async (_req, reply) => {
     reply.header('cache-control', 'public, max-age=15');
-    return cached('*', 'elections', () => queries.listElections());
+    return send(reply, '*', 'elections', () => queries.listElections());
   });
 
   app.get('/api/elections/:id', async (req, reply) => {
     const { id } = roundParams.parse(req.params);
     live(reply);
-    return cached(id, 'round', async () => {
+    return send(reply, id, 'round', async () => {
       const { id: _internal, offices, ...round } = await queries.round(id);
       return { ...round, offices: offices.map(({ id: _o, ...o }) => o) };
     });
@@ -118,7 +147,7 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
   app.get('/api/elections/:id/overview', async (req, reply) => {
     const { id } = roundParams.parse(req.params);
     live(reply);
-    return cached(id, 'overview', () => queries.overview(id));
+    return send(reply, id, 'overview', () => queries.overview(id));
   });
 
   app.get('/api/elections/:id/results', async (req, reply) => {
@@ -134,34 +163,34 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
       })
       .parse(req.query);
     live(reply);
-    const result = await cached(id, `results:${q.office}:${q.area}:${q.limit}`, () =>
-      queries.result(id, q.office, q.area, q.limit ?? null),
-    );
-    if (!result) throw new NotFoundError('no results yet for this office and area');
-    return result;
+    return send(reply, id, `results:${q.office}:${q.area}:${q.limit}`, async () => {
+      const result = await queries.result(id, q.office, q.area, q.limit ?? null);
+      if (!result) throw new NotFoundError('no results yet for this office and area');
+      return result;
+    });
   });
 
   app.get('/api/elections/:id/states', async (req, reply) => {
     const { id } = roundParams.parse(req.params);
     live(reply);
-    return cached(id, 'states', () => queries.states(id));
+    return send(reply, id, 'states', () => queries.states(id));
   });
 
   app.get('/api/elections/:id/states/:uf', async (req, reply) => {
     const p = stateParams.parse(req.params);
     live(reply);
-    return cached(p.id, `state:${p.uf}`, () => queries.state(p.id, p.uf));
+    return send(reply, p.id, `state:${p.uf}`, () => queries.state(p.id, p.uf));
   });
 
   app.get('/api/elections/:id/states/:uf/results', async (req, reply) => {
     const p = stateParams.parse(req.params);
     const q = z.object({ office: slug.optional(), limit: limitQuery }).parse(req.query);
     live(reply);
-    const result = await cached(p.id, `results:${q.office}:${p.uf}:${q.limit}`, () =>
-      queries.result(p.id, q.office, p.uf.toLowerCase(), q.limit ?? null),
-    );
-    if (!result) throw new NotFoundError('no results yet for this office and state');
-    return result;
+    return send(reply, p.id, `results:${q.office}:${p.uf}:${q.limit}`, async () => {
+      const result = await queries.result(p.id, q.office, p.uf.toLowerCase(), q.limit ?? null);
+      if (!result) throw new NotFoundError('no results yet for this office and state');
+      return result;
+    });
   });
 
   app.get('/api/elections/:id/states/:uf/cities', async (req, reply) => {
@@ -177,13 +206,13 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
       })
       .parse(req.query);
     live(reply);
-    return cached(p.id, `cities:${p.uf}:${JSON.stringify(q)}`, () => queries.cities(p.id, p.uf, q));
+    return send(reply, p.id, `cities:${p.uf}:${JSON.stringify(q)}`, () => queries.cities(p.id, p.uf, q));
   });
 
   app.get('/api/elections/:id/states/:uf/cities/:city', async (req, reply) => {
     const p = cityParams.parse(req.params);
     live(reply);
-    return cached(p.id, `city:${p.uf}:${p.city}`, () => queries.city(p.id, p.uf, p.city));
+    return send(reply, p.id, `city:${p.uf}:${p.city}`, () => queries.city(p.id, p.uf, p.city));
   });
 
   app.get('/api/elections/:id/timeline', async (req, reply) => {
@@ -192,9 +221,9 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
     live(reply);
     if (q.at) {
       const at = new Date(q.at).toISOString();
-      return cached(id, `timeline-at:${at}`, () => queries.timelineAt(id, at));
+      return send(reply, id, `timeline-at:${at}`, () => queries.timelineAt(id, at));
     }
-    return cached(id, 'timeline', () => queries.timeline(id));
+    return send(reply, id, 'timeline', () => queries.timeline(id));
   });
 
   app.get('/api/elections/:id/series', async (req, reply) => {
@@ -209,13 +238,13 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
       })
       .parse(req.query);
     live(reply);
-    return cached(id, `series:${q.office}:${q.area}`, () => queries.series(id, q.office, q.area));
+    return send(reply, id, `series:${q.office}:${q.area}`, () => queries.series(id, q.office, q.area));
   });
 
   app.get('/api/elections/:id/operations', async (req, reply) => {
     const { id } = roundParams.parse(req.params);
     reply.header('cache-control', 'no-cache');
-    return cached(id, 'operations', () => queries.operations(id));
+    return send(reply, id, 'operations', () => queries.operations(id));
   });
 
   app.get('/api/elections/:id/events', async (req, reply) => {
@@ -227,14 +256,14 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
       })
       .parse(req.query);
     reply.header('cache-control', 'no-cache');
-    return cached(id, `events:${q.limit}:${q.before}`, () => queries.events(id, q.limit, q.before));
+    return send(reply, id, `events:${q.limit}:${q.before}`, () => queries.events(id, q.limit, q.before));
   });
 
   app.get('/api/elections/:id/search', async (req, reply) => {
     const { id } = roundParams.parse(req.params);
     const q = z.object({ q: z.string().trim().min(1).max(60) }).parse(req.query);
     reply.header('cache-control', 'public, max-age=30');
-    return cached(id, `search:${q.q.toLowerCase()}`, () => queries.search(id, q.q));
+    return send(reply, id, `search:${q.q.toLowerCase()}`, () => queries.search(id, q.q));
   });
 
   app.get('/api/elections/:id/compare', async (req, reply) => {
@@ -249,7 +278,7 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
       })
       .parse(req.query);
     live(reply);
-    return cached(id, `compare:${q.states.join(',')}:${q.office}`, () =>
+    return send(reply, id, `compare:${q.states.join(',')}:${q.office}`, () =>
       queries.compare(id, q.states, q.office),
     );
   });
@@ -271,7 +300,9 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
       res.end('retry: 30000\n\n');
       return;
     }
-    res.write(`retry: 5000\nevent: ready\ndata: {"electionId":"${id}"}\n\n`);
+    res.write(
+      `retry: 5000\nevent: ready\ndata: ${JSON.stringify({ electionId: id, version: versions.get(id) ?? 0 })}\n\n`,
+    );
   });
 
   /** Called for each NOTIFY from the worker. */
@@ -279,9 +310,14 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
     try {
       const event = JSON.parse(payload);
       if (typeof event?.electionId !== 'string') return;
+      const at = Date.parse(event.timestamp);
+      versions.set(
+        event.electionId,
+        Math.max(versions.get(event.electionId) ?? 0, Number.isFinite(at) ? at : Date.now()),
+      );
       cache.invalidate(event.electionId);
       cache.invalidate('*');
-      hub.broadcast(event);
+      hub.broadcast(event, versions.get(event.electionId)!);
     } catch (err) {
       app.log.warn({ err }, 'ignoring malformed event');
     }

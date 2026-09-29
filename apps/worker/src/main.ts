@@ -55,6 +55,7 @@ const collector = new Collector(provider, store, log, {
   cityResultOffices: env.CITY_RESULT_OFFICES,
   maxResultFetchesPerCycle: env.MAX_RESULT_FETCHES_PER_CYCLE,
   reconcileEvery: Math.max(1, Math.round(300 / env.TSE_POLL_INTERVAL)),
+  cityConcurrency: env.TSE_CONCURRENCY,
 });
 http.onRequest(collector.onRequest);
 
@@ -72,6 +73,7 @@ log.info(
 let stopping = false;
 const shutdown = async () => {
   stopping = true;
+  collector.stop();
   log.info('shutting down');
   await close();
   process.exit(0);
@@ -79,8 +81,11 @@ const shutdown = async () => {
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
-// Cycles never overlap: the next one starts TSE_POLL_INTERVAL seconds after the previous ends.
+// Background work (EA15, state deputies, municipal files) drains continuously; headline cycles
+// never overlap.
+void collector.drainCities();
 while (!stopping) {
+  const started = Date.now();
   try {
     await collector.runCycle();
   } catch (err) {
@@ -89,5 +94,9 @@ while (!stopping) {
     // Files fetched in the crashed cycle may not have been stored: download them again.
     provider.resetConditionalCache();
   }
-  await new Promise((r) => setTimeout(r, env.TSE_POLL_INTERVAL * 1000));
+  // Fixed rate: a cycle starts every TSE_POLL_INTERVAL seconds (or right away if the last one
+  // took longer), so detection latency does not grow with cycle duration.
+  await new Promise((r) =>
+    setTimeout(r, Math.max(250, env.TSE_POLL_INTERVAL * 1000 - (Date.now() - started))),
+  );
 }

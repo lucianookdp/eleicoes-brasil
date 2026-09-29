@@ -16,6 +16,8 @@ export type Fetched<T> = { changed: true; data: T; provenance: Provenance } | { 
 export interface ResultQuery {
   office: Office;
   area: AreaRef;
+  /** Background work (municipal files) yields to headline requests (Brazil, states). */
+  background?: boolean;
 }
 
 /**
@@ -32,7 +34,11 @@ export interface ElectionProvider {
   readonly version: string;
   getElectionConfig(): Promise<ElectionConfig>;
   getCountryProgress(electionCode: string): Promise<Fetched<CountryProgress>>;
-  getStateProgress(electionCode: string, state: StateCode): Promise<Fetched<StateProgress>>;
+  getStateProgress(
+    electionCode: string,
+    state: StateCode,
+    options?: { background?: boolean },
+  ): Promise<Fetched<StateProgress>>;
   getResult(query: ResultQuery): Promise<Fetched<AreaResult>>;
   getSections(state: StateCode): Promise<Fetched<CitySections[]>>;
   /** Forget conditional-request state so the next calls download everything again. */

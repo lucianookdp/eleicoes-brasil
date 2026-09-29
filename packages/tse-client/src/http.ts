@@ -26,21 +26,30 @@ export type HttpResult =
 
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-/** Minimal counting semaphore. */
-class Semaphore {
-  private waiting: (() => void)[] = [];
+export type Priority = 'high' | 'low';
+
+/**
+ * Counting semaphore with two queues: waiting "high" requests (Brazil, states) always go
+ * before waiting "low" ones (municipalities), so a long city backlog never delays the headline.
+ */
+class PrioritySemaphore {
+  private high: (() => void)[] = [];
+  private low: (() => void)[] = [];
   constructor(private available: number) {}
-  async acquire() {
+  async acquire(priority: Priority) {
     if (this.available > 0) {
       this.available--;
       return;
     }
-    await new Promise<void>((r) => this.waiting.push(r));
+    await new Promise<void>((r) => (priority === 'high' ? this.high : this.low).push(r));
   }
   release() {
-    const next = this.waiting.shift();
+    const next = this.high.shift() ?? this.low.shift();
     if (next) next();
     else this.available++;
+  }
+  get waiting() {
+    return { high: this.high.length, low: this.low.length };
   }
 }
 
@@ -121,7 +130,7 @@ class HttpStatusError extends Error {
  */
 export class TseHttpClient {
   private readonly validators = new Map<string, { etag: string | null; lastModified: string | null }>();
-  private readonly semaphore: Semaphore;
+  private readonly semaphore: PrioritySemaphore;
   private readonly limiter: RateLimiter;
   private readonly breaker: CircuitBreaker;
   private readonly fetchImpl: typeof fetch;
@@ -133,7 +142,7 @@ export class TseHttpClient {
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.sleep = options.sleep ?? defaultSleep;
     this.now = options.now ?? Date.now;
-    this.semaphore = new Semaphore(options.concurrency);
+    this.semaphore = new PrioritySemaphore(options.concurrency);
     this.limiter = new RateLimiter(1000 / options.requestsPerSecond, this.now, this.sleep);
     this.breaker = new CircuitBreaker(this.now);
   }
@@ -151,12 +160,17 @@ export class TseHttpClient {
     this.validators.clear();
   }
 
-  async get(url: string, { conditional = true } = {}): Promise<HttpResult> {
+  /** Requests waiting for a slot, by priority (exposed for metrics). */
+  get queue() {
+    return this.semaphore.waiting;
+  }
+
+  async get(url: string, { conditional = true, priority = 'high' as Priority } = {}): Promise<HttpResult> {
     let attempt = 0;
     for (;;) {
       this.breaker.check(url);
       try {
-        return await this.once(url, conditional);
+        return await this.once(url, conditional, priority);
       } catch (err) {
         if (err instanceof ProviderNotFoundError) throw err;
         const status = err instanceof HttpStatusError ? err.status : null;
@@ -175,12 +189,14 @@ export class TseHttpClient {
     }
   }
 
-  private async once(url: string, conditional: boolean): Promise<HttpResult> {
-    await this.semaphore.acquire();
-    const started = this.now();
+  private async once(url: string, conditional: boolean, priority: Priority): Promise<HttpResult> {
+    await this.semaphore.acquire(priority);
+    let started = this.now();
     let status: number | null = null;
     try {
       await this.limiter.take();
+      // Latency is the source's response time, not the time spent in our own rate limiter.
+      started = this.now();
       const headers: Record<string, string> = {
         'user-agent': this.options.userAgent ?? 'eleicoes-brasil-collector/1.0',
         'accept-encoding': 'gzip, br',

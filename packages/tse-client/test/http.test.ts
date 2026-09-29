@@ -71,3 +71,38 @@ describe('TseHttpClient', () => {
     expect(waits.filter((w) => w > 0)).toEqual([100, 100]);
   });
 });
+
+describe('TseHttpClient priorities', () => {
+  it('serves waiting high-priority requests before low-priority ones', async () => {
+    const order: string[] = [];
+    const gates: (() => void)[] = [];
+    const fetchImpl = ((url: string) =>
+      new Promise<Response>((resolve) => {
+        order.push(url);
+        gates.push(() => resolve(new Response('{}')));
+      })) as unknown as typeof fetch;
+    const http = new TseHttpClient({
+      requestsPerSecond: 1000,
+      concurrency: 1,
+      timeoutMs: 1000,
+      maxRetries: 0,
+      fetchImpl,
+    });
+    const first = http.get('https://x/busy', { priority: 'low' });
+    const lows = [1, 2, 3].map((i) => http.get(`https://x/city-${i}`, { priority: 'low' }));
+    const high = http.get('https://x/brazil', { priority: 'high' });
+    await new Promise((r) => setTimeout(r, 5));
+    while (gates.length) {
+      gates.shift()!();
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    await Promise.all([first, high, ...lows]);
+    expect(order).toEqual([
+      'https://x/busy',
+      'https://x/brazil',
+      'https://x/city-1',
+      'https://x/city-2',
+      'https://x/city-3',
+    ]);
+  });
+});

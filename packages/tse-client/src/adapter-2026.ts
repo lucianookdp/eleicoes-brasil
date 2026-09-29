@@ -30,7 +30,7 @@ import {
   slugify,
 } from '@eleicoes/election-core';
 import type { z } from 'zod';
-import type { TseHttpClient } from './http';
+import type { Priority, TseHttpClient } from './http';
 import {
   type CityConfigFile,
   cityConfigFileSchema,
@@ -237,31 +237,45 @@ export class TSEAdapter2026 implements ElectionProvider {
     });
   }
 
-  async getStateProgress(electionCode: string, state: StateCode): Promise<Fetched<StateProgress>> {
+  async getStateProgress(
+    electionCode: string,
+    state: StateCode,
+    { background = false }: { background?: boolean } = {},
+  ): Promise<Fetched<StateProgress>> {
     const ctx = await this.ctx();
     const uf = state.toLowerCase();
     const url = `${this.dir(ctx, 'ab', electionCode, uf)}/${uf}-e${pad(electionCode, 6)}-ab.json`;
-    return this.fetch(url, progressFileSchema, (file) => {
-      let progress: CountingProgress | null = null;
-      const cities: AreaProgressEntry[] = [];
-      for (const entry of file.abr) {
-        if (entry.tpabr === 'uf') progress = toProgress(entry);
-        // The spec uses both "mu" and "mun" for municipality entries.
-        else if (entry.tpabr === 'mu' || entry.tpabr === 'mun') {
-          cities.push({ area: area.city(state, String(entry.cdabr)), progress: toProgress(entry) });
+    return this.fetch(
+      url,
+      progressFileSchema,
+      (file) => {
+        let progress: CountingProgress | null = null;
+        const cities: AreaProgressEntry[] = [];
+        for (const entry of file.abr) {
+          if (entry.tpabr === 'uf') progress = toProgress(entry);
+          // The spec uses both "mu" and "mun" for municipality entries.
+          else if (entry.tpabr === 'mu' || entry.tpabr === 'mun') {
+            cities.push({ area: area.city(state, String(entry.cdabr)), progress: toProgress(entry) });
+          }
         }
-      }
-      if (!progress) throw new ProviderPayloadError('EA15 without a "uf" entry', url, null);
-      return { state, progress, cities };
-    });
+        if (!progress) throw new ProviderPayloadError('EA15 without a "uf" entry', url, null);
+        return { state, progress, cities };
+      },
+      background ? 'low' : 'high',
+    );
   }
 
   // ---------------------------------------------------------------- results (EA20)
 
-  async getResult({ office, area: target }: ResultQuery): Promise<Fetched<AreaResult>> {
+  async getResult({ office, area: target, background }: ResultQuery): Promise<Fetched<AreaResult>> {
     const ctx = await this.ctx();
     const url = this.resultUrl(ctx, office, target);
-    return this.fetch(url, resultFileSchema, (file) => this.toResult(file, office, target, url));
+    return this.fetch(
+      url,
+      resultFileSchema,
+      (file) => this.toResult(file, office, target, url),
+      background ? 'low' : 'high',
+    );
   }
 
   private resultUrl(ctx: Context, office: Office, target: AreaRef): string {
@@ -408,8 +422,9 @@ export class TSEAdapter2026 implements ElectionProvider {
     url: string,
     schema: S,
     map: (file: z.infer<S>) => T,
+    priority: Priority = 'high',
   ): Promise<Fetched<T>> {
-    const res = await this.http.get(url);
+    const res = await this.http.get(url, { priority });
     if (res.notModified) return { changed: false };
     const file = this.parse(schema, res.body, url);
     const data = map(file);

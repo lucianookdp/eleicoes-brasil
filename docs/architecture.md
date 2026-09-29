@@ -2,24 +2,60 @@
 
 Complementa o [ARCHITECTURE.md](../ARCHITECTURE.md) com o que acontece em tempo de execução.
 
-## Ciclo do coletor
+## Coletor: dois ritmos
 
-Um ciclo começa `TSE_POLL_INTERVAL` segundos depois do anterior terminar (ciclos nunca se
-sobrepõem). Cada ciclo tem um `cycleId` presente em todos os logs.
+O coletor divide o limite de requisições do TSE entre dois trabalhos:
+
+**Ciclo rápido** (a cada `TSE_POLL_INTERVAL`, padrão 5 s, em ritmo fixo; ciclos nunca se
+sobrepõem). Prioridade alta no cliente HTTP.
 
 ```
 1. ele-c.json (condicional)            → configuração; sincroniza cargos e municípios na 1ª vez
 2. EA14 de cada eleição do pleito      → quais UFs mudaram (assinatura: status | dt/ht | seções)
-3. EA15 das UFs que mudaram            → quais municípios mudaram
-4. fila de resultados (cargo × área)   → Brasil, depois UFs, depois capitais, depois o resto
-5. EA20 dos itens da fila, até MAX_RESULT_FETCHES_PER_CYCLE; o restante fica para o próximo ciclo
-6. grava estado atual, snapshots e eventos; NOTIFY para a API
-7. registra métricas do ciclo (requisições, 200/304/404/erros, latência média e p95)
+3. EA20 do Brasil e dos cargos majoritários das UFs que mudaram
+   (Presidente primeiro, depois Governador, depois Senador)
+4. EA15 das UFs que mudaram            → vai para a fila de fundo
 ```
 
-A cada ~5 minutos, uma **reconciliação** recoloca na fila todos os arquivos de Brasil e UFs
-(requisições condicionais, quase sempre 304). Isso cobre o caso descrito pelo TSE em que um EA20
-muda depois de o EA14 correspondente já ter sido lido.
+Cada dado é anunciado (`NOTIFY`) **assim que é gravado**, sem esperar o fim do ciclo.
+
+**Fila de fundo** (contínua, prioridade baixa): leituras de EA15 (descobrem municípios que
+mudaram), deputados por UF, capitais e demais municípios, nessa ordem. Itens repetidos para o
+mesmo arquivo se fundem, então a fila nunca passa do número de arquivos distintos.
+
+A cada ~5 minutos, uma **reconciliação** recoloca Brasil e UFs na fila (requisições condicionais,
+quase sempre 304), porque o TSE gera os arquivos em paralelo e um EA20 pode mudar depois do EA14.
+
+## Desempenho medido
+
+Medições em um notebook (Apple Silicon), modo demo no **pior caso** (todos os 27 estados e
+208 municípios mudando a cada 10 s), coletor a 20 req/s:
+
+| O quê | Resultado |
+| --- | --- |
+| Arquivo gerado na fonte → gravado no banco, Presidente/Brasil | média 3,8 s, máx 5,7 s |
+| Idem, Governador/Senador por UF | média 4,9–6,3 s |
+| NOTIFY → primeiro navegador (SSE) | ~90 ms |
+| 2.273 conexões SSE simultâneas: diferença entre o 1º e o último a receber | média 42 ms, máx 94 ms |
+| API, `/overview` comprimido (4,5 KB), 200 conexões | 30.247 req/s por processo, p99 13 ms |
+
+Com intervalo de 5 s, o piso teórico de detecção é ~2,5 s em média; o restante é o tempo de
+buscar o arquivo. O painel **Ao vivo** mostra esse atraso em tempo real (“Atraso entre o TSE
+publicar e o dado estar aqui”).
+
+## Muitos leitores ao mesmo tempo
+
+- **Respostas prontas**: cada resposta é serializada e comprimida (Brotli/gzip) **uma vez por
+  atualização**, com ETag; revalidações sem mudança recebem 304.
+- **URLs versionadas**: cada evento traz a versão dos dados; o navegador pede `…?v=<versão>`.
+  Todos os leitores pedem a mesma URL, então um CDN responde quase tudo. A API só permite cache
+  longo de uma versão que ela já conhece (evita guardar dado velho sob chave nova).
+- **Eventos agrupados**: a API junta os eventos de cada rodada a cada 500 ms em um único quadro
+  SSE, sem repetição por área.
+- **Espalhamento**: cada navegador espera 0,25–1,25 s (aleatório) antes de buscar, para que
+  milhares não cheguem no mesmo milissegundo.
+- **Limite por IP generoso** (6.000/min) e a conexão ao vivo fora dele: operadoras móveis põem
+  milhares de pessoas atrás do mesmo IP.
 
 ## Cliente HTTP
 

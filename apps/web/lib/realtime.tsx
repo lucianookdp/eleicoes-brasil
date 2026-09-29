@@ -3,7 +3,7 @@
 import type { RealtimeEvent } from '@eleicoes/election-core';
 import { useQueryClient } from '@tanstack/react-query';
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from 'react';
-import { API_URL } from './api';
+import { API_URL, setDataVersion } from './api';
 
 export type ConnectionState = 'connecting' | 'live' | 'reconnecting' | 'offline';
 
@@ -31,8 +31,10 @@ export function RealtimeProvider({ roundSlug, children }: { roundSlug: string; c
   useEffect(() => {
     const source = new EventSource(`${API_URL}/api/realtime/elections/${roundSlug}`);
     const pending = new Set<string>();
+    let version = 0;
     const flush = () => {
       timer.current = null;
+      setDataVersion(roundSlug, version);
       client.invalidateQueries({ queryKey: [roundSlug] });
       const now = Date.now();
       setRecent((prev) => {
@@ -42,29 +44,30 @@ export function RealtimeProvider({ roundSlug, children }: { roundSlug: string; c
         return next;
       });
     };
-    const onEvent = (e: MessageEvent<string>) => {
+    source.addEventListener('ready', ((e: MessageEvent<string>) => {
+      try {
+        version = (JSON.parse(e.data) as { version?: number }).version ?? 0;
+        setDataVersion(roundSlug, version);
+      } catch {}
+    }) as EventListener);
+    // One frame per update, with every area that changed. The refetch is spread over ~1 s so
+    // thousands of readers do not hit the API in the same millisecond.
+    source.addEventListener('batch', ((e: MessageEvent<string>) => {
       setLastEventAt(Date.now());
       try {
-        const event = JSON.parse(e.data) as RealtimeEvent;
-        if (event.areaKey) pending.add(event.areaKey);
-        if (event.state) pending.add(event.state.toLowerCase());
+        const batch = JSON.parse(e.data) as { version: number; events: RealtimeEvent[] };
+        version = Math.max(version, batch.version);
+        for (const event of batch.events) {
+          if (event.areaKey) pending.add(event.areaKey);
+          if (event.state) pending.add(event.state.toLowerCase());
+        }
       } catch {
-        // Heartbeats and malformed frames are ignored.
+        return;
       }
-      if (!timer.current) timer.current = setTimeout(flush, 800);
-    };
+      if (!timer.current) timer.current = setTimeout(flush, 250 + Math.random() * 1000);
+    }) as EventListener);
     source.onopen = () => setConnection(navigator.onLine ? 'live' : 'offline');
     source.onerror = () => setConnection(navigator.onLine ? 'reconnecting' : 'offline');
-    for (const type of [
-      'country.updated',
-      'state.updated',
-      'city.updated',
-      'result.updated',
-      'counting.updated',
-      'ingestion.status',
-    ]) {
-      source.addEventListener(type, onEvent as EventListener);
-    }
     const offline = () => setConnection('offline');
     const online = () => setConnection('reconnecting');
     window.addEventListener('offline', offline);

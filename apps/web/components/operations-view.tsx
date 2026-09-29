@@ -43,7 +43,7 @@ const STATE_LABEL: Record<IngestionStatus['state'], { label: string; cls: string
  * talking to the source, and how fresh each area is.
  */
 export function OperationsView() {
-  const { round } = useRound();
+  const { round, meta } = useRound();
   const { data, error, refetch } = useOperations(round.slug);
   const now = useNow();
   if (!data)
@@ -82,15 +82,30 @@ export function OperationsView() {
         <SectionTitle id="ritmo" title="Ritmo da apuração">
           Média dos últimos 5 minutos.
         </SectionTitle>
+        <div className="mb-3 rounded-xl border border-line bg-surface px-4 py-3">
+          <p className="text-[13px] text-muted">
+            Atraso entre o TSE publicar e o dado estar aqui (Brasil e estados, últimos 15 min)
+          </p>
+          <p className="numeral text-[28px] leading-tight">
+            {data.delay.avgSeconds != null
+              ? `${data.delay.avgSeconds.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} s`
+              : '—'}
+            <span className="ml-3 text-[14px] font-normal text-muted">
+              {data.delay.p95Seconds != null
+                ? `95% em até ${data.delay.p95Seconds.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} s · ${data.delay.samples} atualizações`
+                : 'sem atualizações recentes'}
+            </span>
+          </p>
+        </div>
         <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Tile label="Seções por minuto" value={fmtInt(Math.round(data.processing.sectionsPerMinute))} />
           <Tile label="Votos por minuto" value={fmtCompact(data.processing.votesPerMinute)} />
           <Tile
-            label="Estados atualizados por minuto"
+            label="Atualizações de estados por minuto"
             value={data.processing.statesPerMinute.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}
           />
           <Tile
-            label="Municípios atualizados por minuto"
+            label="Atualizações de municípios por minuto"
             value={data.processing.citiesPerMinute.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}
           />
         </dl>
@@ -113,33 +128,39 @@ export function OperationsView() {
         </section>
       </div>
 
-      <section aria-labelledby="coleta" className="mb-8">
-        <SectionTitle id="coleta" title="Coleta">
-          Requisições do nosso coletor aos arquivos públicos do TSE nos últimos {data.requests.windowMinutes}{' '}
-          minutos.
-        </SectionTitle>
-        <dl className="mb-4 grid grid-cols-3 gap-3 lg:grid-cols-6">
-          <Tile label="Requisições" value={fmtInt(data.requests.total)} />
-          <Tile label="HTTP 200" value={fmtInt(data.requests.ok)} />
-          <Tile label="HTTP 304" value={fmtInt(data.requests.notModified)} detail="sem mudança" />
-          <Tile
-            label="Erros"
-            value={fmtInt(data.requests.errors)}
-            tone={data.requests.errors > 0 ? 'bad' : undefined}
-          />
-          <Tile
-            label="Latência média"
-            value={data.requests.avgLatencyMs != null ? `${Math.round(data.requests.avgLatencyMs)} ms` : '—'}
-          />
-          <Tile
-            label="Latência p95"
-            value={data.requests.p95LatencyMs != null ? `${Math.round(data.requests.p95LatencyMs)} ms` : '—'}
-          />
-        </dl>
-        <Panel className="p-3 sm:p-4">
-          <Cycles cycles={data.cycles} />
-        </Panel>
-      </section>
+      {meta?.features.advancedOperations !== false && (
+        <section aria-labelledby="coleta" className="mb-8">
+          <SectionTitle id="coleta" title="Coleta">
+            Requisições do nosso coletor aos arquivos públicos do TSE nos últimos{' '}
+            {data.requests.windowMinutes} minutos.
+          </SectionTitle>
+          <dl className="mb-4 grid grid-cols-3 gap-3 lg:grid-cols-6">
+            <Tile label="Requisições" value={fmtInt(data.requests.total)} />
+            <Tile label="HTTP 200" value={fmtInt(data.requests.ok)} />
+            <Tile label="HTTP 304" value={fmtInt(data.requests.notModified)} detail="sem mudança" />
+            <Tile
+              label="Erros"
+              value={fmtInt(data.requests.errors)}
+              tone={data.requests.errors > 0 ? 'bad' : undefined}
+            />
+            <Tile
+              label="Latência média"
+              value={
+                data.requests.avgLatencyMs != null ? `${Math.round(data.requests.avgLatencyMs)} ms` : '—'
+              }
+            />
+            <Tile
+              label="Latência p95"
+              value={
+                data.requests.p95LatencyMs != null ? `${Math.round(data.requests.p95LatencyMs)} ms` : '—'
+              }
+            />
+          </dl>
+          <Panel className="p-3 sm:p-4">
+            <Cycles cycles={data.cycles} />
+          </Panel>
+        </section>
+      )}
 
       <section aria-labelledby="frescor">
         <SectionTitle id="frescor" title="Frescor dos dados">

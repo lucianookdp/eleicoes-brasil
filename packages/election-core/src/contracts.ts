@@ -215,6 +215,11 @@ export interface OperationsDTO {
     avgLatencyMs: number | null;
     p95LatencyMs: number | null;
   };
+  /**
+   * Time between the TSE generating a Brazil/state result file and our collector storing it,
+   * over the last 15 minutes. The number that says how "live" the live view is.
+   */
+  delay: { avgSeconds: number | null; p95Seconds: number | null; samples: number };
   freshness: { areaKey: string; name: string; updatedAt: string | null; totalizedAt: string | null }[];
   heat: { uf: string; sections: number; votes: number; updates: number }[];
   cycles: CycleDTO[];
@@ -283,5 +288,7 @@ export interface RealtimeEvent {
     votesAdded?: number | null;
     countedPct?: number | null;
     status?: string;
+    /** Number of areas updated (aggregated city events). */
+    count?: number;
   };
 }

@@ -13,7 +13,7 @@ import { EmptyState, ErrorNotice, Panel, SectionTitle, Skeleton } from './ui';
 
 /** "Como estava a eleição às 19:32?" — pick a moment and see the count as it was. */
 export function HistoryView() {
-  const { round, elections, href } = useRound();
+  const { round, elections, href, meta } = useRound();
   const timeline = useTimeline(round.slug);
   const overview = useOverview(round.slug);
   const office = overview.data?.round.offices.find((o) => o.scope === 'country');
@@ -181,31 +181,33 @@ export function HistoryView() {
         </>
       )}
 
-      <section aria-labelledby="replay" className="max-w-2xl">
-        <SectionTitle id="replay" title="Modo replay" />
-        <p className="text-[14px] text-ink-2">
-          Uma apuração gravada pode ser reproduzida como se estivesse acontecendo de novo, em velocidade
-          acelerada, com o comando{' '}
-          <code className="rounded bg-surface-2 px-1 font-mono text-[13px]">
-            pnpm replay --election {round.slug} --speed 10
-          </code>
-          .
-        </p>
-        {replays.length > 0 && (
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {replays.map((r) => (
-              <li key={r.slug}>
-                <Link
-                  href={`/elections/${r.electionSlug}?turno=${r.round}`}
-                  className="inline-flex min-h-10 items-center rounded-lg border border-line px-3 text-[14px] hover:border-line-strong"
-                >
-                  Abrir replay do {r.round}º turno
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {meta?.features.replay !== false && (
+        <section aria-labelledby="replay" className="max-w-2xl">
+          <SectionTitle id="replay" title="Modo replay" />
+          <p className="text-[14px] text-ink-2">
+            Uma apuração gravada pode ser reproduzida como se estivesse acontecendo de novo, em velocidade
+            acelerada, com o comando{' '}
+            <code className="rounded bg-surface-2 px-1 font-mono text-[13px]">
+              pnpm replay --election {round.slug} --speed 10
+            </code>
+            .
+          </p>
+          {replays.length > 0 && (
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {replays.map((r) => (
+                <li key={r.slug}>
+                  <Link
+                    href={`/elections/${r.electionSlug}?turno=${r.round}`}
+                    className="inline-flex min-h-10 items-center rounded-lg border border-line px-3 text-[14px] hover:border-line-strong"
+                  >
+                    Abrir replay do {r.round}º turno
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
     </>
   );
 }

@@ -183,4 +183,34 @@ suite('API (integration)', () => {
     const fresh = (await built.app.inject('/api/elections/test-1/overview')).json();
     expect(fresh.progress.countedPct).toBe(55);
   });
+
+  it('serves pre-compressed bodies with an ETag and answers 304 to revalidation', async () => {
+    const first = await built.app.inject({
+      url: '/api/elections/test-1/overview',
+      headers: { 'accept-encoding': 'br' },
+    });
+    expect(first.headers['content-encoding']).toBe('br');
+    const etag = first.headers.etag as string;
+    expect(etag).toBeTruthy();
+    const again = await built.app.inject({
+      url: '/api/elections/test-1/overview',
+      headers: { 'if-none-match': etag },
+    });
+    expect(again.statusCode).toBe(304);
+  });
+
+  it('caches versioned URLs long only once the instance has that version', async () => {
+    const future = Date.now() + 60_000;
+    const early = await built.app.inject(`/api/elections/test-1/overview?v=${future}`);
+    expect(early.headers['cache-control']).toContain('max-age=3');
+    built.onEvent(
+      JSON.stringify({
+        type: 'country.updated',
+        electionId: 'test-1',
+        timestamp: new Date(future).toISOString(),
+      }),
+    );
+    const late = await built.app.inject(`/api/elections/test-1/overview?v=${future}`);
+    expect(late.headers['cache-control']).toContain('s-maxage=3600');
+  });
 });

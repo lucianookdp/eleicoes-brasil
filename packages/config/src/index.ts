@@ -31,16 +31,16 @@ export const workerEnvSchema = z.object({
   TSE_BASE_URL: z.string().url().optional(),
   TSE_REQUESTS_PER_SECOND: z.coerce.number().positive().max(80).default(20),
   TSE_CONCURRENCY: z.coerce.number().int().positive().max(32).default(8),
-  /** Seconds between collector cycles. */
-  TSE_POLL_INTERVAL: z.coerce.number().positive().default(15),
+  /** Seconds between headline cycles (Brazil + states). Municipal files drain continuously. */
+  TSE_POLL_INTERVAL: z.coerce.number().positive().default(5),
   TSE_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
   TSE_MAX_RETRIES: z.coerce.number().int().min(0).max(8).default(3),
   /** Fetch per-municipality result files (EA20 "mu"). The largest share of requests. */
   COLLECT_CITY_RESULTS: bool.default(true),
   /** "all" or "majoritarian": proportional offices at city level are large files. */
   CITY_RESULT_OFFICES: z.enum(['all', 'majoritarian']).default('all'),
-  /** Upper bound of result files fetched per cycle, so one cycle never starves the next. */
-  MAX_RESULT_FETCHES_PER_CYCLE: z.coerce.number().int().positive().default(600),
+  /** Upper bound of Brazil/state result files per headline cycle. */
+  MAX_RESULT_FETCHES_PER_CYCLE: z.coerce.number().int().positive().default(400),
   /** REPLAY mode: playback speed multiplier (10 = ten times faster than it happened). */
   REPLAY_SPEED: z.coerce.number().positive().default(10),
   /** Port for the local fictitious TSE server used by `pnpm dev:demo`. */
@@ -57,7 +57,11 @@ export const apiEnvSchema = z.object({
   PORT: z.coerce.number().int().default(4000),
   /** Comma-separated list of allowed browser origins. */
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
-  API_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(600),
+  /**
+   * Per IP. Generous on purpose: Brazilian mobile carriers put thousands of people behind one
+   * IP (CGNAT). Abuse protection belongs mostly to the CDN in front of the API.
+   */
+  API_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(6000),
   /** Seconds the in-memory cache may serve current data without a NOTIFY. Safety net only. */
   CACHE_TTL_SECONDS: z.coerce.number().positive().default(10),
 });

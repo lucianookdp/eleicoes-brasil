@@ -114,8 +114,17 @@ const NAV = [
   { path: '/states', label: 'Estados', icon: IconStates },
   { path: '/operations', label: 'Ao vivo', icon: IconPulse },
   { path: '/historico', label: 'Histórico', icon: IconHistory },
-  { path: '/compare', label: 'Comparar', icon: IconCompare },
+  { path: '/compare', label: 'Comparar', icon: IconCompare, flag: 'comparison' as const },
 ];
+
+/** Hides sections switched off by feature flags (ENABLE_* on the API). */
+function useNav() {
+  const { meta } = useRound();
+  return NAV.filter((n) => {
+    const flag = 'flag' in n ? n.flag : undefined;
+    return !flag || meta?.features[flag] !== false;
+  });
+}
 
 function useActive() {
   const pathname = usePathname();
@@ -126,6 +135,7 @@ function useActive() {
 
 function Header({ onSearch }: { onSearch: () => void }) {
   const { round, href } = useRound();
+  const nav = useNav();
   const active = useActive();
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-ground/90 backdrop-blur supports-[backdrop-filter]:bg-ground/75">
@@ -140,7 +150,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
         </Link>
         <ElectionSwitcher />
         <nav aria-label="Seções" className="ml-2 hidden items-center gap-1 lg:flex">
-          {NAV.map((n) => (
+          {nav.map((n) => (
             <Link
               key={n.path}
               href={href(n.path)}
@@ -277,7 +287,7 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
 }
 
 function BottomNav({ onSearch }: { onSearch: () => void }) {
-  const { href } = useRound();
+  const { href, meta } = useRound();
   const active = useActive();
   const [more, setMore] = useState(false);
   const item =
@@ -336,7 +346,9 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             <ul className="grid gap-1">
               {[
                 { to: href('/historico'), label: 'Histórico da apuração', icon: IconHistory },
-                { to: href('/compare'), label: 'Comparar estados', icon: IconCompare },
+                ...(meta?.features.comparison === false
+                  ? []
+                  : [{ to: href('/compare'), label: 'Comparar estados', icon: IconCompare }]),
                 { to: `${href()}#favoritos`, label: 'Favoritos', icon: IconStar },
                 { to: '/como-funciona', label: 'Como funciona', icon: IconPulse },
                 { to: '/sobre', label: 'Sobre os dados', icon: IconInfo },

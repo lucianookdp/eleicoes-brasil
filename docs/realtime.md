@@ -11,6 +11,19 @@ worker ──NOTIFY election_events──▶ PostgreSQL ──LISTEN──▶ AP
 `GET /api/realtime/elections/:roundId` — `text/event-stream`. Ao conectar, o servidor envia
 `retry: 5000` e um evento `ready`. Um comentário `: ping` a cada 25 s mantém proxies abertos.
 
+## Quadros
+
+A API agrupa os eventos de cada rodada a cada 500 ms e envia **um** quadro:
+
+```
+event: batch
+data: {"version":1790657940008,"events":[{"type":"state.updated","state":"SP",...}, ...]}
+```
+
+`version` é o horário (ms) do evento mais recente; o navegador passa a pedir `?v=<version>` (ver
+[architecture.md](architecture.md#muitos-leitores-ao-mesmo-tempo)). Ao conectar, o quadro `ready`
+já traz a versão atual.
+
 ## Eventos
 
 | Tipo | Quando |
@@ -38,8 +51,9 @@ Payload (sempre < 8 KB, limite do NOTIFY):
 ## No navegador
 
 `RealtimeProvider` ([realtime.tsx](../apps/web/lib/realtime.tsx)) abre um `EventSource` por
-rodada. Cada evento marca a área como “atualizada agora” (destaque visual por 3 s) e agenda uma
-invalidação das consultas TanStack Query da rodada (chaves começam com o slug). O servidor não
+rodada. Cada quadro marca as áreas como “atualizadas agora” (destaque visual por 3 s) e agenda,
+após 0,25–1,25 s aleatórios, a troca de versão e a invalidação das consultas TanStack Query da
+rodada (chaves começam com o slug). O servidor não
 empurra documentos inteiros: cada tela busca só o que exibe, e o cache da API já foi invalidado.
 
 Estados de conexão exibidos no cabeçalho: “Ao vivo”, “Reconectando”, “Offline” (com o horário da

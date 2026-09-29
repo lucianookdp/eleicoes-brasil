@@ -676,7 +676,7 @@ export class Queries {
 
   async operations(slug: string): Promise<OperationsDTO> {
     const round = await this.round(slug);
-    const [ingestion, [rates], [req], freshness, heat, cycles, events] = await Promise.all([
+    const [ingestion, [rates], [req], freshness, heat, cycles, events, [delay]] = await Promise.all([
       this.ingestion(round.id, round.status),
       this.sql<{ sections: number; votes: number; states: number; cities: number }[]>`
         select coalesce(sum(sections_added) filter (where type = 'country.updated'), 0)::float8 / 5 as sections,
@@ -715,6 +715,14 @@ export class Queries {
                requests, ok, not_modified as "notModified", errors, p95_latency_ms as "p95LatencyMs", status
         from collector_cycles where round_id = ${round.id} order by started_at desc limit 40`,
       this.eventRows(round.id, 60),
+      this.sql<{ avg: number | null; p95: number | null; samples: number }[]>`
+        select avg(d)::float8 as avg, percentile_cont(0.95) within group (order by d) as p95, count(*)::int as samples
+        from (
+          select extract(epoch from ((provenance->>'retrievedAt')::timestamptz - (provenance->>'sourceGeneratedAt')::timestamptz)) as d
+          from result_snapshots
+          where round_id = ${round.id} and area_type in ('country', 'state')
+            and captured_at > now() - interval '15 minutes' and provenance->>'sourceGeneratedAt' is not null
+        ) x where d >= 0`,
     ]);
     const fresh = new Map(freshness.map((f) => [f.areaKey, f]));
     return {
@@ -734,6 +742,7 @@ export class Queries {
         avgLatencyMs: req?.avg ?? null,
         p95LatencyMs: req?.p95 ?? null,
       },
+      delay: { avgSeconds: delay?.avg ?? null, p95Seconds: delay?.p95 ?? null, samples: delay?.samples ?? 0 },
       freshness: [
         { key: 'br', name: 'Brasil' },
         ...DOMESTIC_STATES.map((s) => ({ key: s.code.toLowerCase(), name: s.name })),
