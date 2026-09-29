@@ -13,6 +13,7 @@ import {
   DOMESTIC_STATES,
   type ElectionSummary,
   getState,
+  hasValidVotes,
   type IngestionStatus,
   type LeaderDTO,
   type OfficeInfo,
@@ -25,6 +26,7 @@ import {
   type ResultDTO,
   type RoundDetail,
   rankCandidates,
+  rankForDisplay,
   type SearchHitDTO,
   type SeriesDTO,
   STATES,
@@ -224,11 +226,19 @@ export class Queries {
     const cached = this.colorCache.get(key);
     if (cached) return cached;
     const [row] = await this.sql<
-      { candidates: { key: string; votes: number; number: string; party: { abbreviation: string } }[] }[]
+      {
+        candidates: {
+          key: string;
+          votes: number;
+          number: string;
+          voteDestination: string | null;
+          party: { abbreviation: string };
+        }[];
+      }[]
     >`
       select result->'candidates' as candidates from area_results
       where round_id = ${round.id} and office_id = ${office.id} and area_key = ${home}`;
-    const map = assignColors(rankCandidates(row?.candidates ?? []));
+    const map = assignColors(rankForDisplay(row?.candidates ?? []));
     // Kept for the life of the process so a candidate never changes colour mid-count.
     if (map.size > 0) this.colorCache.set(key, map);
     return map;
@@ -243,7 +253,7 @@ export class Queries {
   ): Promise<ResultDTO> {
     const a = parseAreaKey(row.areaKey)!;
     const colors = await this.colorsFor(round, office, a.state);
-    const ranked = rankCandidates(row.result.candidates);
+    const ranked = rankForDisplay(row.result.candidates);
     const deltas = candidateDeltas(
       row.previousCandidates,
       ranked.map((c) => [c.key, c.votes, c.percent]),
@@ -370,7 +380,9 @@ export class Queries {
         }[]
       >`
         select area_key as "areaKey",
-               (select c from jsonb_array_elements(result->'candidates') c order by (c->>'votes')::bigint desc limit 1) as top
+               (select c from jsonb_array_elements(result->'candidates') c
+                where coalesce(c->>'voteDestination', 'Válido') ilike 'v_lido%'
+                order by (c->>'votes')::bigint desc limit 1) as top
         from area_results where round_id = ${round.id} and office_id = ${headlineOffice.id} and area_type = 'state'`;
       for (const r of rows) {
         if (!r.top || r.top.votes === 0) continue;
@@ -549,7 +561,12 @@ export class Queries {
       const names = new Map((current?.result.candidates ?? []).map((c) => [c.key, c]));
       for (const s of snaps) {
         if (!s.candidates) continue;
-        const top = [...s.candidates].sort((x, y) => y[1] - x[1])[0];
+        const top = [...s.candidates]
+          .filter((c) => {
+            const k = names.get(c[0]);
+            return !k || hasValidVotes(k);
+          })
+          .sort((x, y) => y[1] - x[1])[0];
         const cand = top && names.get(top[0]);
         if (s.areaKey !== 'br' && cand && top[1] > 0) {
           leaders.set(s.areaKey.toUpperCase(), {
@@ -605,7 +622,9 @@ export class Queries {
     if (!office || !a) throw new NotFoundError('unknown office or area');
     const [current] = await this.resultRows(round.id, [office.id], [a.key]);
     const colors = await this.colorsFor(round, office, a.state);
-    const top = rankCandidates(current?.result.candidates ?? []).slice(0, 6);
+    const top = rankForDisplay(current?.result.candidates ?? [])
+      .filter(hasValidVotes)
+      .slice(0, 6);
     const rows = await this.sql<{ at: Date; countedPct: number | null; candidates: CompactCandidate[] }[]>`
       select captured_at as at, counted_pct as "countedPct", candidates from result_snapshots
       where round_id = ${round.id} and office_id = ${office.id} and area_key = ${a.key} and candidates is not null
@@ -864,7 +883,8 @@ export class Queries {
           name: getState(uf)?.name ?? uf,
           progress: p ? this.toProgress(p) : null,
           votes: r?.result.votes ?? null,
-          candidates: rankCandidates(r?.result.candidates ?? [])
+          candidates: rankForDisplay(r?.result.candidates ?? [])
+            .filter(hasValidVotes)
             .slice(0, 6)
             .map((c) => ({
               key: c.key,

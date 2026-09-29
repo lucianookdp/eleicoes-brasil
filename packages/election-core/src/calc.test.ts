@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { area, parseAreaKey } from './areas';
-import { candidateDeltas, countedPct, percent, progressDelta, rankCandidates } from './calc';
+import { candidateDeltas, countedPct, percent, progressDelta, rankCandidates, rankForDisplay } from './calc';
 import { assignColors } from './colors';
 import { emptyProgress } from './domain';
 import { checkProgress } from './quality';
@@ -104,5 +104,17 @@ describe('assignColors', () => {
       { key: '3', party: { abbreviation: 'XYZ' } },
     ]);
     expect(new Set(colors.values()).size).toBe(3);
+  });
+});
+
+describe('rankForDisplay', () => {
+  it('never puts annulled votes ahead of valid ones', () => {
+    const r = rankForDisplay([
+      { votes: 100, number: '1', voteDestination: 'Anulado sub judice' },
+      { votes: 90, number: '2', voteDestination: 'Válido' },
+      { votes: 80, number: '3', voteDestination: null },
+      { votes: 95, number: '4', voteDestination: 'Anulado' },
+    ]);
+    expect(r.map((c) => c.number)).toEqual(['2', '3', '1', '4']);
   });
 });

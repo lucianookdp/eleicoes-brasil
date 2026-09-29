@@ -68,6 +68,7 @@ export const keepCandidateHistory = (office: Office, area: AreaRef) =>
 export class Store {
   private progress = new Map<string, CountingProgress>();
   private knownCandidates = new Set<string>();
+  private knownParties = new Set<string>();
 
   constructor(
     readonly db: Database,
@@ -355,9 +356,15 @@ export class Store {
 
   /** Keeps the searchable candidate and party lists in sync with country/state files. */
   private async upsertCandidates(office: StoredOffice, result: AreaResult) {
-    const fresh = result.candidates.filter((c) => !this.knownCandidates.has(`${office.id}:${c.key}`));
+    // Sorted and filtered: parallel result writes touch the same parties and candidates, and
+    // rows locked in a consistent order cannot deadlock each other.
+    const fresh = result.candidates
+      .filter((c) => !this.knownCandidates.has(`${office.id}:${c.key}`))
+      .sort((a, b) => a.key.localeCompare(b.key));
     if (fresh.length === 0) return;
-    const partyRows = [...new Map(result.parties.map((p) => [p.number, p])).values()];
+    const partyRows = [...new Map(result.parties.map((p) => [p.number, p])).values()]
+      .filter((p) => !this.knownParties.has(p.number))
+      .sort((a, b) => a.number.localeCompare(b.number));
     if (partyRows.length > 0) {
       await this.db
         .insert(parties)
@@ -373,6 +380,7 @@ export class Store {
           target: [parties.roundId, parties.number],
           set: { abbreviation: sql`excluded.abbreviation`, name: sql`excluded.name` },
         });
+      for (const p of partyRows) this.knownParties.add(p.number);
     }
     for (let i = 0; i < fresh.length; i += 500) {
       await this.db

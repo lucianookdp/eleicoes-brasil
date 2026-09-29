@@ -1,7 +1,7 @@
 'use client';
 
 import type { CandidateDTO, OfficeInfo, ResultDTO } from '@eleicoes/election-core';
-import { formatClock, percent } from '@eleicoes/election-core';
+import { formatClock, hasValidVotes, percent } from '@eleicoes/election-core';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import type { ApiError } from '@/lib/api';
@@ -14,7 +14,11 @@ const hasMajorityLine = (r: ResultDTO) => r.office.kind === 'majoritarian' && r.
 
 /** Shares of the valid vote as one stacked bar, with the 50% threshold marked. */
 export function RaceBar({ result, top = 6 }: { result: ResultDTO; top?: number }) {
-  const shown = result.candidates.slice(0, top).filter((c) => (c.percent ?? 0) > 0);
+  // Only valid votes compete: annulled candidates stay in the list, flagged, but not in the bar.
+  const shown = result.candidates
+    .filter(hasValidVotes)
+    .slice(0, top)
+    .filter((c) => (c.percent ?? 0) > 0);
   const rest = 100 - shown.reduce((s, c) => s + (c.percent ?? 0), 0);
   if (shown.length === 0) return null;
   return (
@@ -83,6 +87,14 @@ export function CandidateRow({ c, result, rank }: { c: CandidateDTO; result: Res
           <span className="sr-only">{rank}º. </span>
           <span className="truncate">{displayName(c.ballotName)}</span>
           <StatusPill c={c} result={result} />
+          {!hasValidVotes(c) && (
+            <span
+              className="rounded bg-warn-soft px-1.5 py-0.5 text-[11.5px] font-medium text-warn"
+              title="Destinação dos votos informada pelo TSE"
+            >
+              {c.voteDestination}
+            </span>
+          )}
         </p>
         <p className="truncate text-[12.5px] text-muted">
           {c.number} · {c.party.abbreviation}

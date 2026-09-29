@@ -87,3 +87,19 @@ export function rankCandidates<T extends { votes: number; number: string }>(list
     (a, b) => b.votes - a.votes || a.number.localeCompare(b.number, 'pt-BR', { numeric: true }),
   );
 }
+
+/** Votes that count: destination "Válido" or "Válido (legenda)". Unknown destination counts as valid. */
+export function hasValidVotes(c: { voteDestination: string | null }): boolean {
+  return c.voteDestination == null || /^v[aá]lido/i.test(c.voteDestination);
+}
+
+/**
+ * Display order: candidates whose votes are valid first (by votes), then candidates whose votes
+ * were annulled (including "sub judice"). A candidate with annulled votes is never shown as leader.
+ */
+export function rankForDisplay<T extends { votes: number; number: string; voteDestination: string | null }>(
+  list: T[],
+): T[] {
+  const ranked = rankCandidates(list);
+  return [...ranked.filter(hasValidVotes), ...ranked.filter((c) => !hasValidVotes(c))];
+}
