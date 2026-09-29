@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/main.ts', 'src/replay.ts', 'src/demo/server.ts'],
+  entry: ['src/main.ts', 'src/replay.ts', 'src/demo/server.ts', 'src/history/import.ts'],
   format: 'esm',
   target: 'node22',
   platform: 'node',

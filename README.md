@@ -123,6 +123,20 @@ converte números em texto (`"48,32"`) e horários de Brasília para UTC, e devo
 domínio. Mudança de formato do TSE = mudança só no adapter. Ver
 [docs/tse-integration.md](docs/tse-integration.md).
 
+## Eleições passadas
+
+Resultados finais de eleições anteriores vêm do
+[Portal de Dados Abertos do TSE](https://dadosabertos.tse.jus.br) e entram nas mesmas tabelas,
+aparecendo no seletor de eleições como qualquer outra:
+
+```bash
+pnpm import:history --year 2022 --download        # baixa e importa (arquivos grandes)
+pnpm import:history --year 2024 --path ~/Downloads/votacao_candidato_munzona_2024.zip
+```
+
+Esses arquivos trazem só o resultado final: não há evolução minuto a minuto para eleições
+importadas. Importar de novo o mesmo ano substitui a importação anterior.
+
 ## Nova eleição (2030, municipais…)
 
 Resumo: conferir a documentação nova do TSE → ajustar schemas → criar `TSEAdapter2030` se o

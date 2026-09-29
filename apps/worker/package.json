@@ -10,7 +10,8 @@
     "replay": "tsx src/replay.ts",
     "demo:tse": "tsx src/demo/server.ts",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "import:history": "tsx src/history/import.ts"
   },
   "dependencies": {
     "@eleicoes/config": "workspace:*",

@@ -52,7 +52,9 @@ Legenda: ✅ feito · 🟡 em andamento · ⬜ pendente
 - ⬜ Deploy (Railway/Fly para api+worker, Vercel para web, Neon para Postgres)
 - ⬜ Subdomínio `election.lucianookdp.dev`
 
-## Phase 9 — Eleições passadas ⬜
+## Phase 9 — Eleições passadas 🟡
+- ✅ Importador `pnpm import:history --year 2022 --download` (CSV do Portal de Dados Abertos → mesmas tabelas), testado com arquivos sintéticos no formato oficial
+- ⬜ Rodar com os arquivos reais de 2022, 2018, 2024 e 2020 e conferir totais com o TSE
 - Importador de resultados finais a partir do Portal de Dados Abertos do TSE
   (`votacao_candidato_munzona_<ano>`, `detalhe_votacao_munzona_<ano>`), gerando um snapshot
   final por área. Alvo: 2022, 2018 (gerais) e 2024, 2020 (municipais).
