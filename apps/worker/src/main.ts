@@ -52,7 +52,7 @@ if (round.demo && env.DEMO_EMBEDDED) {
   log.info({ round: round.slug }, 'demo round reset');
 }
 const roundId = await Store.ensureRound(db, round, env.APP_MODE, source.environment);
-const store = new Store(db, sql, roundId, round.slug);
+const store = new Store(db, sql, roundId, round.slug, round.demo ? 'DEMO' : 'TSE');
 
 const http = new TseHttpClient({
   requestsPerSecond: env.TSE_REQUESTS_PER_SECOND,

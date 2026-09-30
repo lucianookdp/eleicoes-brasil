@@ -15,6 +15,13 @@
       "when": 1790746830416,
       "tag": "0001_candidate_photos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790747407156,
+      "tag": "0002_scope_cities_by_provider",
+      "breakpoints": true
     }
   ]
 }

@@ -61,11 +61,15 @@ export function splitCsvLine(line: string): string[] {
   return out;
 }
 
-export async function* readCsv(path: string): AsyncGenerator<Record<string, string>> {
-  const lines = createInterface({
-    input: createReadStream(path, { encoding: 'latin1' }),
-    crlfDelay: Number.POSITIVE_INFINITY,
-  });
+/** A CSV on disk, or one read on demand (e.g. streamed straight out of a ZIP archive). */
+export type CsvSource = string | { name: string; open: () => NodeJS.ReadableStream };
+
+export async function* readCsv(source: CsvSource): AsyncGenerator<Record<string, string>> {
+  const input =
+    typeof source === 'string'
+      ? createReadStream(source, { encoding: 'latin1' })
+      : source.open().setEncoding('latin1');
+  const lines = createInterface({ input, crlfDelay: Number.POSITIVE_INFINITY });
   let header: string[] | null = null;
   for await (const line of lines) {
     if (!line.trim()) continue;
@@ -146,8 +150,13 @@ const ELECTED = /^(eleito|eleito por qp|eleito por m[eé]dia|2[ºo°] turno)$/i;
  * Returns one ImportedRound per turno found in the files.
  */
 export async function aggregateOpenData(
-  candidateFiles: string[],
-  detailFiles: string[],
+  candidateFiles: CsvSource[],
+  detailFiles: CsvSource[],
+  /**
+   * Keep proportional offices (deputies) at municipality level. Off by default for imports:
+   * thousands of candidates × 5,570 municipalities is ~1 GB for a view few people open.
+   */
+  { cityProportional = false }: { cityProportional?: boolean } = {},
 ): Promise<ImportedRound[]> {
   const rounds = new Map<string, ImportedRound>();
   const candidates = new Map<string, Map<string, CandidateAgg>>(); // turno → key → agg
@@ -198,7 +207,9 @@ export async function aggregateOpenData(
   };
   /** Areas a candidate's votes roll up to: no state totals for mayors, no national totals for governors. */
   const areasFor = (office: Office, uf: StateCode, city: string) => {
-    const list: AreaRef[] = [area.city(uf, city)];
+    const list: AreaRef[] = [];
+    if (office.scope === 'city' || office.kind === 'majoritarian' || cityProportional)
+      list.push(area.city(uf, city));
     if (office.scope !== 'city') list.push(area.state(uf));
     if (office.scope === 'country') list.push(area.country());
     return list;

@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { createWriteStream, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { Readable } from 'node:stream';
@@ -9,10 +9,10 @@ import { type AreaResult, emptyProgress } from '@eleicoes/election-core';
 import { eq } from 'drizzle-orm';
 import { createLogger } from '../logger';
 import { Store } from '../store';
-import { aggregateOpenData } from './open-data';
+import { aggregateOpenData, type CsvSource } from './open-data';
 
 /**
- * pnpm import:history --year 2022 [--path <dir|zip|csv>] [--download]
+ * pnpm import:history --year 2022 [--path <dir|zip|csv>] [--download] [--with-city-deputies]
  *
  * Imports the final results of a past election from the TSE Open Data Portal into the same
  * tables the live collector uses, so it shows up in the election picker like any other.
@@ -24,6 +24,7 @@ const { values } = parseArgs({
     path: { type: 'string' },
     download: { type: 'boolean', default: false },
     name: { type: 'string' },
+    'with-city-deputies': { type: 'boolean', default: false },
   },
 });
 const log = createLogger('import', process.env.LOG_LEVEL ?? 'info');
@@ -37,7 +38,9 @@ if (!url || !values.year || !/^\d{4}$/.test(values.year)) {
 const year = values.year;
 // pnpm runs scripts inside apps/worker; INIT_CWD is where the command was typed.
 const cwd = process.env.INIT_CWD ?? process.cwd();
-const workDir = join(cwd, '.data', 'opendata', year);
+const workDir = process.env.OPEN_DATA_DIR
+  ? join(process.env.OPEN_DATA_DIR, year)
+  : join(cwd, '.data', 'opendata', year);
 mkdirSync(workDir, { recursive: true });
 
 const SOURCES = [
@@ -56,23 +59,33 @@ if (values.download) {
   }
 }
 
-// Collect CSV files: unzip archives into the work directory first.
+// Collect CSV sources. Archives are read in place (unzip -p), never extracted: the 2022
+// candidate archive alone is ~580 MB compressed and several GB unpacked.
 const inputs = values.path ? [resolve(cwd, values.path)] : readdirSync(workDir).map((f) => join(workDir, f));
-const csvs: string[] = [];
+const sources: { name: string; source: CsvSource }[] = [];
 for (const input of inputs) {
   if (statSync(input).isDirectory()) {
-    for (const f of readdirSync(input)) if (f.toLowerCase().endsWith('.csv')) csvs.push(join(input, f));
+    for (const f of readdirSync(input))
+      if (f.toLowerCase().endsWith('.csv')) sources.push({ name: f, source: join(input, f) });
   } else if (input.toLowerCase().endsWith('.zip')) {
-    execFileSync('unzip', ['-o', '-q', input, '*.csv', '-d', workDir]);
-    for (const f of readdirSync(workDir))
-      if (f.toLowerCase().endsWith('.csv') && !csvs.includes(join(workDir, f))) csvs.push(join(workDir, f));
-  } else if (input.toLowerCase().endsWith('.csv')) csvs.push(input);
+    const entries = execFileSync('unzip', ['-Z1', input], {
+      encoding: 'utf8',
+      maxBuffer: 16 * 1024 * 1024,
+    }).split('\n');
+    for (const entry of entries.filter((e) => e.toLowerCase().endsWith('.csv'))) {
+      const zip = input;
+      sources.push({
+        name: basename(entry),
+        source: { name: entry, open: () => spawn('unzip', ['-p', zip, entry]).stdout },
+      });
+    }
+  } else if (input.toLowerCase().endsWith('.csv')) sources.push({ name: basename(input), source: input });
 }
 // Per-state files and the national "BRASIL" file carry the same rows: never read both.
 const pick = (prefix: string) => {
-  const all = csvs.filter((f) => basename(f).toLowerCase().startsWith(prefix) && basename(f).includes(year));
-  const perState = all.filter((f) => !/_brasil\.csv$/i.test(f));
-  return perState.length > 0 ? perState : all;
+  const all = sources.filter((s) => s.name.toLowerCase().startsWith(prefix) && s.name.includes(year));
+  const perState = all.filter((s) => !/_brasil\.csv$/i.test(s.name));
+  return (perState.length > 0 ? perState : all).map((s) => s.source);
 };
 const candidateFiles = pick('votacao_candidato_munzona');
 const detailFiles = pick('detalhe_votacao_munzona');
@@ -82,7 +95,13 @@ if (candidateFiles.length === 0) {
 }
 log.info({ candidateFiles: candidateFiles.length, detailFiles: detailFiles.length }, 'reading files');
 
-const rounds = await aggregateOpenData(candidateFiles, detailFiles);
+const rounds = await aggregateOpenData(candidateFiles, detailFiles, {
+  cityProportional: values['with-city-deputies'],
+});
+log.info(
+  { rounds: rounds.map((r) => ({ round: r.round, results: r.results.size, areas: r.progress.size })) },
+  'aggregated',
+);
 await runMigrations(url);
 const { db, sql, close } = createDatabase(url, { max: 4 });
 

@@ -60,6 +60,8 @@ interface RoundRow {
   demo: boolean;
   adapter: string | null;
   adapterVersion: string | null;
+  /** "TSE", or "DEMO" for the fictitious election (its municipality codes are made up). */
+  provider?: string;
 }
 
 interface OfficeRow extends OfficeInfo {
@@ -127,19 +129,22 @@ export class Queries {
     };
   }
 
-  async round(slug: string): Promise<Omit<RoundDetail, 'offices'> & { id: string; offices: OfficeRow[] }> {
+  async round(
+    slug: string,
+  ): Promise<Omit<RoundDetail, 'offices'> & { id: string; provider: string; offices: OfficeRow[] }> {
     const [r] = await this.sql<RoundRow[]>`
       select r.id, r.slug, e.slug as "electionSlug", e.name as "electionName", e.year, e.kind, r.round,
-             r.date::text as date, r.status, r.environment, e.demo, r.adapter, r.adapter_version as "adapterVersion"
+             r.date::text as date, r.status, r.environment, e.demo, r.adapter, r.adapter_version as "adapterVersion",
+             r.provider
       from election_rounds r join elections e on e.id = r.election_id where r.slug = ${slug}`;
     if (!r) throw new NotFoundError(`election round "${slug}" not found`);
     const offices = await this.sql<OfficeRow[]>`
       select id, provider_id as code, slug, name, kind, scope, states from offices where round_id = ${r.id}`;
-    return { ...this.summary(r), id: r.id, offices: sortOffices(offices) };
+    return { ...this.summary(r), id: r.id, provider: r.provider ?? 'TSE', offices: sortOffices(offices) };
   }
 
   private publicRound(r: Awaited<ReturnType<Queries['round']>>): RoundDetail {
-    const { id: _id, offices, ...rest } = r;
+    const { id: _id, provider: _provider, offices, ...rest } = r;
     return { ...rest, offices: offices.map(publicOffice) };
   }
 
@@ -304,13 +309,13 @@ export class Queries {
       where round_id = ${roundId} and office_id in ${this.sql(officeIds)} and area_key in ${this.sql(areaKeys)}`;
   }
 
-  private async areaName(areaKey: string): Promise<string> {
+  private async areaName(areaKey: string, provider: string): Promise<string> {
     const a = parseAreaKey(areaKey);
     if (!a) return areaKey;
     if (a.type === 'country') return 'Brasil';
     if (a.type === 'state') return stateName(a.state!);
     const [c] = await this.sql<{ name: string }[]>`
-      select name from cities where state_code = ${a.state} and provider_id = ${a.cityCode}`;
+      select name from cities where provider = ${provider} and state_code = ${a.state} and provider_id = ${a.cityCode}`;
     const city = c ? titleCase(c.name) : a.cityCode!;
     return a.type === 'zone' ? `${city} — Zona ${a.zone}` : city;
   }
@@ -328,7 +333,9 @@ export class Queries {
     const office = officeSlug ? applicable.find((o) => o.slug === officeSlug) : applicable[0];
     if (!office) throw new NotFoundError(`office "${officeSlug}" is not disputed in "${areaKey}"`);
     const [row] = await this.resultRows(round.id, [office.id], [a.key]);
-    return row ? this.toResultDTO(round, office, row, await this.areaName(a.key), limit) : null;
+    return row
+      ? this.toResultDTO(round, office, row, await this.areaName(a.key, round.provider), limit)
+      : null;
   }
 
   // ---------------------------------------------------------------- pages
@@ -417,7 +424,9 @@ export class Queries {
     const [progress, ingestion, [count]] = await Promise.all([
       this.progressOf(round.id, uf.toLowerCase()),
       this.ingestion(round.id, round.status),
-      this.sql<{ n: number }[]>`select count(*)::int as n from cities where state_code = ${uf}`,
+      this.sql<
+        { n: number }[]
+      >`select count(*)::int as n from cities where provider = ${round.provider} and state_code = ${uf}`,
     ]);
     return {
       round: this.publicRound(round),
@@ -461,7 +470,8 @@ export class Queries {
              p.counted_pct as "countedPct", p.updated_at as "updatedAt", count(*) over ()::int as total
       from cities c
       left join area_progress p on p.round_id = ${round.id} and p.area_key = lower(c.state_code) || '-' || c.provider_id
-      where c.state_code = ${uf} ${like ? this.sql`and c.search_name like ${like}` : this.sql``}
+      where c.provider = ${round.provider} and c.state_code = ${uf}
+        ${like ? this.sql`and c.search_name like ${like}` : this.sql``}
       order by ${order}
       limit ${opts.pageSize} offset ${(opts.page - 1) * opts.pageSize}`;
     return {
@@ -491,7 +501,7 @@ export class Queries {
       { code: string; name: string; isCapital: boolean; ibgeCode: string | null; zones: string[] }[]
     >`
       select provider_id as code, name, is_capital as "isCapital", ibge_code as "ibgeCode", zones
-      from cities where state_code = ${uf} and provider_id = ${code}`;
+      from cities where provider = ${round.provider} and state_code = ${uf} and provider_id = ${code}`;
     if (!city) throw new NotFoundError(`city ${uf}/${code} not found`);
     const key = `${uf.toLowerCase()}-${code}`;
     const offices = this.officesFor(round.offices, 'city', uf);
@@ -677,6 +687,7 @@ export class Queries {
              c.name as "cityName"
       from ingestion_events e
       left join cities c on e.area_key like '%-_____' and c.state_code = e.state_code and c.provider_id = right(e.area_key, 5)
+        and c.provider = (select provider from election_rounds where id = ${roundId})
       where e.round_id = ${roundId} ${before ? this.sql`and e.id < ${before}` : this.sql``}
         and (e.type <> 'city.updated' or coalesce(e.sections_added, 0) > 0)
       order by e.id desc limit ${limit}`;
@@ -812,7 +823,7 @@ export class Queries {
     const [cityRows, candidateRows, partyRows] = await Promise.all([
       this.sql<{ uf: string; code: string; name: string }[]>`
         select state_code as uf, provider_id as code, name from cities
-        where search_name like ${like} and state_code <> 'ZZ'
+        where provider = ${round.provider} and search_name like ${like} and state_code <> 'ZZ'
         order by is_capital desc, length(search_name), search_name limit 8`,
       this.sql<
         {

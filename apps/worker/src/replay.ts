@@ -76,7 +76,7 @@ export async function runReplay({ databaseUrl, source, speed, log, maxGapMs = 10
         providerElectionCodes: src.round.providerElectionCodes,
       })
       .where(eq(electionRounds.id, targetId));
-    const store = new Store(db, pg, targetId, targetSlug);
+    const store = new Store(db, pg, targetId, targetSlug, src.election.demo ? 'DEMO' : 'TSE');
 
     // Copy reference data (offices, parties, candidates) with the new round id.
     const officeMap = new Map<string, StoredOffice>();

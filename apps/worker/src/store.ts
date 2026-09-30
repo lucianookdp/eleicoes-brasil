@@ -77,6 +77,8 @@ export class Store {
     private readonly sql: Sql,
     readonly roundId: string,
     readonly roundSlug: string,
+    /** \"TSE\", or \"DEMO\" so made-up demo municipality codes never mix with official ones. */
+    readonly provider = 'TSE',
   ) {}
 
   static async ensureRound(db: Database, def: RoundDefinition, mode: string, environment: string | null) {
@@ -101,10 +103,17 @@ export class Store {
         adapter: def.adapter,
         environment,
         mode,
+        provider: def.demo ? 'DEMO' : 'TSE',
       })
       .onConflictDoUpdate({
         target: electionRounds.slug,
-        set: { adapter: def.adapter, environment, mode, updatedAt: sql`now()` },
+        set: {
+          adapter: def.adapter,
+          environment,
+          mode,
+          provider: def.demo ? 'DEMO' : 'TSE',
+          updatedAt: sql`now()`,
+        },
       })
       .returning({ id: electionRounds.id });
     return round!.id;
@@ -174,6 +183,7 @@ export class Store {
 
     for (let i = 0; i < config.cities.length; i += 500) {
       const batch = config.cities.slice(i, i + 500).map((c) => ({
+        provider: this.provider,
         stateCode: c.state,
         providerId: c.code,
         ibgeCode: c.ibgeCode,
