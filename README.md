@@ -135,6 +135,7 @@ aparecendo no seletor de eleições como qualquer outra:
 ```bash
 pnpm import:history --year 2022 --download        # baixa e importa (arquivos grandes)
 pnpm import:history --year 2024 --path ~/Downloads/votacao_candidato_munzona_2024.zip
+pnpm import:photos --year 2022                     # fotos oficiais de presidente, governador e senador
 ```
 
 Esses arquivos trazem só o resultado final: não há evolução minuto a minuto para eleições

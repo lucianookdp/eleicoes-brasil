@@ -73,7 +73,7 @@ function Avatar({ c, photo }: { c: CandidateDTO; photo: boolean }) {
   const [failed, setFailed] = useState(false);
   return (
     <span
-      className="relative flex size-9 items-center justify-center overflow-hidden rounded-full text-[12px] font-semibold"
+      className={`relative flex items-center justify-center overflow-hidden rounded-full font-semibold ${photo ? 'size-12 text-[14px]' : 'size-9 text-[12px]'}`}
       style={{
         background: `color-mix(in srgb, ${c.color} 18%, transparent)`,
         color: c.color,
@@ -90,10 +90,11 @@ function Avatar({ c, photo }: { c: CandidateDTO; photo: boolean }) {
           loading="lazy"
           decoding="async"
           onError={() => setFailed(true)}
-          className="absolute inset-0 size-full object-cover"
-          style={{ boxShadow: `inset 0 0 0 1.5px ${c.color}` }}
+          className="absolute inset-0 size-full object-cover object-[center_22%]"
         />
       )}
+      {/* Party-colour ring drawn over the photo (an inset shadow on the img itself is hidden). */}
+      <span className="absolute inset-0 rounded-full" style={{ boxShadow: `inset 0 0 0 2px ${c.color}` }} />
     </span>
   );
 }
@@ -102,9 +103,12 @@ export function CandidateRow({ c, result, rank }: { c: CandidateDTO; result: Res
   const pp = fmtPp(c.deltaPp);
   const delta = fmtSigned(c.deltaVotes);
   const mates = c.runningMates.filter((m) => m.name);
+  const photo = result.office.kind === 'majoritarian';
   return (
-    <li className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 py-3">
-      <Avatar c={c} photo={result.office.kind === 'majoritarian'} />
+    <li
+      className={`grid items-center gap-x-3 gap-y-1.5 py-3 ${photo ? 'grid-cols-[48px_minmax(0,1fr)_auto]' : 'grid-cols-[36px_minmax(0,1fr)_auto]'}`}
+    >
+      <Avatar c={c} photo={photo} />
       <div className="min-w-0">
         <p className="flex items-center gap-2 truncate font-medium">
           <span className="sr-only">{rank}º. </span>

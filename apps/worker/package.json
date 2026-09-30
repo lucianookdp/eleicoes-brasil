@@ -11,7 +11,8 @@
     "demo:tse": "tsx src/demo/server.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "import:history": "tsx src/history/import.ts"
+    "import:history": "tsx src/history/import.ts",
+    "import:photos": "tsx src/history/photos.ts"
   },
   "dependencies": {
     "@eleicoes/config": "workspace:*",

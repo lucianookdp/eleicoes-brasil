@@ -21,7 +21,8 @@
     "db:migrate": "pnpm --filter @eleicoes/database db:migrate",
     "replay": "pnpm --filter @eleicoes/worker replay",
     "worker": "pnpm --filter @eleicoes/worker start",
-    "import:history": "pnpm --filter @eleicoes/worker import:history"
+    "import:history": "pnpm --filter @eleicoes/worker import:history",
+    "import:photos": "pnpm --filter @eleicoes/worker import:photos"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
