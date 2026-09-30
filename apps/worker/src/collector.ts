@@ -335,14 +335,39 @@ export class Collector {
         );
         if (hasErrors(issues) && !background) this.backgroundErrors++;
       }
-      return (await this.store.applyResult(job.office, res.data, res.provenance, now))
-        ? 'stored'
-        : 'unchanged';
+      const stored = await this.store.applyResult(job.office, res.data, res.provenance, now);
+      // Also when unchanged: after a restart, stored results still need their photos.
+      this.queuePhotos(job.office, job.area, res.data.candidates);
+      return stored ? 'stored' : 'unchanged';
     } catch (err) {
       // Not generated yet (the TSE answers 404 until then). It is queued again when the area changes.
       if (err instanceof ProviderNotFoundError) return 'missing';
       await this.recordFailure(log, err, `result ${job.office.slug} ${job.area.key}`, job.area);
       return 'failed';
+    }
+  }
+
+  /** Photos of majoritarian candidates, once each: a few hundred files, ahead of deputies and cities. */
+  private queuePhotos(office: StoredOffice, target: AreaRef, candidates: { key: string }[]) {
+    const provider = this.provider;
+    if (
+      !provider.getCandidatePhoto ||
+      office.kind !== 'majoritarian' ||
+      target.type === 'city' ||
+      target.type === 'zone'
+    )
+      return;
+    for (const c of candidates) {
+      if (this.store.knownPhotos.has(c.key) || this.background.has(`photo:${c.key}`)) continue;
+      this.enqueue(`photo:${c.key}`, 3, async () => {
+        try {
+          await this.store.savePhoto(c.key, await provider.getCandidatePhoto!(office, target.state, c.key));
+          return true;
+        } catch (err) {
+          await this.recordFailure(this.log, err, `photo ${c.key}`, target);
+          return false;
+        }
+      });
     }
   }
 
@@ -401,7 +426,8 @@ export class Collector {
   /**
    * Queues every office of this provider election that applies to the area.
    * Headline (next cycle, high priority): Brazil, and president/governor/senator per state.
-   * Background: state-level deputies (5), capitals (10), other municipalities (11).
+   * Background: EA15 reads (0), candidate photos (3), state-level deputies (5), capitals (10),
+   * other municipalities (11).
    */
   private queueArea(code: string, target: AreaRef) {
     for (const office of this.offices) {

@@ -43,6 +43,17 @@ export interface ElectionProvider {
   getSections(state: StateCode): Promise<Fetched<CitySections[]>>;
   /** Forget conditional-request state so the next calls download everything again. */
   resetConditionalCache(): void;
+  /** Candidate photo published by the provider, if any. Fetched by the collector only, once. */
+  getCandidatePhoto?(
+    office: Office,
+    state: StateCode | null,
+    candidateKey: string,
+  ): Promise<CandidatePhoto | null>;
+}
+
+export interface CandidatePhoto {
+  data: Uint8Array;
+  contentType: string;
 }
 
 /** An external payload did not match the expected schema. Carries context for the ingestion log. */

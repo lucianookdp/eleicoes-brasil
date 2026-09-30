@@ -45,7 +45,7 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  `img-src 'self' data: blob: ${api}`,
   "font-src 'self'",
   `connect-src 'self' ${api}`,
   "manifest-src 'self'",

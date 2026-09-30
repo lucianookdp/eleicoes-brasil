@@ -232,6 +232,49 @@ export class TseHttpClient {
     }
   }
 
+  /**
+   * Downloads a binary file (candidate photos) once, without conditional requests or retries.
+   * Returns null on 404. Same rate limit, concurrency and circuit breaker as JSON requests.
+   */
+  async getBytes(
+    url: string,
+    priority: Priority = 'low',
+  ): Promise<{ data: Uint8Array; contentType: string } | null> {
+    this.breaker.check(url);
+    await this.semaphore.acquire(priority);
+    let started = this.now();
+    try {
+      await this.limiter.take();
+      started = this.now();
+      const res = await this.fetchImpl(url, {
+        headers: { 'user-agent': this.options.userAgent ?? 'eleicoes-brasil-collector/1.0' },
+        signal: AbortSignal.timeout(this.options.timeoutMs),
+      });
+      // A missing photo is expected now and then and each one is tried once: unlike JSON 404s,
+      // it does not feed the breaker, so it can never pause result collection.
+      if (res.status === 404) {
+        this.emit(url, 404, started, 'not-found');
+        return null;
+      }
+      if (res.status === 403 || res.status === 429) {
+        this.breaker.blocked();
+        this.emit(url, res.status, started, 'error');
+        throw new ProviderUnavailableError(`blocked by source (HTTP ${res.status})`, url, res.status);
+      }
+      if (!res.ok) {
+        this.breaker.failure();
+        this.emit(url, res.status, started, 'error');
+        throw new ProviderUnavailableError(`HTTP ${res.status}`, url, res.status);
+      }
+      const data = new Uint8Array(await res.arrayBuffer());
+      this.breaker.success();
+      this.emit(url, res.status, started, 'ok');
+      return { data, contentType: res.headers.get('content-type') ?? 'image/jpeg' };
+    } finally {
+      this.semaphore.release();
+    }
+  }
+
   private emit(url: string, status: number | null, started: number, outcome: RequestRecord['outcome']) {
     const record = { url, status, durationMs: this.now() - started, outcome };
     for (const l of this.listeners) l(record);

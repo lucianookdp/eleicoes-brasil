@@ -51,6 +51,7 @@ O diretório usa o código da eleição sem zeros (`21270`); o nome do arquivo u
 | EA15 `<uf>-e…-ab.json` | andamento da UF e de cada município |
 | EA20 `…-u.json` | resultado de um cargo em uma abrangência (Brasil, UF, município, zona) |
 | EA16 `<uf>-p…-cs.json` | seções por zona e horário do arquivo auxiliar (implementado no adapter, coleta em fase futura) |
+| Fotos (`ft` no `arq`) | `…/<cd_eleicao>/fotos/<uf ou br>/<sqcand>.jpeg`, confirmado no simulado; baixadas uma vez, só de cargos majoritários |
 
 Campos de andamento (EA14/15/20): `and` (`n` não iniciada, `p` parcial, `f` finalizada),
 `dt`/`ht` (data/hora da última totalização, horário de Brasília), `s` (seções: `ts` total, `st`

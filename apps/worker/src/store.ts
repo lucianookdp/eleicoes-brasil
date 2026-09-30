@@ -1,6 +1,7 @@
 import {
   areaProgress,
   areaResults,
+  candidatePhotos,
   candidates,
   cities,
   collectorCycles,
@@ -69,6 +70,7 @@ export class Store {
   private progress = new Map<string, CountingProgress>();
   private knownCandidates = new Set<string>();
   private knownParties = new Set<string>();
+  readonly knownPhotos = new Set<string>();
 
   constructor(
     readonly db: Database,
@@ -114,6 +116,11 @@ export class Store {
       .from(areaProgress)
       .where(eq(areaProgress.roundId, this.roundId));
     this.progress = new Map(rows.map((r) => [r.key, r.progress]));
+    const photos = await this.db
+      .select({ key: candidatePhotos.candidateKey })
+      .from(candidatePhotos)
+      .where(eq(candidatePhotos.roundId, this.roundId));
+    for (const p of photos) this.knownPhotos.add(p.key);
   }
 
   lastProgress(areaKey: string) {
@@ -415,6 +422,20 @@ export class Store {
         });
     }
     for (const c of fresh) this.knownCandidates.add(`${office.id}:${c.key}`);
+  }
+
+  /** Stores a candidate photo, or a marker that the provider has none (so it is not retried). */
+  async savePhoto(candidateKey: string, photo: { data: Uint8Array; contentType: string } | null) {
+    await this.db
+      .insert(candidatePhotos)
+      .values({
+        roundId: this.roundId,
+        candidateKey,
+        contentType: photo?.contentType ?? null,
+        data: photo?.data ?? null,
+      })
+      .onConflictDoNothing();
+    this.knownPhotos.add(candidateKey);
   }
 
   // ------------------------------------------------------------------ events, cycles, status

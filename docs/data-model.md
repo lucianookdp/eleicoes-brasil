@@ -27,6 +27,7 @@ cities (compartilhada entre eleições; código TSE é estável)
 | `progress_snapshots`, `result_snapshots` | histórico | `bigserial` |
 | `ingestion_events` | feed de atividade + log de ingestão | `bigserial` |
 | `collector_cycles` | métricas de cada ciclo | UUID (`cycleId`) |
+| `candidate_photos` | fotos oficiais de candidatos majoritários (bytes), baixadas uma vez; linha sem dados = sem foto na fonte | (`round`, `candidate_key`) |
 
 `area_key` é uma chave estável: `br`, `sp`, `sp-71072`, `sp-71072-z0001`. Nomes nunca são chave.
 Estados (26 + DF + exterior) são dados estáticos em código (`election-core/geo.ts`), não tabela.

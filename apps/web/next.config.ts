@@ -2,8 +2,8 @@ import type { NextConfig } from 'next';
 
 /**
  * Exported as static files for GitHub Pages (a CDN, no server to scale on election night).
- * NEXT_PUBLIC_BASE_PATH is "/eleicoes-brasil" when served from lucianookdp.dev/eleicoes-brasil,
- * and empty on a dedicated domain (election.lucianookdp.dev).
+ * NEXT_PUBLIC_BASE_PATH is "/eleicoes-brasil" on lucianookdp.github.io/eleicoes-brasil and
+ * would be empty on a dedicated domain.
  */
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 

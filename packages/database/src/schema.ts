@@ -11,6 +11,7 @@ import {
   bigint,
   bigserial,
   boolean,
+  customType,
   date,
   doublePrecision,
   index,
@@ -293,4 +294,24 @@ export const collectorCycles = pgTable(
     error: text('error'),
   },
   (t) => [index('collector_cycles_time').on(t.roundId, t.startedAt)],
+);
+
+const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({ dataType: () => 'bytea' });
+
+/**
+ * Candidate photos published by the provider, downloaded once by the collector and served by our
+ * API (the browser never talks to the TSE). A row with null data means "provider has no photo".
+ */
+export const candidatePhotos = pgTable(
+  'candidate_photos',
+  {
+    roundId: uuid('round_id')
+      .notNull()
+      .references(() => electionRounds.id, { onDelete: 'cascade' }),
+    candidateKey: text('candidate_key').notNull(),
+    contentType: text('content_type'),
+    data: bytea('data'),
+    fetchedAt: ts('fetched_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.roundId, t.candidateKey] })],
 );

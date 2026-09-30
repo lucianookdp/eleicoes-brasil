@@ -20,17 +20,17 @@ Redis não é necessário (ver [ADR 006](adr/006-cache-without-redis.md)).
 ```bash
 docker build --build-arg APP=api -t eleicoes-api .
 docker build --build-arg APP=worker -t eleicoes-worker .
-docker build --target web --build-arg NEXT_PUBLIC_API_URL=https://api.election.lucianookdp.dev -t eleicoes-web .
+docker build --target web --build-arg NEXT_PUBLIC_API_URL=https://api-production-39d40.up.railway.app -t eleicoes-web .
 ```
 
-API e worker são um único arquivo JavaScript cada (todas as dependências embutidas); o web usa a
-saída `standalone` do Next. O worker aplica as migrações ao iniciar.
+API e worker são um único arquivo JavaScript cada (todas as dependências embutidas); o web é a
+exportação estática do Next servida por nginx. O worker aplica as migrações ao iniciar.
 
 ## Variáveis por serviço
 
 - **worker**: `DATABASE_URL`, `APP_MODE`, `ELECTION_ROUND`, `TSE_*`. Não expõe porta.
-- **api**: `DATABASE_URL`, `CORS_ORIGINS` (ex.: `https://election.lucianookdp.dev`), `PORT`.
-- **web**: `NEXT_PUBLIC_API_URL` (no build), `API_URL` (em execução, pode ser endereço interno).
+- **api**: `DATABASE_URL`, `CORS_ORIGINS` (ex.: `https://lucianookdp.github.io`), `PORT`.
+- **web**: `NEXT_PUBLIC_API_URL` e `NEXT_PUBLIC_BASE_PATH` (no build).
 
 ## Noite da eleição
 
@@ -46,12 +46,13 @@ saída `standalone` do Next. O worker aplica as migrações ao iniciar.
    sem buffer e sem cache (`X-Accel-Buffering: no` já é enviado). Uma instância aguenta
    ~30 mil req/s de respostas em cache e milhares de conexões ao vivo; com CDN, a origem recebe
    poucas requisições por atualização.
-5. Acompanhe `/elections/2026/operations`.
+5. Acompanhe o painel **Ao vivo** (`/eleicao/ao-vivo/?e=2026&t=1`).
 
-## Subdomínio
+## Endereço
 
-`election.lucianookdp.dev` → web; `api.election.lucianookdp.dev` → api. Ajuste `CORS_ORIGINS` e
-`NEXT_PUBLIC_API_URL` para esses domínios.
+O site fica em `https://lucianookdp.github.io/eleicoes-brasil/` (base `/eleicoes-brasil`). Para usar
+um domínio próprio no futuro, basta apontar o DNS para o GitHub Pages, esvaziar
+`NEXT_PUBLIC_BASE_PATH` e incluir o domínio em `CORS_ORIGINS`.
 
 ## Postgres local sem Docker
 

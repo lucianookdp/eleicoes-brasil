@@ -5,8 +5,10 @@ import { formatClock, hasValidVotes, percent } from '@eleicoes/election-core';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import type { ApiError } from '@/lib/api';
+import { API_URL } from '@/lib/api';
 import { displayName, fmtInt, fmtPct, fmtPp, fmtSigned, initials } from '@/lib/format';
 import { useResult } from '@/lib/queries';
+import { useRound } from './shell';
 import { EmptyState, ErrorNotice, Segmented, Skeleton } from './ui';
 
 /** Single-seat majoritarian races have an absolute-majority threshold worth drawing. */
@@ -65,23 +67,44 @@ function StatusPill({ c, result }: { c: CandidateDTO; result: ResultDTO }) {
   return <span className={`rounded px-1.5 py-0.5 text-[11.5px] font-medium ${tone}`}>{text}</span>;
 }
 
+/** Official photo when the TSE publishes one (served by our API), initials otherwise. */
+function Avatar({ c, photo }: { c: CandidateDTO; photo: boolean }) {
+  const { round } = useRound();
+  const [failed, setFailed] = useState(false);
+  return (
+    <span
+      className="relative flex size-9 items-center justify-center overflow-hidden rounded-full text-[12px] font-semibold"
+      style={{
+        background: `color-mix(in srgb, ${c.color} 18%, transparent)`,
+        color: c.color,
+        boxShadow: `inset 0 0 0 1.5px ${c.color}`,
+      }}
+      aria-hidden
+    >
+      {initials(c.ballotName)}
+      {photo && !failed && (
+        // biome-ignore lint/performance/noImgElement: static export, no image optimisation server
+        <img
+          src={`${API_URL}/api/elections/${round.slug}/photos/${c.key}`}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailed(true)}
+          className="absolute inset-0 size-full object-cover"
+          style={{ boxShadow: `inset 0 0 0 1.5px ${c.color}` }}
+        />
+      )}
+    </span>
+  );
+}
+
 export function CandidateRow({ c, result, rank }: { c: CandidateDTO; result: ResultDTO; rank: number }) {
   const pp = fmtPp(c.deltaPp);
   const delta = fmtSigned(c.deltaVotes);
   const mates = c.runningMates.filter((m) => m.name);
   return (
     <li className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 py-3">
-      <span
-        className="flex size-9 items-center justify-center rounded-full text-[12px] font-semibold"
-        style={{
-          background: `color-mix(in srgb, ${c.color} 18%, transparent)`,
-          color: c.color,
-          boxShadow: `inset 0 0 0 1.5px ${c.color}`,
-        }}
-        aria-hidden
-      >
-        {initials(c.ballotName)}
-      </span>
+      <Avatar c={c} photo={result.office.kind === 'majoritarian'} />
       <div className="min-w-0">
         <p className="flex items-center gap-2 truncate font-medium">
           <span className="sr-only">{rank}º. </span>

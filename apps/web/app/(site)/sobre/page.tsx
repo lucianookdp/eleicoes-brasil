@@ -48,6 +48,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
   {
     title: 'Créditos',
     body: [
+      'Fotos dos candidatos: publicadas pelo TSE nos arquivos de divulgação de resultados; baixadas uma vez e servidas pelos nossos servidores.',
       'Geometria do mapa: “Map of Brazil” de Victor Cazanave (svg-maps), licença CC BY 4.0. Código-fonte aberto no GitHub.',
     ],
   },

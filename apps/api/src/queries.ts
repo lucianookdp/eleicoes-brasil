@@ -25,7 +25,6 @@ import {
   parseAreaKey,
   type ResultDTO,
   type RoundDetail,
-  rankCandidates,
   rankForDisplay,
   type SearchHitDTO,
   type SeriesDTO,

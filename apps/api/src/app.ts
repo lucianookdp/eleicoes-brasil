@@ -283,6 +283,21 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
     );
   });
 
+  // Candidate photos, downloaded once from the TSE by the collector. Immutable per candidate.
+  app.get('/api/elections/:id/photos/:key', async (req, reply) => {
+    const p = roundParams.extend({ key: z.string().regex(/^\d{1,20}$/) }).parse(req.params);
+    const [row] = await sql<{ data: Uint8Array; contentType: string }[]>`
+      select p.data, p.content_type as "contentType" from candidate_photos p
+      join election_rounds r on r.id = p.round_id
+      where r.slug = ${p.id} and p.candidate_key = ${p.key} and p.data is not null`;
+    if (!row) {
+      reply.header('cache-control', 'public, max-age=300');
+      throw new NotFoundError('no photo for this candidate');
+    }
+    reply.header('cache-control', 'public, max-age=604800, immutable').type(row.contentType);
+    return reply.send(Buffer.from(row.data));
+  });
+
   // Server-Sent Events. One long-lived response per browser tab.
   app.get('/api/realtime/elections/:id', async (req, reply) => {
     const { id } = roundParams.parse(req.params);

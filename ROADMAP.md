@@ -48,9 +48,8 @@ Legenda: ✅ feito · 🟡 em andamento · ⬜ pendente
 ## Phase 8 — Production Hardening 🟡
 - ✅ Testes unitários (parsers, adapter, cálculos), integração (API, demo + adapter), E2E Playwright desktop e mobile
 - ✅ Docker (imagem única com 3 alvos), docker compose, GitHub Actions
-- ⬜ Validar adapter no simulado de 29/09 e ajustar schemas
-- ⬜ Deploy (Railway/Fly para api+worker, Vercel para web, Neon para Postgres)
-- ⬜ Subdomínio `election.lucianookdp.dev`
+- ✅ Adapter validado no simulado oficial de 29/09 (corrigidos: deadlock de partidos, votos anulados)
+- ✅ Deploy: web no GitHub Pages (https://lucianookdp.github.io/eleicoes-brasil/), API, coletor e Postgres no Railway
 
 ## Phase 9 — Eleições passadas 🟡
 - ✅ Importador `pnpm import:history --year 2022 --download` (CSV do Portal de Dados Abertos → mesmas tabelas), testado com arquivos sintéticos no formato oficial
@@ -63,7 +62,7 @@ Legenda: ✅ feito · 🟡 em andamento · ⬜ pendente
 ## Phase 10 — Granularidade fina ⬜
 - Resultados por zona eleitoral (arquivos EA20 de zona, coletados após totalização do município)
 - Lista de seções (EA16) e situação (EA18), atrás de `ENABLE_SECTIONS_VIEW`
-- Fotos de candidatos majoritários (servidas pela nossa API, nunca direto do TSE)
+- ✅ Fotos de candidatos majoritários (baixadas uma vez pelo coletor, servidas pela nossa API)
 
 ## Riscos
 

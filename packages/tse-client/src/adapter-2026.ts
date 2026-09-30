@@ -4,6 +4,7 @@ import {
   type AreaResult,
   area,
   brasiliaToUtc,
+  type CandidatePhoto,
   type CandidateResult,
   type City,
   type CitySections,
@@ -369,6 +370,30 @@ export class TSEAdapter2026 implements ElectionProvider {
       votesPublishable: publishable,
       noElectedReasons: file.esae === 's' ? (file.mnae ?? []) : [],
     };
+  }
+
+  // ---------------------------------------------------------------- photos ("ft" directory)
+
+  /** "<base>/<ambiente>/<ciclo>/<cd_eleicao>/fotos/<uf>/<sqcand>.jpeg" (confirmed on the 2026 simulation). */
+  async getCandidatePhoto(
+    office: Office,
+    state: StateCode | null,
+    candidateKey: string,
+  ): Promise<CandidatePhoto | null> {
+    // The fictitious demo election has no photos.
+    if (!/^\d{1,20}$/.test(candidateKey) || this.source.environment === 'demo') return null;
+    const ctx = await this.ctx();
+    const template = ctx.dirs.get('ft');
+    const dir = (
+      template?.startsWith('<base>') ? template : '<base>/<ambiente>/<ciclo>/<cd_eleicao>/fotos/<uf>'
+    )
+      .replace('<base>', this.source.baseUrl)
+      .replace('<ambiente>', this.source.environment)
+      .replace('<ciclo>', ctx.cycle)
+      .replace('<cd_eleicao>', office.providerElectionCode)
+      .replace('<uf>', office.scope === 'country' || !state ? 'br' : state.toLowerCase());
+    const photo = await this.http.getBytes(`${dir}/${candidateKey}.jpeg`);
+    return photo?.contentType.startsWith('image/') ? photo : null;
   }
 
   // ---------------------------------------------------------------- sections (EA16)
