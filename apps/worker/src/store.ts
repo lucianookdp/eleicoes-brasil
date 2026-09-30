@@ -233,62 +233,68 @@ export class Store {
       };
     });
 
-    await this.db.transaction(async (tx) => {
-      const rows = changed.map((e) => ({
-        roundId: this.roundId,
-        areaKey: e.area.key,
-        areaType: e.area.type,
-        stateCode: e.area.state,
-        status: e.progress.status,
-        countedPct: countedPct(e.progress),
-        turnout: e.progress.turnout,
-        totalizedAt: e.progress.totalizedAt,
-        progress: e.progress,
-        updatedAt: now,
-      }));
-      await tx
-        .insert(areaProgress)
-        .values(rows)
-        .onConflictDoUpdate({
-          target: [areaProgress.roundId, areaProgress.areaKey],
-          set: {
-            status: sql`excluded.status`,
-            countedPct: sql`excluded.counted_pct`,
-            turnout: sql`excluded.turnout`,
-            totalizedAt: sql`excluded.totalized_at`,
-            progress: sql`excluded.progress`,
-            updatedAt: sql`excluded.updated_at`,
-          },
-        });
-      await tx.insert(progressSnapshots).values(
-        changed.map((e) => ({
+    // Batches of 1,000 rows: a whole country of municipalities in one statement exceeds the
+    // 65,535-parameter limit of the Postgres protocol.
+    for (let i = 0; i < changed.length; i += 1000) {
+      const chunk = changed.slice(i, i + 1000);
+      const chunkChanges = changes.slice(i, i + 1000);
+      await this.db.transaction(async (tx) => {
+        const rows = chunk.map((e) => ({
           roundId: this.roundId,
           areaKey: e.area.key,
           areaType: e.area.type,
           stateCode: e.area.state,
-          capturedAt: now,
-          totalizedAt: e.progress.totalizedAt,
+          status: e.progress.status,
           countedPct: countedPct(e.progress),
-          sectionsCounted: e.progress.sectionsCounted,
           turnout: e.progress.turnout,
+          totalizedAt: e.progress.totalizedAt,
           progress: e.progress,
-          sourceFile: provenance.sourceFile,
-          sourceId: provenance.sourceId,
-        })),
-      );
-      await tx.insert(ingestionEvents).values(
-        changes.map((c) => ({
-          roundId: this.roundId,
-          occurredAt: now,
-          type: eventType(c.area),
-          areaKey: c.area.key,
-          stateCode: c.area.state,
-          sectionsAdded: c.sectionsAdded,
-          votesAdded: c.votesAdded,
-          countedPct: c.countedPct,
-        })),
-      );
-    });
+          updatedAt: now,
+        }));
+        await tx
+          .insert(areaProgress)
+          .values(rows)
+          .onConflictDoUpdate({
+            target: [areaProgress.roundId, areaProgress.areaKey],
+            set: {
+              status: sql`excluded.status`,
+              countedPct: sql`excluded.counted_pct`,
+              turnout: sql`excluded.turnout`,
+              totalizedAt: sql`excluded.totalized_at`,
+              progress: sql`excluded.progress`,
+              updatedAt: sql`excluded.updated_at`,
+            },
+          });
+        await tx.insert(progressSnapshots).values(
+          chunk.map((e) => ({
+            roundId: this.roundId,
+            areaKey: e.area.key,
+            areaType: e.area.type,
+            stateCode: e.area.state,
+            capturedAt: now,
+            totalizedAt: e.progress.totalizedAt,
+            countedPct: countedPct(e.progress),
+            sectionsCounted: e.progress.sectionsCounted,
+            turnout: e.progress.turnout,
+            progress: e.progress,
+            sourceFile: provenance.sourceFile,
+            sourceId: provenance.sourceId,
+          })),
+        );
+        await tx.insert(ingestionEvents).values(
+          chunkChanges.map((c) => ({
+            roundId: this.roundId,
+            occurredAt: now,
+            type: eventType(c.area),
+            areaKey: c.area.key,
+            stateCode: c.area.state,
+            sectionsAdded: c.sectionsAdded,
+            votesAdded: c.votesAdded,
+            countedPct: c.countedPct,
+          })),
+        );
+      });
+    }
 
     for (const e of changed) this.progress.set(e.area.key, e.progress);
     return changes;
