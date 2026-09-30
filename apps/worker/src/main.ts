@@ -1,7 +1,8 @@
 import { APP_VERSION, loadEnv, workerEnvSchema } from '@eleicoes/config';
-import { createDatabase, runMigrations } from '@eleicoes/database';
+import { createDatabase, electionRounds, runMigrations } from '@eleicoes/database';
 import { findRound } from '@eleicoes/election-core';
 import { createProvider, TseHttpClient } from '@eleicoes/tse-client';
+import { eq } from 'drizzle-orm';
 import { Collector } from './collector';
 import { createLogger } from './logger';
 import { runReplay } from './replay';
@@ -45,6 +46,11 @@ if (!registered) {
 const source = { ...registered, baseUrl: env.TSE_BASE_URL ?? registered.baseUrl };
 
 const { db, sql, close } = createDatabase(env.DATABASE_URL, { max: 5 });
+if (round.demo && env.DEMO_EMBEDDED) {
+  // Each run of the embedded demo is a fresh fictitious election: never mix two runs' history.
+  await db.delete(electionRounds).where(eq(electionRounds.slug, round.slug));
+  log.info({ round: round.slug }, 'demo round reset');
+}
 const roundId = await Store.ensureRound(db, round, env.APP_MODE, source.environment);
 const store = new Store(db, sql, roundId, round.slug);
 
