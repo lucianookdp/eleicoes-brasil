@@ -40,7 +40,7 @@ export function StatesView() {
         <Panel
           className={`p-3 sm:p-4 lg:sticky lg:top-20 lg:col-span-5 lg:block ${view === 'map' ? '' : 'hidden'}`}
         >
-          <BrazilMap states={states} allowLeader={hasHeadline} />
+          <BrazilMap key={round.slug} states={states} allowLeader={hasHeadline} />
         </Panel>
         <div className={`lg:col-span-7 lg:block ${view === 'list' ? '' : 'hidden'}`}>
           <StatesTable states={states} leaderLabel={hasHeadline ? 'Mais votado' : undefined} />

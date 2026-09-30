@@ -68,6 +68,10 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
   };
 
   const headline = data?.headline ?? null;
+  const hasEvolution =
+    !!data?.round.offices.some((o) => o.scope === 'country') && round.environment !== 'dados-abertos';
+  // A remembered tab that this election does not have falls back to the map.
+  const activeTab: Tab = tab === 'evolucao' && !hasEvolution ? 'mapa' : tab;
   const headlineOffice = data?.round.offices.find((o) => o.scope === 'country');
   const series = useSeries(round.slug, tab === 'evolucao' ? headlineOffice?.slug : undefined, 'br');
   const events = useEvents(round.slug, 25);
@@ -148,17 +152,20 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
         <Panel className="lg:sticky lg:top-20 lg:col-span-5">
           <Tabs
             label="Detalhes da apuração"
-            value={tab}
+            value={activeTab}
             onChange={setTab}
             tabs={[
               { value: 'mapa', label: 'Mapa' },
               { value: 'estados', label: 'Estados' },
-              ...(headlineOffice ? [{ value: 'evolucao' as const, label: 'Evolução' }] : []),
+              // Imported elections only have final numbers: no evolution to show.
+              ...(hasEvolution ? [{ value: 'evolucao' as const, label: 'Evolução' }] : []),
               { value: 'atividade', label: 'Atividade' },
             ]}
           >
-            {tab === 'mapa' && <BrazilMap states={states} allowLeader={!!headlineOffice} />}
-            {tab === 'estados' && (
+            {activeTab === 'mapa' && (
+              <BrazilMap key={round.slug} states={states} allowLeader={!!headlineOffice} />
+            )}
+            {activeTab === 'estados' && (
               <div className="max-h-[70vh] overflow-y-auto pr-1 lg:max-h-[calc(100vh-14rem)]">
                 <StatesTable
                   states={states}
@@ -168,12 +175,13 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
               </div>
             )}
             {tab === 'evolucao' &&
+              round.environment !== 'dados-abertos' &&
               (series.data ? (
                 <EvolutionChart series={series.data} majority />
               ) : (
                 <Skeleton className="h-72" />
               ))}
-            {tab === 'atividade' && (
+            {activeTab === 'atividade' && (
               <>
                 <ActivityFeed events={events.data ?? []} max={18} dense />
                 <Link

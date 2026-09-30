@@ -31,7 +31,9 @@ function fill(s: StateRowDTO | undefined, mode: Mode): string {
 export function BrazilMap({ states, allowLeader = true }: { states: StateRowDTO[]; allowLeader?: boolean }) {
   const { href } = useRound();
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>('progress');
+  // A finished count is 100% everywhere: who won each state is the useful view then.
+  const finished = states.length > 0 && states.every((s) => s.progress?.status === 'finished');
+  const [mode, setMode] = useState<Mode>(allowLeader && finished ? 'leader' : 'progress');
   const [active, setActive] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string | null>(null);
   const byUf = new Map(states.map((s) => [s.uf.toLowerCase(), s]));
