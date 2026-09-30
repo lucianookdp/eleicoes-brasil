@@ -64,6 +64,8 @@ const KNOWN_OFFICES: Record<
   '8': { slug: 'deputado-distrital', kind: 'proportional', scope: 'state', states: ['DF'] },
   '11': { slug: 'prefeito', kind: 'majoritarian', scope: 'city' },
   '13': { slug: 'vereador', kind: 'proportional', scope: 'city' },
+  // Fernando de Noronha (PE) district council, elected together with general elections.
+  '25': { slug: 'conselheiro-distrital', kind: 'majoritarian', scope: 'city', states: ['PE'] },
 };
 
 /** EA11 `e.tp` → scope of offices without a known code. */

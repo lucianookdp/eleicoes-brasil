@@ -36,6 +36,8 @@ const OFFICES: Record<string, { slug: string; kind: OfficeKind; scope: OfficeSco
   '8': { slug: 'deputado-distrital', kind: 'proportional', scope: 'state' },
   '11': { slug: 'prefeito', kind: 'majoritarian', scope: 'city' },
   '13': { slug: 'vereador', kind: 'proportional', scope: 'city' },
+  // Fernando de Noronha (PE) district council, elected together with general elections.
+  '25': { slug: 'conselheiro-distrital', kind: 'majoritarian', scope: 'city' },
 };
 
 /** Splits one CSV line with ";" separators and '"' quotes (no embedded newlines in these files). */
@@ -198,10 +200,11 @@ export async function aggregateOpenData(
         kind: known?.kind ?? 'majoritarian',
         scope: known?.scope ?? 'state',
         providerElectionCode: row.CD_ELEICAO ?? code,
-        states: code === '8' ? ['DF'] : null,
+        states: code === '8' ? ['DF'] : code === '25' ? ['PE'] : null,
       };
       r.offices.push(o);
-      if (o.scope === 'city') r.kind = 'municipal';
+      // Mayors and councillors make it a municipal election (not Fernando de Noronha's council).
+      if (code === '11' || code === '13') r.kind = 'municipal';
     }
     return o;
   };
