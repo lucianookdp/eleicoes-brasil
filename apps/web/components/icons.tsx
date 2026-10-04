@@ -104,3 +104,20 @@ export function Logo({ size = 22 }: { size?: number }) {
     </svg>
   );
 }
+export const IconPin = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z" />
+    <circle cx="12" cy="9.5" r="2.5" />
+  </Icon>
+);
+export const IconPerson = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21a8 8 0 0 1 16 0" />
+  </Icon>
+);
+export const IconFlag = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
+  </Icon>
+);

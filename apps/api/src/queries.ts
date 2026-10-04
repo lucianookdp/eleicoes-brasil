@@ -453,7 +453,9 @@ export class Queries {
         'counted-asc': this.sql`p.counted_pct asc nulls first, c.search_name`,
         turnout: this.sql`p.turnout desc nulls last, c.search_name`,
         updated: this.sql`p.updated_at desc nulls last, c.search_name`,
-      }[opts.sort] ?? this.sql`c.is_capital desc, c.search_name`;
+      }[opts.sort] ??
+      // Default: capital, then the biggest cities (by electorate).
+      this.sql`c.is_capital desc, (p.progress->>'electorateTotal')::bigint desc nulls last, c.search_name`;
     const rows = await this.sql<
       {
         code: string;
@@ -472,7 +474,7 @@ export class Queries {
       left join area_progress p on p.round_id = ${round.id} and p.area_key = lower(c.state_code) || '-' || c.provider_id
       where c.provider = ${round.provider} and c.state_code = ${uf}
         ${like ? this.sql`and c.search_name like ${like}` : this.sql``}
-      order by ${order}
+      order by ${like ? this.sql`c.search_name like ${`${searchKey(opts.q!)}%`} desc,` : this.sql``} ${order}
       limit ${opts.pageSize} offset ${(opts.page - 1) * opts.pageSize}`;
     return {
       items: rows.map((r) => ({
@@ -804,7 +806,7 @@ export class Queries {
         hits.push({
           kind: 'state',
           label: s.name,
-          detail: s.code,
+          detail: `Estado · ${s.code}`,
           path: `/states/${s.code.toLowerCase()}`,
         });
       }
@@ -822,9 +824,14 @@ export class Queries {
     const like = `%${key}%`;
     const [cityRows, candidateRows, partyRows] = await Promise.all([
       this.sql<{ uf: string; code: string; name: string }[]>`
-        select state_code as uf, provider_id as code, name from cities
-        where provider = ${round.provider} and search_name like ${like} and state_code <> 'ZZ'
-        order by is_capital desc, length(search_name), search_name limit 8`,
+        select c.state_code as uf, c.provider_id as code, c.name from cities c
+        left join area_progress p
+          on p.round_id = ${round.id} and p.area_key = lower(c.state_code) || '-' || c.provider_id
+        where c.provider = ${round.provider} and c.search_name like ${like} and c.state_code <> 'ZZ'
+        -- Names starting with the query first, then the biggest cities (by electorate).
+        order by c.search_name like ${`${key}%`} desc, c.is_capital desc,
+                 (p.progress->>'electorateTotal')::bigint desc nulls last, c.search_name
+        limit 8`,
       this.sql<
         {
           ballotName: string;
@@ -840,7 +847,9 @@ export class Queries {
                o.name as office, o.slug as "officeSlug", o.scope
         from candidates c join offices o on o.id = c.office_id
         where c.round_id = ${round.id} and (c.search_name like ${like} or c.number = ${q.trim()})
-        order by o.scope = 'country' desc, length(c.search_name) limit 8`,
+        order by o.scope = 'country' desc, o.kind = 'majoritarian' desc,
+                 c.search_name like ${`${key}%`} desc, length(c.search_name)
+        limit 8`,
       this.sql<{ number: string; abbreviation: string; name: string }[]>`
         select number, abbreviation, name from parties
         where round_id = ${round.id} and (lower(abbreviation) = ${key} or lower(name) like ${like}) limit 5`,

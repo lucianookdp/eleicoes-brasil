@@ -8,6 +8,7 @@ import { fmtInt, fmtPct } from '@/lib/format';
 import { useCities, useResult, useSeries, useStateDetail } from '@/lib/queries';
 import { CountingHero } from './counting';
 import { EvolutionChart } from './evolution-chart';
+import { IconSearch } from './icons';
 import { ResultPanel, useOfficeParam } from './results';
 import { useRound } from './shell';
 import {
@@ -84,7 +85,7 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
 }
 
 const CITY_SORTS = [
-  { value: 'default', label: 'Capital primeiro' },
+  { value: 'default', label: 'Maiores primeiro' },
   { value: 'name', label: 'Nome' },
   { value: 'counted-desc', label: 'Mais apurados' },
   { value: 'counted-asc', label: 'Menos apurados' },
@@ -97,16 +98,17 @@ function Cities({ uf, total }: { uf: string; total: number }) {
   const [q, setQ] = useState('');
   const [debounced, setDebounced] = useState('');
   const [sort, setSort] = useState('default');
-  const [page, setPage] = useState(1);
   useEffect(() => {
-    const t = setTimeout(() => {
-      setDebounced(q);
-      setPage(1);
-    }, 250);
+    const t = setTimeout(() => setDebounced(q), 200);
     return () => clearTimeout(t);
   }, [q]);
-  const { data, isFetching } = useCities(round.slug, uf.toLowerCase(), { q: debounced, sort, page });
-  const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+  const { data, isFetching, isFetchingNextPage, hasNextPage, fetchNextPage } = useCities(
+    round.slug,
+    uf.toLowerCase(),
+    { q: debounced, sort },
+  );
+  const items = data?.pages.flatMap((p) => p.items) ?? [];
+  const found = data?.pages[0]?.total ?? 0;
 
   return (
     <section aria-labelledby="municipios" className="mt-12">
@@ -114,25 +116,26 @@ function Cities({ uf, total }: { uf: string; total: number }) {
         {fmtInt(total)} municípios
       </SectionTitle>
       <div className="mb-3 flex flex-wrap gap-2">
-        <label className="min-w-0 flex-1 basis-60">
+        <label className="flex h-11 min-w-0 flex-1 basis-60 items-center gap-2 rounded-xl border border-line bg-surface px-3 focus-within:border-live">
+          <IconSearch className="shrink-0 text-muted" />
           <span className="sr-only">Buscar município</span>
           <input
             type="search"
+            enterKeyHint="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar município…"
-            className="h-10 w-full rounded-lg border border-line bg-surface px-3 text-[14px] placeholder:text-muted focus:border-line-strong"
+            placeholder="Buscar município"
+            autoComplete="off"
+            className="h-full min-w-0 flex-1 bg-transparent text-[14px] placeholder:text-muted"
+            style={{ outline: 'none' }}
           />
         </label>
         <label className="flex items-center gap-2 text-[13px] text-muted">
           Ordenar
           <select
             value={sort}
-            onChange={(e) => {
-              setSort(e.target.value);
-              setPage(1);
-            }}
-            className="h-10 rounded-lg border border-line bg-surface px-2 text-[14px] text-ink"
+            onChange={(e) => setSort(e.target.value)}
+            className="h-11 rounded-xl border border-line bg-surface px-2 text-[14px] text-ink"
           >
             {CITY_SORTS.map((s) => (
               <option key={s.value} value={s.value}>
@@ -142,11 +145,11 @@ function Cities({ uf, total }: { uf: string; total: number }) {
           </select>
         </label>
       </div>
-      {data && data.items.length === 0 && (
+      {data && items.length === 0 && (
         <EmptyState title={`Nenhum município encontrado para “${debounced}”.`} />
       )}
-      <ul className={`grid gap-x-6 sm:grid-cols-2 xl:grid-cols-3 ${isFetching ? 'opacity-70' : ''}`}>
-        {(data?.items ?? []).map((c) => {
+      <ul className={`grid gap-x-6 sm:grid-cols-2 xl:grid-cols-3 ${isFetching && !isFetchingNextPage ? 'opacity-70' : ''}`}>
+        {items.map((c) => {
           const p = c.progress;
           return (
             <li key={c.code} className="border-b border-line">
@@ -184,31 +187,15 @@ function Cities({ uf, total }: { uf: string; total: number }) {
           );
         })}
       </ul>
-      {pages > 1 && (
-        <nav
-          aria-label="Páginas de municípios"
-          className="mt-4 flex items-center justify-between text-[14px]"
+      {hasNextPage && (
+        <button
+          type="button"
+          onClick={() => fetchNextPage()}
+          disabled={isFetchingNextPage}
+          className="mt-4 h-11 w-full rounded-xl border border-line text-[14px] font-medium text-ink-2 hover:border-line-strong hover:text-ink disabled:opacity-60"
         >
-          <button
-            type="button"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-            className="h-10 rounded-lg border border-line px-4 disabled:opacity-40"
-          >
-            Anterior
-          </button>
-          <span className="text-muted">
-            Página {page} de {pages}
-          </span>
-          <button
-            type="button"
-            disabled={page >= pages}
-            onClick={() => setPage((p) => p + 1)}
-            className="h-10 rounded-lg border border-line px-4 disabled:opacity-40"
-          >
-            Próxima
-          </button>
-        </nav>
+          {isFetchingNextPage ? 'Carregando…' : `Mostrar mais (${fmtInt(items.length)} de ${fmtInt(found)})`}
+        </button>
       )}
     </section>
   );

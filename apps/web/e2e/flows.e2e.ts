@@ -30,7 +30,7 @@ test('selects a state, changes office and opens a city', async ({ page }) => {
   await expect(page).toHaveURL(/cargo=governador/);
   await expect(page.getByRole('tab', { name: 'Governador' })).toHaveAttribute('aria-selected', 'true');
 
-  await page.getByPlaceholder('Buscar município…').fill('campinas');
+  await page.getByPlaceholder('Buscar município').fill('campinas');
   await page.getByRole('link', { name: /Campinas/ }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Campinas' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Você está em' })).toContainText('São Paulo');
@@ -61,7 +61,7 @@ test('global search finds a city', async ({ page, isMobile }) => {
       .getByRole('button', { name: 'Buscar' })
       .click();
   else await page.keyboard.press('Control+k');
-  await page.getByPlaceholder('Estado, município, candidato, partido ou cargo').fill('recife');
+  await page.getByPlaceholder('Cidade, estado ou candidato').fill('recife');
   await page.getByRole('option', { name: /Recife/ }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Recife' })).toBeVisible();
 });

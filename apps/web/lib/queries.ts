@@ -15,7 +15,7 @@ import type {
   TimelineAtDTO,
   TimelineDTO,
 } from '@eleicoes/election-core';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { api } from './api';
 
 /** Every key starts with the round slug so one realtime event can refresh a whole round. */
@@ -47,13 +47,16 @@ export const useResult = (round: string, area: string, office: string | undefine
     retry: (n, err) => (err as { status?: number }).status !== 404 && n < 2,
   });
 
-export const useCities = (round: string, uf: string, params: { q: string; sort: string; page: number }) =>
-  useQuery({
+/** City list of a state, loaded 30 at a time ("Mostrar mais"). */
+export const useCities = (round: string, uf: string, params: { q: string; sort: string }) =>
+  useInfiniteQuery({
     queryKey: [round, 'cities', uf, params],
-    queryFn: () =>
+    queryFn: ({ pageParam }) =>
       api<Paginated<CityRowDTO>>(
-        `${base(round)}/states/${uf}/cities?page=${params.page}&sort=${params.sort}${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`,
+        `${base(round)}/states/${uf}/cities?page=${pageParam}&sort=${params.sort}${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`,
       ),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.page * last.pageSize < last.total ? last.page + 1 : undefined),
     placeholderData: keepPreviousData,
   });
 
