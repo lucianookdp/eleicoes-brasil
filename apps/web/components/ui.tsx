@@ -165,9 +165,10 @@ export function FreshnessNotice({
     now - changedAt > 5 * 60_000
   ) {
     return (
-      <Notice tone="muted" title="Aguardando o TSE">
-        O TSE não divulga números novos desde as {formatClock(progress!.updatedAt).slice(0, 5)}. O site segue
-        conectado e atualiza sozinho assim que o TSE publicar.
+      <Notice tone="warn" title="Aguardando o TSE">
+        O TSE não divulga números novos desde as {formatClock(progress!.updatedAt).slice(0, 5)}. Não é um
+        problema deste site: os números são os mesmos do TSE e dos outros sites de apuração, e atualizam
+        sozinhos assim que o TSE publicar.
       </Notice>
     );
   }

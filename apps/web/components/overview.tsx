@@ -10,7 +10,7 @@ import { ActivityFeed } from './activity';
 import { BrazilMap } from './brazil-map';
 import { CountingHero } from './counting';
 import { EvolutionChart } from './evolution-chart';
-import { CandidateList, Provenance, RaceBar } from './results';
+import { CandidateList, Provenance, RaceBar, TseStaleNotice } from './results';
 import { useRound } from './shell';
 import { StatesTable } from './states-table';
 import { EmptyState, ErrorNotice, FreshnessNotice, Panel, Skeleton, Tabs } from './ui';
@@ -137,6 +137,7 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
               )}
               {headline && (
                 <>
+                  <TseStaleNotice result={headline} />
                   <RaceBar result={headline} />
                   <CandidateList result={headline} collapsed={4} />
                   <Provenance result={headline} />
