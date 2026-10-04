@@ -247,7 +247,11 @@ export class Collector {
         .slice(0, this.options.cityConcurrency * 4);
       for (const [key] of batch) this.background.delete(key);
       await mapLimit(batch, this.options.cityConcurrency, async ([key, task]) => {
-        const ok = await task.run();
+        // A database blip must not stop the background loop: count it and retry later.
+        const ok = await task.run().catch((err) => {
+          this.log.error({ err, key }, 'background task failed');
+          return false;
+        });
         if (!ok) {
           this.backgroundErrors++;
           // Retry later unless newer work for the same file was queued meanwhile.

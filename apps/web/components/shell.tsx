@@ -402,9 +402,48 @@ function SiteFooter({ version }: { version?: string }) {
             </Link>
           </p>
         </div>
-        <p className="shrink-0 font-mono text-[12px]">Eleições Brasil{version ? ` v${version}` : ''}</p>
+        <div className="flex shrink-0 flex-col gap-1 md:items-end">
+          <a
+            href="https://lucianookdp.dev"
+            target="_blank"
+            rel="noopener"
+            className="inline-flex items-center gap-1.5 text-ink-2 hover:text-ink"
+          >
+            Desenvolvido por <AuthorLogo />
+          </a>
+          <p className="font-mono text-[12px]">Eleições Brasil{version ? ` v${version}` : ''}</p>
+        </div>
       </div>
     </footer>
+  );
+}
+
+/** The author's wordmark, as on lucianookdp.dev: "lucian", an infinity sign for "oo", "kdp". */
+function AuthorLogo() {
+  return (
+    <span
+      className="inline-flex items-center text-[15px] font-semibold tracking-tight text-ink"
+      role="img"
+      aria-label="lucianookdp"
+    >
+      <span aria-hidden>lucian</span>
+      <svg aria-hidden viewBox="4 4 92 42" className="mx-[-0.015em] h-[0.62em] w-auto translate-y-[0.02em]">
+        <defs>
+          <linearGradient id="author-infinity" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#5fe3a1" />
+            <stop offset="100%" stopColor="#22b573" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M 25 10 C 10 10 10 40 25 40 C 35 40 40 30 50 25 C 60 20 65 10 75 10 C 90 10 90 40 75 40 C 65 40 60 30 50 25 C 40 20 35 10 25 10 Z"
+          fill="none"
+          stroke="url(#author-infinity)"
+          strokeWidth={11}
+          strokeLinecap="round"
+        />
+      </svg>
+      <span aria-hidden>kdp</span>
+    </span>
   );
 }
 
