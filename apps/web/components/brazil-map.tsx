@@ -118,7 +118,9 @@ function StateCard({ state, pinned }: { state: StateRowDTO | undefined; pinned: 
   const p = state.progress;
   return (
     <div
-      className="mt-2 rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-[13.5px] sm:absolute sm:left-0 sm:top-0 sm:mt-0 sm:w-56"
+      // A hover card sits over the map on larger screens: it must not take the pointer, or the
+      // state under it loses hover, the card hides, the state gets hover again… (flicker).
+      className={`mt-2 rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-[13.5px] sm:absolute sm:bottom-0 sm:left-0 sm:mt-0 sm:w-56 ${pinned ? '' : 'pointer-events-none'}`}
       aria-live="polite"
     >
       <p className="font-semibold">{state.name}</p>
