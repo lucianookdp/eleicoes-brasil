@@ -1,0 +1,24 @@
+# Election-night watchdog: fails (and GitHub emails the repository owner) when the API is down
+# or the collector stops bringing fresh data. Times are UTC: 20:00–02:59 = 17h–23h59 Brasília.
+name: health
+
+on:
+  schedule:
+    - cron: '*/5 20-23 4 10 *'
+    - cron: '*/5 0-2 5 10 *'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: API and collector are alive
+        run: |
+          ops=$(curl -fsS --retry 3 --retry-delay 10 https://api-production-39d40.up.railway.app/api/elections/2026-1/operations)
+          echo "$ops" | jq '.ingestion'
+          age=$(echo "$ops" | jq -r '(now - (.ingestion.lastSuccessAt | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) | floor')
+          echo "last successful collection ${age}s ago"
+          test "$age" -lt 180
+      - name: Site is up
+        run: curl -fsS -o /dev/null https://lucianookdp.github.io/eleicoes-brasil/
