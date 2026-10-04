@@ -1,10 +1,11 @@
 'use client';
 
-import type { OverviewDTO } from '@eleicoes/election-core';
+import type { OverviewDTO, ResultDTO } from '@eleicoes/election-core';
+import { hasValidVotes } from '@eleicoes/election-core';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useFavorites } from '@/lib/favorites';
-import { fmtPct } from '@/lib/format';
+import { displayName, fmtPct } from '@/lib/format';
 import { useEvents, useOverview, useSeries } from '@/lib/queries';
 import { ActivityFeed } from './activity';
 import { BrazilMap } from './brazil-map';
@@ -93,6 +94,7 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
   return (
     <>
       <RoundTitle />
+      {headline && <DecidedBanner result={headline} />}
       <FreshnessNotice
         ingestion={data.ingestion}
         progress={data.progress}
@@ -197,6 +199,40 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
         </Panel>
       </div>
     </>
+  );
+}
+
+/** Last Sunday of October: the constitutional date of the 2nd round. */
+function runoffDate(year: number) {
+  const d = new Date(Date.UTC(year, 9, 31));
+  d.setUTCDate(31 - d.getUTCDay());
+  return new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(d);
+}
+
+/** Shown only once the TSE itself marks the headline race as decided (runoff or elected). */
+function DecidedBanner({ result }: { result: ResultDTO }) {
+  const { round } = useRound();
+  const leaders = result.candidates.filter(hasValidVotes);
+  // During the count the TSE flags the race (md); once final it marks the candidates instead.
+  const inRunoff = leaders.filter((c) => /2º turno/i.test(c.status ?? ''));
+  const elected = leaders.find((c) => /^eleit/i.test(c.status ?? ''));
+  const decided =
+    result.mathematicallyDecided ?? (inRunoff.length > 0 ? 'runoff' : elected ? 'elected' : null);
+  if (!decided || round.round !== 1 || leaders.length < 2) return null;
+  const pair = inRunoff.length >= 2 ? inRunoff : leaders;
+  const a = displayName((decided === 'elected' ? (elected ?? leaders[0]) : pair[0])!.ballotName);
+  const b = displayName(pair[1]!.ballotName);
+  return (
+    <div role="status" className="mb-4 rounded-xl border border-live/40 bg-live-soft px-4 py-3">
+      <p className="text-[17px] font-semibold text-live">
+        {decided === 'runoff' ? 'Vai ter 2º turno' : `${a} venceu no 1º turno`}
+      </p>
+      <p className="text-[14px] text-ink-2">
+        {decided === 'runoff'
+          ? `${a} e ${b} disputam a ${result.office.name === 'Presidente' ? 'Presidência' : `vaga de ${result.office.name}`} no dia ${runoffDate(round.year)}.`
+          : `Resultado definido pelo TSE para ${result.office.name}.`}
+      </p>
+    </div>
   );
 }
 
