@@ -97,7 +97,16 @@ describe('quality', () => {
 });
 
 describe('assignColors', () => {
-  it('never gives two highlighted candidates the same colour', () => {
+  it('gives every candidate the party colour, whatever the ranking', () => {
+    const ranked = Array.from({ length: 12 }, (_, i) => ({
+      key: String(i),
+      party: { abbreviation: i === 11 ? 'NOVO' : 'XYZ' },
+    }));
+    expect(assignColors(ranked).get('11')).toBe('#F26522');
+    expect(assignColors([{ key: 'm', party: { abbreviation: 'MISSÃO' } }]).get('m')).toBe('#F5A400');
+  });
+
+  it('never gives two candidates in the same race the same colour', () => {
     const colors = assignColors([
       { key: '1', party: { abbreviation: 'PT' } },
       { key: '2', party: { abbreviation: 'PT' } },

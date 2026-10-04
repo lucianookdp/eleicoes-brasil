@@ -6,13 +6,14 @@
 const PARTY_COLORS: Record<string, string> = {
   PT: '#E5383B',
   PL: '#2F6BFF',
-  NOVO: '#F28C28',
+  // Official colours are yellow and black; amber keeps it apart from NOVO's orange.
+  MISSÃO: '#F5A400',
+  MISSAO: '#F5A400',
+  NOVO: '#F26522',
   PSD: '#E0B43A',
-  MISSÃO: '#14B8A6',
-  MISSAO: '#14B8A6',
   PRTB: '#C569D8',
   AVANTE: '#29B6F6',
-  DC: '#A1887F',
+  DC: '#3557A8',
   PCB: '#B23A48',
   PSTU: '#D9534F',
   PCO: '#C0392B',
@@ -34,6 +35,9 @@ const PARTY_COLORS: Record<string, string> = {
   CIDADANIA: '#EC6FA0',
   PCdoB: '#C62828',
   PRD: '#34558B',
+  AGIR: '#5C6BC0',
+  MOBILIZA: '#A93226',
+  PMB: '#D81B60',
   // Fictitious parties used by the demo election.
   PEX: '#E5383B',
   PMD: '#2F6BFF',
@@ -43,7 +47,7 @@ const PARTY_COLORS: Record<string, string> = {
   PSM: '#C569D8',
 };
 
-/** Distinct fallbacks for parties without a colour or when two candidates collide. */
+/** Distinct colours for parties missing from the table above. */
 const FALLBACK = ['#5AA9E6', '#FF9F1C', '#2EC4B6', '#E71D36', '#B388EB', '#8AC926', '#F15BB5', '#00BBF9'];
 const NEUTRAL = '#8A9A93';
 
@@ -54,29 +58,42 @@ export function partyColor(abbreviation: string | null | undefined): string | nu
   );
 }
 
+/** Mixes a #RRGGBB colour with white (amount > 0) or black (amount < 0). */
+function shade(hex: string, amount: number): string {
+  const target = amount > 0 ? 255 : 0;
+  const k = Math.abs(amount);
+  const channel = (i: number) => {
+    const v = Number.parseInt(hex.slice(i, i + 2), 16);
+    return Math.round(v + (target - v) * k)
+      .toString(16)
+      .padStart(2, '0');
+  };
+  return `#${channel(1)}${channel(3)}${channel(5)}`.toUpperCase();
+}
+
 /**
- * Assigns colours to an already ranked list. The top `highlight` candidates get distinct
- * colours (party colour when free, fallback otherwise); the rest share a neutral grey.
+ * Every candidate wears their party's colour, whatever their position in the count. A second
+ * candidate of the same party in the same race (two Senate seats, for example) gets a lighter
+ * shade and a third a darker one, so the bar segments stay distinguishable. Parties without a
+ * known colour take a fallback, and grey once those run out.
  */
 export function assignColors<T extends { key: string; party: { abbreviation: string } }>(
   ranked: T[],
-  highlight = 8,
 ): Map<string, string> {
-  const used = new Set<string>();
+  const perParty = new Map<string, number>();
+  const usedFallbacks = new Set<string>();
   const out = new Map<string, string>();
-  let fb = 0;
-  ranked.forEach((c, i) => {
-    if (i >= highlight) {
-      out.set(c.key, NEUTRAL);
-      return;
+  for (const c of ranked) {
+    const base = partyColor(c.party.abbreviation);
+    if (base) {
+      const n = perParty.get(base) ?? 0;
+      perParty.set(base, n + 1);
+      out.set(c.key, n === 0 ? base : n === 1 ? shade(base, 0.4) : shade(base, -0.3));
+      continue;
     }
-    let color = partyColor(c.party.abbreviation);
-    if (!color || used.has(color)) {
-      while (used.has(FALLBACK[fb % FALLBACK.length]!) && fb < FALLBACK.length * 2) fb++;
-      color = FALLBACK[fb++ % FALLBACK.length]!;
-    }
-    used.add(color);
-    out.set(c.key, color);
-  });
+    const free = FALLBACK.find((f) => !usedFallbacks.has(f));
+    if (free) usedFallbacks.add(free);
+    out.set(c.key, free ?? NEUTRAL);
+  }
   return out;
 }
