@@ -125,10 +125,13 @@ export function FreshnessNotice({
   ingestion,
   progress,
   roundStatus,
+  votesAt,
 }: {
   ingestion: IngestionStatus;
   progress: ProgressDTO | null;
   roundStatus: string;
+  /** TSE time of the headline vote file: its votes can stall while the counting file moves on. */
+  votesAt?: string | null;
 }) {
   const { connection } = useRealtime();
   const last = ingestion.lastSuccessAt ?? progress?.updatedAt ?? null;
@@ -156,21 +159,20 @@ export function FreshnessNotice({
   }
   // Our collection is healthy but the TSE has published nothing new for a while: say so, so the
   // pause is not mistaken for a problem with this site.
-  const changedAt = progress?.updatedAt ? Date.parse(progress.updatedAt) : null;
-  if (
-    roundStatus === 'live' &&
-    ingestion.state === 'healthy' &&
-    progress?.status !== 'finished' &&
-    changedAt != null &&
-    now - changedAt > 5 * 60_000
-  ) {
-    return (
-      <Notice tone="warn" title="Aguardando o TSE">
-        O TSE não divulga números novos desde as {formatClock(progress!.updatedAt).slice(0, 5)}. Não é um
-        problema deste site: os números são os mesmos do TSE e dos outros sites de apuração, e atualizam
-        sozinhos assim que o TSE publicar.
-      </Notice>
-    );
+  const stale = (at: string | null | undefined) => !!at && now - Date.parse(at) > 5 * 60_000;
+  if (roundStatus === 'live' && ingestion.state === 'healthy' && progress?.status !== 'finished') {
+    const what = stale(progress?.updatedAt)
+      ? `não divulga números novos desde as ${formatClock(progress!.updatedAt).slice(0, 5)}`
+      : stale(votesAt)
+        ? `não atualiza os votos desde as ${formatClock(votesAt).slice(0, 5)}`
+        : null;
+    if (what)
+      return (
+        <Notice tone="warn" title="Aguardando o TSE">
+          O TSE {what}. Não é um problema deste site: os números são os mesmos do TSE e dos outros sites de
+          apuração, e atualizam sozinhos assim que o TSE publicar.
+        </Notice>
+      );
   }
   return null;
 }

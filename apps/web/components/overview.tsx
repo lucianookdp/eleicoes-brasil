@@ -4,13 +4,13 @@ import type { OverviewDTO } from '@eleicoes/election-core';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useFavorites } from '@/lib/favorites';
-import { fmtPct } from '@/lib/format';
+import { fmtPct, shownTime } from '@/lib/format';
 import { useEvents, useOverview, useSeries } from '@/lib/queries';
 import { ActivityFeed } from './activity';
 import { BrazilMap } from './brazil-map';
 import { CountingHero } from './counting';
 import { EvolutionChart } from './evolution-chart';
-import { CandidateList, Provenance, RaceBar, TseStaleNotice } from './results';
+import { CandidateList, Provenance, RaceBar } from './results';
 import { useRound } from './shell';
 import { StatesTable } from './states-table';
 import { EmptyState, ErrorNotice, FreshnessNotice, Panel, Skeleton, Tabs } from './ui';
@@ -93,7 +93,12 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
   return (
     <>
       <RoundTitle />
-      <FreshnessNotice ingestion={data.ingestion} progress={data.progress} roundStatus={data.round.status} />
+      <FreshnessNotice
+        ingestion={data.ingestion}
+        progress={data.progress}
+        roundStatus={data.round.status}
+        votesAt={headline ? shownTime(headline.progress.totalizedAt, headline.provenance?.retrievedAt) : null}
+      />
       <Favorites data={data} />
 
       <div className="grid items-start gap-4 lg:grid-cols-12 [&>*]:min-w-0 lg:gap-6">
@@ -137,7 +142,6 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
               )}
               {headline && (
                 <>
-                  <TseStaleNotice result={headline} />
                   <RaceBar result={headline} />
                   <CandidateList result={headline} collapsed={4} />
                   <Provenance result={headline} />

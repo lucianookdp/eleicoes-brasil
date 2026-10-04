@@ -3,7 +3,7 @@
 import type { CandidateDTO, OfficeInfo, ResultDTO } from '@eleicoes/election-core';
 import { formatClock, hasValidVotes, percent } from '@eleicoes/election-core';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { ApiError } from '@/lib/api';
 import { API_URL } from '@/lib/api';
 import { displayName, fmtInt, fmtPct, fmtPp, fmtSigned, initials, shownTime } from '@/lib/format';
@@ -330,13 +330,9 @@ export function ResultPanel({
       )}
       {result && (
         <div>
-          {/* Brazil and states are fetched every few seconds, so old votes there mean the TSE has
-              not published; city files can also be waiting in our queue. */}
-          {areaKey.includes('-') ? (
-            <BehindNotice result={result} areaPct={areaPct} />
-          ) : (
-            <TseStaleNotice result={result} />
-          )}
+          {/* Only city vote files can wait in our queue; Brazil and states are polled every few
+              seconds, and a TSE pause there is announced once, at the top of the page. */}
+          {areaKey.includes('-') && <BehindNotice result={result} areaPct={areaPct} />}
           {!result.votesPublishable && (
             <p className="mb-3 rounded-lg bg-surface-2 px-3 py-2 text-[13px] text-ink-2">
               O TSE ainda não liberou os votos deste cargo. Os números aparecem assim que a divulgação for
@@ -382,30 +378,6 @@ export function ResultPanel({
         </div>
       )}
     </div>
-  );
-}
-
-/**
- * The TSE sometimes goes many minutes without a new vote file while the count goes on. Every site
- * that reads the TSE shows the same numbers then; say so plainly, so it is not taken for a fault here.
- */
-export function TseStaleNotice({ result }: { result: ResultDTO }) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(t);
-  }, []);
-  const at = shownTime(result.progress.totalizedAt, result.provenance?.retrievedAt);
-  if (result.final || result.progress.status !== 'in-progress' || !at || now - Date.parse(at) < 5 * 60_000)
-    return null;
-  return (
-    <p className="mb-3 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-[13.5px] text-ink-2">
-      <span className="font-medium text-warn">
-        O TSE não atualiza os votos de {result.office.name} desde as {formatClock(at).slice(0, 5)}.
-      </span>{' '}
-      Estes são os números oficiais mais recentes, os mesmos do TSE e dos outros sites de apuração. O site
-      atualiza sozinho assim que o TSE publicar.
-    </p>
   );
 }
 
