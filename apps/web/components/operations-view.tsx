@@ -3,7 +3,7 @@
 import type { CycleDTO, IngestionStatus, OperationsDTO } from '@eleicoes/election-core';
 import { formatClock } from '@eleicoes/election-core';
 import { useEffect, useState } from 'react';
-import { ago, fmtCompact, fmtInt, shownTime } from '@/lib/format';
+import { ago, fmtCompact, fmtInt } from '@/lib/format';
 import { useOperations, useOverview } from '@/lib/queries';
 import { TILES } from '@/lib/tiles';
 import { ActivityFeed } from './activity';
@@ -75,11 +75,7 @@ export function OperationsView() {
           ingestion={overview.ingestion}
           progress={overview.progress}
           roundStatus={overview.round.status}
-          votesAt={
-            overview.headline
-              ? shownTime(overview.headline.progress.totalizedAt, overview.headline.provenance?.retrievedAt)
-              : null
-          }
+          votesAt={overview.headline?.provenance?.retrievedAt ?? null}
         />
       )}
       <Panel className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 text-[14px]">

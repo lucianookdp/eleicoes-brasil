@@ -4,7 +4,7 @@ import type { OverviewDTO } from '@eleicoes/election-core';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useFavorites } from '@/lib/favorites';
-import { fmtPct, shownTime } from '@/lib/format';
+import { fmtPct } from '@/lib/format';
 import { useEvents, useOverview, useSeries } from '@/lib/queries';
 import { ActivityFeed } from './activity';
 import { BrazilMap } from './brazil-map';
@@ -97,7 +97,8 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
         ingestion={data.ingestion}
         progress={data.progress}
         roundStatus={data.round.status}
-        votesAt={headline ? shownTime(headline.progress.totalizedAt, headline.provenance?.retrievedAt) : null}
+        // When the new votes reached us: the TSE's own stamp on the file can be 20 minutes older.
+        votesAt={headline?.provenance?.retrievedAt ?? null}
       />
       <Favorites data={data} />
 
