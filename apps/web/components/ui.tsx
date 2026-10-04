@@ -3,7 +3,7 @@
 import type { IngestionStatus, ProgressDTO } from '@eleicoes/election-core';
 import { formatClock } from '@eleicoes/election-core';
 import Link from 'next/link';
-import { type ReactNode, useId } from 'react';
+import { type ReactNode, useEffect, useId, useState } from 'react';
 import { type Favorite, useFavorites } from '@/lib/favorites';
 import { useRealtime } from '@/lib/realtime';
 import { IconChevron, IconStar } from './icons';
@@ -132,6 +132,12 @@ export function FreshnessNotice({
 }) {
   const { connection } = useRealtime();
   const last = ingestion.lastSuccessAt ?? progress?.updatedAt ?? null;
+  // Re-check every 30 s: when the TSE stops publishing nothing else re-renders this.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
   if (connection === 'offline') {
     return (
       <Notice tone="muted" title="Você está sem conexão">
@@ -145,6 +151,23 @@ export function FreshnessNotice({
       <Notice tone="warn" title={ingestion.state === 'offline' ? 'Dados atrasados' : 'Fonte do TSE instável'}>
         Mostrando os últimos dados recebidos{last && <> às {formatClock(last)}</>}. Continuamos tentando
         buscar dados novos.
+      </Notice>
+    );
+  }
+  // Our collection is healthy but the TSE has published nothing new for a while: say so, so the
+  // pause is not mistaken for a problem with this site.
+  const changedAt = progress?.updatedAt ? Date.parse(progress.updatedAt) : null;
+  if (
+    roundStatus === 'live' &&
+    ingestion.state === 'healthy' &&
+    progress?.status !== 'finished' &&
+    changedAt != null &&
+    now - changedAt > 5 * 60_000
+  ) {
+    return (
+      <Notice tone="muted" title="Aguardando o TSE">
+        O TSE não divulga números novos desde as {formatClock(progress!.updatedAt).slice(0, 5)}. O site segue
+        conectado e atualiza sozinho assim que o TSE publicar.
       </Notice>
     );
   }
