@@ -91,6 +91,9 @@ class CircuitBreaker {
     this.cooldownMs = 15_000;
   }
   failure() {
+    // Requests already in flight when the circuit opened fail too: they must not re-trip it
+    // and double the cooldown (a 40 s outage would otherwise pause collection for 5 min).
+    if (this.now() < this.openUntil) return;
     this.failures++;
     if (this.failures >= 5) this.trip(this.cooldownMs, true);
   }
@@ -113,7 +116,8 @@ class CircuitBreaker {
   private trip(ms: number, escalate: boolean) {
     this.openUntil = this.now() + ms;
     this.failures = 0;
-    if (escalate) this.cooldownMs = Math.min(this.cooldownMs * 2, 5 * 60_000);
+    // Network trouble: probe again at most a minute later, so collection resumes quickly.
+    if (escalate) this.cooldownMs = Math.min(this.cooldownMs * 2, 60_000);
   }
 }
 

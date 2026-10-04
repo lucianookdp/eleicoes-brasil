@@ -45,21 +45,25 @@ export class ResponseCache {
     const k = `${round}\u0000${key}`;
     const hit = this.entries.get(k);
     if (hit && hit.expires > Date.now()) return hit.value;
-    // Store the promise so concurrent requests share one database round-trip.
-    const value = load().then((v) => new CachedBody(v));
+    // Store the promise so concurrent requests share one database round-trip. If the database
+    // fails, keep serving the last good body (expired, not invalidated) instead of an error.
+    const stale = hit?.value;
+    const value = load()
+      .then((v) => new CachedBody(v))
+      .catch((err) => {
+        if (stale) return stale;
+        throw err;
+      });
     this.entries.set(k, { expires: Date.now() + this.ttlMs, value });
     value.catch(() => this.entries.delete(k));
     if (this.entries.size > 5000) this.prune();
     return value;
   }
 
+  /** Marks entries stale (not deleted): they are still the fallback if the database fails. */
   invalidate(round?: string) {
-    if (!round) {
-      this.entries.clear();
-      return;
-    }
-    const prefix = `${round}\u0000`;
-    for (const k of this.entries.keys()) if (k.startsWith(prefix)) this.entries.delete(k);
+    const prefix = round ? `${round}\u0000` : '';
+    for (const [k, v] of this.entries) if (k.startsWith(prefix)) v.expires = 0;
   }
 
   private prune() {

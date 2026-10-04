@@ -249,6 +249,7 @@ export class Collector {
       await mapLimit(batch, this.options.cityConcurrency, async ([key, task]) => {
         // A database blip must not stop the background loop: count it and retry later.
         const ok = await task.run().catch((err) => {
+          this.provider.resetConditionalCache();
           this.log.error({ err, key }, 'background task failed');
           return false;
         });
@@ -396,6 +397,10 @@ export class Collector {
         target,
       );
     } else {
+      // Usually the database: the file may have been downloaded but not stored. Forget the
+      // ETags so the next poll downloads it again instead of getting a 304 and losing it
+      // (a final result never changes again).
+      this.provider.resetConditionalCache();
       log.error({ err }, `unexpected error: ${what}`);
       await this.store.recordIssue('collector.error', String(err), { what }, now, target);
     }

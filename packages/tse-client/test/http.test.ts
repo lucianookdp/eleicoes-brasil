@@ -42,6 +42,24 @@ describe('TseHttpClient', () => {
     expect(seen).toHaveLength(3); // 1 + 2 retries
   });
 
+  it('a short outage pauses collection for seconds, not minutes', async () => {
+    let t = 0;
+    let down = true;
+    const { http } = client(
+      () => {
+        if (down) throw new TypeError('fetch failed');
+        return new Response('{}');
+      },
+      { now: () => t, concurrency: 10, maxRetries: 0 },
+    );
+    // Ten requests in flight when the source drops: the circuit opens once, for 15 s.
+    await Promise.allSettled(Array.from({ length: 10 }, (_, i) => http.get(`https://x/${i}.json`)));
+    await expect(http.get('https://x/a.json')).rejects.toBeInstanceOf(ProviderUnavailableError);
+    down = false;
+    t += 16_000;
+    expect((await http.get('https://x/a.json')).notModified).toBe(false);
+  });
+
   it('never retries a 404', async () => {
     const { http, seen } = client(() => new Response('', { status: 404 }));
     await expect(http.get('https://x/a.json')).rejects.toBeInstanceOf(ProviderNotFoundError);
