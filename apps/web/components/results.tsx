@@ -339,7 +339,7 @@ export function ResultPanel({
           )}
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[13px] text-muted">
             <span>
-              {fmtPct(result.progress.countedPct)} das urnas apuradas · {fmtInt(result.votes.valid)} votos
+              Votos de {fmtPct(result.progress.countedPct)} das urnas · {fmtInt(result.votes.valid)} votos
               válidos
               {result.seats && result.seats > 1 ? ` · ${result.seats} vagas` : ''}
             </span>

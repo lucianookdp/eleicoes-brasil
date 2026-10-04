@@ -115,7 +115,7 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
                 </h2>
                 {headline && (
                   <span className="text-[12.5px] text-muted">
-                    {fmtPct(headline.progress.countedPct)} das urnas apuradas
+                    votos de {fmtPct(headline.progress.countedPct)} das urnas
                   </span>
                 )}
               </div>
