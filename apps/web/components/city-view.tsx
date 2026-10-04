@@ -57,7 +57,9 @@ export function CityView({ uf, city, initial }: { uf: string; city: string; init
       />
 
       <section aria-labelledby="resultados" className="mt-8 max-w-3xl">
-        <SectionTitle id="resultados" title="Resultados por cargo" />
+        <SectionTitle id="resultados" title="Resultados por cargo">
+          Site em fase de testes: os resultados por município podem chegar alguns minutos depois do TSE.
+        </SectionTitle>
         <ResultPanel
           roundSlug={round.slug}
           areaKey={key}
