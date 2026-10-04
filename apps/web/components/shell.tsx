@@ -257,7 +257,7 @@ function LiveStatus() {
         />
         {label}
       </span>
-      {updated && (
+      {updated && status !== 'scheduled' && (
         <span className="hidden whitespace-nowrap text-muted md:inline lg:hidden xl:inline">
           <span className="sr-only">Última atualização às </span>
           <time dateTime={updated}>{formatClock(updated)}</time>
