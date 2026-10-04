@@ -169,8 +169,7 @@ export function FreshnessNotice({
     if (what)
       return (
         <Notice tone="warn" title="Aguardando o TSE">
-          O TSE {what}. Não é um problema deste site: os números são os mesmos do TSE e dos outros sites de
-          apuração, e atualizam sozinhos assim que o TSE publicar.
+          O TSE {what}. A pausa é do TSE: assim que ele enviar novas informações, o site atualiza sozinho.
         </Notice>
       );
   }
