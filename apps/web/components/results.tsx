@@ -396,7 +396,7 @@ export function TseStaleNotice({ result }: { result: ResultDTO }) {
     return () => clearInterval(t);
   }, []);
   const at = shownTime(result.progress.totalizedAt, result.provenance?.retrievedAt);
-  if (result.final || result.progress.status !== 'in-progress' || !at || now - Date.parse(at) < 10 * 60_000)
+  if (result.final || result.progress.status !== 'in-progress' || !at || now - Date.parse(at) < 5 * 60_000)
     return null;
   return (
     <p className="mb-3 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-[13.5px] text-ink-2">
