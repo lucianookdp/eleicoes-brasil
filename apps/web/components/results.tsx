@@ -383,11 +383,9 @@ function BehindNotice({ result, areaPct }: { result: ResultDTO; areaPct?: number
   if (areaPct == null || shown == null || areaPct - shown < 0.5 || !result.provenance) return null;
   return (
     <p className="mb-3 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-[13.5px] text-ink-2">
-      <span className="font-medium text-warn">
-        Votos das {formatClock(result.provenance.retrievedAt).slice(0, 5)}, com {fmtPct(shown, 1)} das urnas.
-      </span>{' '}
-      O TSE já apurou {fmtPct(areaPct, 1)} aqui. Os números atualizados estão a caminho e devem aparecer em
-      até 20 minutos.
+      <span className="font-medium text-warn">Números corretos, de uma parcial anterior:</span> votos das{' '}
+      {formatClock(result.provenance.retrievedAt).slice(0, 5)}, com {fmtPct(shown, 1)} das urnas. O TSE já
+      apurou {fmtPct(areaPct, 1)} aqui; a atualização chega em até 20 minutos.
     </p>
   );
 }
