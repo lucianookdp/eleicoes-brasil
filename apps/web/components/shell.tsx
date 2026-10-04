@@ -96,7 +96,8 @@ export function ElectionShell({
             className="border-b border-warn/30 bg-warn-soft px-4 py-1.5 text-center text-[13px] text-warn"
             role="note"
           >
-            Eleição demonstrativa com candidatos e partidos fictícios. Estes números não são resultados reais.
+            Eleição de demonstração, com candidatos e partidos fictícios. Estes números não são resultados
+            reais.
           </div>
         )}
         <main id="conteudo" className="mx-auto w-full max-w-[1320px] px-4 pb-28 pt-5 sm:px-6 lg:pb-12">
@@ -111,10 +112,10 @@ export function ElectionShell({
 }
 
 const NAV = [
-  { path: '', label: 'Visão geral', icon: IconOverview },
+  { path: '', label: 'Resultados', icon: IconOverview },
   { path: '/states', label: 'Estados', icon: IconStates },
-  { path: '/operations', label: 'Ao vivo', icon: IconPulse },
-  { path: '/historico', label: 'Histórico', icon: IconHistory },
+  { path: '/operations', label: 'Bastidores', icon: IconPulse },
+  { path: '/historico', label: 'Linha do tempo', icon: IconHistory },
   { path: '/compare', label: 'Comparar', icon: IconCompare, flag: 'comparison' as const },
 ];
 
@@ -142,7 +143,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
         <Link
           href={href()}
           className="flex items-center gap-2 font-semibold tracking-tight"
-          aria-label="Eleições Brasil — visão geral"
+          aria-label="Eleições Brasil — resultados"
         >
           <Logo />
           <span className="hidden sm:inline">Eleições Brasil</span>
@@ -198,7 +199,8 @@ function ElectionSwitcher() {
           <optgroup key={e.slug} label={e.name}>
             {e.rounds.map((r) => (
               <option key={r.slug} value={r.slug}>
-                {e.demo ? 'Demo' : e.slug.startsWith('replay-') ? 'Replay' : e.year} · {r.round}º turno
+                {e.demo ? 'Demonstração' : e.slug.startsWith('replay-') ? 'Reprodução' : e.year} · {r.round}º
+                turno
               </option>
             ))}
           </optgroup>
@@ -222,16 +224,18 @@ function LiveStatus() {
   const updated = data?.progress?.updatedAt ?? null;
   const ingestion = data?.ingestion.state;
   const isReplay = round.environment === 'replay';
+  // The overview follows the live stream; the election list only refreshes every minute.
+  const status = data?.round.status ?? round.status;
 
   let tone: 'live' | 'warn' | 'muted' | 'ink' = 'muted';
-  let label = 'Aguardando apuração';
+  let label = 'Aguardando';
   if (connection === 'offline') {
     tone = 'muted';
-    label = 'Offline';
-  } else if (round.status === 'final') {
+    label = 'Sem conexão';
+  } else if (status === 'final') {
     tone = 'ink';
-    label = isReplay ? 'Replay encerrado' : 'Apuração encerrada';
-  } else if (round.status === 'live') {
+    label = isReplay ? 'Reprodução encerrada' : 'Apuração encerrada';
+  } else if (status === 'live') {
     if (connection === 'reconnecting') {
       tone = 'warn';
       label = 'Reconectando';
@@ -240,7 +244,7 @@ function LiveStatus() {
       label = 'Dados atrasados';
     } else {
       tone = 'live';
-      label = isReplay ? 'Replay' : 'Ao vivo';
+      label = isReplay ? 'Reprodução' : 'Ao vivo';
     }
   }
   const color = { live: 'text-live', warn: 'text-warn', muted: 'text-muted', ink: 'text-ink-2' }[tone];
@@ -256,7 +260,7 @@ function LiveStatus() {
       {updated && (
         <span className="hidden whitespace-nowrap text-muted md:inline lg:hidden xl:inline">
           <span className="sr-only">Última atualização às </span>
-          <time dateTime={updated}>{formatClock(updated)}</time> BRT
+          <time dateTime={updated}>{formatClock(updated)}</time>
         </span>
       )}
     </div>
@@ -344,7 +348,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             </div>
             <ul className="grid gap-1">
               {[
-                { to: href('/historico'), label: 'Histórico da apuração', icon: IconHistory },
+                { to: href('/historico'), label: 'Linha do tempo', icon: IconHistory },
                 ...(meta?.features.comparison === false
                   ? []
                   : [{ to: href('/compare'), label: 'Comparar estados', icon: IconCompare }]),
@@ -376,22 +380,19 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
 }
 
 function Footer() {
-  const { meta, round } = useRound();
-  const adapter = meta?.adapters.find((a) => round.adapter?.startsWith(a.id));
-  return (
-    <SiteFooter version={meta?.app.version} adapter={adapter ? `${adapter.id} ${adapter.version}` : null} />
-  );
+  const { meta } = useRound();
+  return <SiteFooter version={meta?.app.version} />;
 }
 
-function SiteFooter({ version, adapter }: { version?: string; adapter?: string | null }) {
+function SiteFooter({ version }: { version?: string }) {
   return (
     <footer className="border-t border-line pb-24 lg:pb-0">
       <div className="mx-auto flex max-w-[1320px] flex-col gap-2 px-4 py-6 text-[13px] text-muted sm:px-6 md:flex-row md:items-start md:justify-between">
         <div className="max-w-2xl">
           <p>
-            Fonte: Tribunal Superior Eleitoral — TSE. Este site não é um serviço oficial da Justiça Eleitoral.
-            Resultados parciais refletem apenas as seções totalizadas até o horário indicado e podem mudar até
-            o fim da totalização.{' '}
+            Fonte: Tribunal Superior Eleitoral (TSE). Este site não é um serviço oficial da Justiça Eleitoral.
+            Resultados parciais consideram apenas as urnas já apuradas e podem mudar até o fim da apuração.
+            Horários de Brasília.{' '}
             <Link href="/como-funciona" className="text-ink-2 underline underline-offset-2">
               Como funciona
             </Link>
@@ -401,10 +402,7 @@ function SiteFooter({ version, adapter }: { version?: string; adapter?: string |
             </Link>
           </p>
         </div>
-        <p className="shrink-0 font-mono text-[12px]">
-          Eleições Brasil{version ? ` v${version}` : ''}
-          {adapter && ` · adapter ${adapter}`}
-        </p>
+        <p className="shrink-0 font-mono text-[12px]">Eleições Brasil{version ? ` v${version}` : ''}</p>
       </div>
     </footer>
   );

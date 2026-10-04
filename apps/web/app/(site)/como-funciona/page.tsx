@@ -18,7 +18,7 @@ const stroke = {
 const STEPS: { title: string; text: string; icon: ReactNode; ours: boolean }[] = [
   {
     title: 'Urnas',
-    text: 'Ao fim da votação, cada urna envia seus votos para a Justiça Eleitoral.',
+    text: 'Às 17h, quando a votação termina, cada urna imprime o boletim com os seus votos, e o resultado é transmitido para a Justiça Eleitoral.',
     ours: false,
     icon: (
       <svg viewBox="0 0 32 32" width={30} height={30} aria-hidden {...stroke}>
@@ -29,7 +29,7 @@ const STEPS: { title: string; text: string; icon: ReactNode; ours: boolean }[] =
   },
   {
     title: 'TSE',
-    text: 'O Tribunal Superior Eleitoral soma os votos e publica arquivos com os resultados a cada atualização.',
+    text: 'O Tribunal Superior Eleitoral soma os votos e divulga os resultados, atualizados ao longo da noite.',
     ours: false,
     icon: (
       <svg viewBox="0 0 32 32" width={30} height={30} aria-hidden {...stroke}>
@@ -38,8 +38,8 @@ const STEPS: { title: string; text: string; icon: ReactNode; ours: boolean }[] =
     ),
   },
   {
-    title: 'Nosso coletor',
-    text: 'A cada poucos segundos, nosso sistema confere se há algo novo. Baixa só o que mudou, sem sobrecarregar o TSE.',
+    title: 'Nossa coleta',
+    text: 'A cada poucos segundos, nosso sistema confere se há algo novo no TSE e baixa só o que mudou, sem sobrecarregar o tribunal.',
     ours: true,
     icon: (
       <svg viewBox="0 0 32 32" width={30} height={30} aria-hidden {...stroke}>
@@ -50,7 +50,7 @@ const STEPS: { title: string; text: string; icon: ReactNode; ours: boolean }[] =
   },
   {
     title: 'Conferência',
-    text: 'Cada arquivo é conferido. Números impossíveis ou fora do padrão são sinalizados e não apagam o que já estava certo.',
+    text: 'Cada arquivo é conferido. Números impossíveis ou fora do padrão são sinalizados e nunca apagam o que já estava certo.',
     ours: true,
     icon: (
       <svg viewBox="0 0 32 32" width={30} height={30} aria-hidden {...stroke}>
@@ -60,8 +60,8 @@ const STEPS: { title: string; text: string; icon: ReactNode; ours: boolean }[] =
     ),
   },
   {
-    title: 'Histórico',
-    text: 'Guardamos cada atualização com o horário. É isso que permite ver como estava a apuração às 19h32, por exemplo.',
+    title: 'Linha do tempo',
+    text: 'Guardamos cada atualização com o horário. Assim dá para ver como estava a apuração às 19h32, por exemplo.',
     ours: true,
     icon: (
       <svg viewBox="0 0 32 32" width={30} height={30} aria-hidden {...stroke}>
@@ -86,15 +86,15 @@ const STEPS: { title: string; text: string; icon: ReactNode; ours: boolean }[] =
 const QUESTIONS = [
   {
     q: 'Por que não mostrar direto do site do TSE?',
-    a: 'Se cada pessoa consultasse o TSE diretamente, milhões de acessos iriam para lá ao mesmo tempo. Aqui, só o nosso coletor conversa com o TSE; todo mundo lê a nossa cópia, que é atualizada em segundos.',
+    a: 'Se cada pessoa consultasse o TSE diretamente, milhões de acessos chegariam lá ao mesmo tempo. Aqui, só o nosso sistema consulta o TSE, e todo mundo lê a nossa cópia, atualizada em segundos.',
   },
   {
     q: 'E se o TSE ficar fora do ar?',
-    a: 'Nada é apagado. Continuamos mostrando os últimos números recebidos, com um aviso de “dados atrasados” e o horário da última atualização. O coletor segue tentando até a fonte voltar.',
+    a: 'Nada é apagado. Continuamos mostrando os últimos números recebidos, com um aviso de “dados atrasados” e o horário da última atualização, e seguimos tentando até o TSE voltar.',
   },
   {
     q: 'Os números podem ser diferentes dos do TSE?',
-    a: 'Os números são os mesmos que o TSE publica. Pode haver alguns segundos de diferença entre a publicação no TSE e a chegada aqui. Em caso de dúvida, a fonte oficial é sempre o TSE.',
+    a: 'Não. Os números são exatamente os que o TSE divulga; pode haver só alguns segundos de diferença até eles chegarem aqui. Em caso de dúvida, a fonte oficial é sempre o TSE.',
   },
 ];
 
@@ -103,7 +103,7 @@ export default function HowItWorksPage() {
     <div className="max-w-5xl pb-8 pt-3">
       <h1 className="text-[28px] font-semibold tracking-tight sm:text-[34px]">Como funciona</h1>
       <p className="mt-2 max-w-2xl text-[16px] text-ink-2">
-        O caminho de um voto, da urna até a sua tela. Todos os dados vêm do Tribunal Superior Eleitoral; nós
+        O caminho de um voto, da urna até a sua tela. Todos os dados vêm do Tribunal Superior Eleitoral. Nós
         só buscamos, conferimos, guardamos e mostramos.
       </p>
 
@@ -163,8 +163,8 @@ export default function HowItWorksPage() {
           ))}
         </div>
         <p className="mt-6 text-[14px] text-ink-2">
-          Quer ver isso acontecendo? O painel <strong>Ao vivo</strong> de cada eleição mostra o ritmo da
-          apuração e a saúde do nosso coletor em tempo real. Mais detalhes em{' '}
+          Quer ver isso acontecendo? A página <strong>Bastidores</strong> mostra, em tempo real, o ritmo da
+          apuração e o funcionamento da nossa coleta. Mais detalhes em{' '}
           <Link href="/sobre" className="text-info underline underline-offset-2">
             Sobre os dados
           </Link>

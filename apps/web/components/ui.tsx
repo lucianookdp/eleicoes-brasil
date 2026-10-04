@@ -104,11 +104,10 @@ export function Skeleton({ className = '' }: { className?: string }) {
 export function ErrorNotice({ error, retry }: { error: unknown; retry?: () => void }) {
   return (
     <div role="alert" className="rounded-xl border border-bad/40 bg-bad-soft px-4 py-3 text-[14px]">
-      <p className="font-medium text-bad">Não foi possível carregar estes dados.</p>
-      <p className="text-ink-2">
-        {error instanceof Error ? error.message : 'Erro desconhecido.'} Nossa API pode estar temporariamente
-        indisponível.
+      <p className="font-medium text-bad" title={error instanceof Error ? error.message : undefined}>
+        Não foi possível carregar estes dados.
       </p>
+      <p className="text-ink-2">Verifique sua conexão ou tente de novo em alguns instantes.</p>
       {retry && (
         <button type="button" onClick={retry} className="mt-2 text-info underline underline-offset-2">
           Tentar de novo
@@ -135,8 +134,8 @@ export function FreshnessNotice({
   const last = ingestion.lastSuccessAt ?? progress?.updatedAt ?? null;
   if (connection === 'offline') {
     return (
-      <Notice tone="muted" title="Você está offline">
-        Exibindo os últimos dados recebidos{last && <> às {formatClock(last)} BRT</>}. Eles serão atualizados
+      <Notice tone="muted" title="Você está sem conexão">
+        Mostrando os últimos dados recebidos{last && <> às {formatClock(last)}</>}. Eles voltam a se atualizar
         quando a conexão voltar.
       </Notice>
     );
@@ -144,8 +143,8 @@ export function FreshnessNotice({
   if (roundStatus === 'live' && (ingestion.state === 'offline' || ingestion.state === 'degraded')) {
     return (
       <Notice tone="warn" title={ingestion.state === 'offline' ? 'Dados atrasados' : 'Fonte do TSE instável'}>
-        Exibindo os últimos dados recebidos com sucesso{last && <> às {formatClock(last)} BRT</>}. A coleta
-        continua tentando.
+        Mostrando os últimos dados recebidos{last && <> às {formatClock(last)}</>}. Continuamos tentando
+        buscar dados novos.
       </Notice>
     );
   }

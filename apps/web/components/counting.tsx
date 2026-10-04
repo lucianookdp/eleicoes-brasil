@@ -4,7 +4,10 @@ import type { ProgressDTO, StateRowDTO, VoteTotals } from '@eleicoes/election-co
 import { formatClock, percent } from '@eleicoes/election-core';
 import { useState } from 'react';
 import { fmtCompact, fmtInt, fmtPct } from '@/lib/format';
+import { useRound } from './shell';
 import { Stat } from './ui';
+
+const DAY = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', timeZone: 'UTC' });
 
 const REGION_ORDER = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul', 'Exterior'];
 
@@ -27,6 +30,7 @@ export function CountingHero({
   title?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const { round } = useRound();
   const started = progress && progress.status !== 'not-started';
   const pending =
     progress?.sectionsTotal != null && progress.sectionsCounted != null
@@ -40,12 +44,11 @@ export function CountingHero({
       </h2>
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
         <p className="numeral text-[clamp(48px,14vw,84px)] leading-[0.95]" aria-live="polite">
-          {started ? fmtPct(progress.countedPct) : '—'}
+          {started ? fmtPct(progress.countedPct) : progress ? fmtPct(0) : '—'}
         </p>
         {started && progress.totalizedAt && (
-          <p className="pb-1.5 text-right text-[13px] text-ink-2">
-            atualizado às <span className="font-medium text-ink">{formatClock(progress.totalizedAt)}</span>{' '}
-            BRT
+          <p className="hidden pb-1.5 text-right text-[13px] text-ink-2 sm:block">
+            atualizado às <span className="font-medium text-ink">{formatClock(progress.totalizedAt)}</span>
           </p>
         )}
       </div>
@@ -53,17 +56,23 @@ export function CountingHero({
         {!progress
           ? 'Aguardando os primeiros dados do TSE.'
           : !started
-            ? 'A apuração ainda não começou. Os números aparecem aqui assim que o TSE publicar a primeira parcial.'
+            ? // General elections: polls close at 17h Brasília nationwide and results start right after.
+              `A apuração começa em ${DAY.format(new Date(`${round.date}T12:00:00Z`))}, às 17h, quando as urnas fecham. Os números aparecem aqui assim que o TSE divulgar a primeira parcial.`
             : progress.status === 'finished'
-              ? `Todas as ${fmtInt(progress.sectionsTotal)} seções totalizadas.`
-              : `das seções totalizadas · ${fmtInt(progress.sectionsCounted)} de ${fmtInt(progress.sectionsTotal)} (faltam ${fmtInt(pending)})`}
+              ? `Todas as ${fmtInt(progress.sectionsTotal)} urnas foram apuradas.`
+              : `das urnas apuradas · ${fmtInt(progress.sectionsCounted)} de ${fmtInt(progress.sectionsTotal)} (faltam ${fmtInt(pending)})`}
+        {started && progress.totalizedAt && (
+          <span className="block text-[13px] text-muted sm:hidden">
+            atualizado às {formatClock(progress.totalizedAt)}
+          </span>
+        )}
       </p>
 
       {started && (
         <div
           className="mt-3 h-2.5 overflow-hidden rounded-full bg-line"
           role="progressbar"
-          aria-label="Seções totalizadas no total"
+          aria-label="Urnas apuradas"
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round((progress.countedPct ?? 0) * 100) / 100}

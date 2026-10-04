@@ -11,11 +11,11 @@ import { ProgressBar } from './ui';
 const SORTS = {
   name: { label: 'Nome', fn: (a: StateRowDTO, b: StateRowDTO) => a.name.localeCompare(b.name, 'pt-BR') },
   'counted-desc': {
-    label: 'Maior totalização',
+    label: 'Mais apurados',
     fn: (a: StateRowDTO, b: StateRowDTO) => (b.progress?.countedPct ?? -1) - (a.progress?.countedPct ?? -1),
   },
   'counted-asc': {
-    label: 'Menor totalização',
+    label: 'Menos apurados',
     fn: (a: StateRowDTO, b: StateRowDTO) => (a.progress?.countedPct ?? 101) - (b.progress?.countedPct ?? 101),
   },
   votes: {
@@ -23,12 +23,12 @@ const SORTS = {
     fn: (a: StateRowDTO, b: StateRowDTO) => (b.progress?.turnout ?? -1) - (a.progress?.turnout ?? -1),
   },
   updated: {
-    label: 'Atualização recente',
+    label: 'Atualizados agora',
     fn: (a: StateRowDTO, b: StateRowDTO) =>
       Date.parse(b.progress?.totalizedAt ?? '0') - Date.parse(a.progress?.totalizedAt ?? '0'),
   },
   activity: {
-    label: 'Atividade em 5 min',
+    label: 'Mais urnas em 5 min',
     fn: (a: StateRowDTO, b: StateRowDTO) =>
       b.sectionsLast5m - a.sectionsLast5m || b.updatesLast5m - a.updatesLast5m,
   },
@@ -68,13 +68,13 @@ export function StatesTable({
       {/* Desktop: dense table */}
       <div className={`scroll-x hidden ${compact ? '' : 'md:block'}`}>
         <table className="w-full text-[14px]">
-          <caption className="sr-only">Totalização por estado</caption>
+          <caption className="sr-only">Apuração por estado</caption>
           <thead className="text-left text-[12.5px] text-muted">
             <tr className="border-b border-line">
               <th className="py-2 pr-2 font-normal">UF</th>
               <th className="py-2 pr-4 font-normal">Estado</th>
-              <th className="w-[22%] py-2 pr-4 font-normal">Totalizado</th>
-              <th className="py-2 pr-4 text-right font-normal">Seções</th>
+              <th className="w-[22%] py-2 pr-4 font-normal">Apurado</th>
+              <th className="py-2 pr-4 text-right font-normal">Urnas</th>
               <th className="py-2 pr-4 text-right font-normal">Votos</th>
               {leaderLabel && <th className="py-2 pr-4 font-normal">{leaderLabel}</th>}
               <th className="py-2 pr-4 text-right font-normal">Atualizado</th>
@@ -99,7 +99,7 @@ export function StatesTable({
                     <div className="flex items-center gap-2">
                       <ProgressBar
                         value={p?.countedPct ?? null}
-                        label={`${s.name} totalizado`}
+                        label={`${s.name}: urnas apuradas`}
                         className="flex-1"
                       />
                       <span className="w-16 text-right">
@@ -134,7 +134,7 @@ export function StatesTable({
                   </td>
                   <td className="py-2 text-right text-[13px]">
                     {s.sectionsLast5m > 0 ? (
-                      <span className="text-live">+{fmtInt(s.sectionsLast5m)} seções</span>
+                      <span className="text-live">+{fmtInt(s.sectionsLast5m)} urnas</span>
                     ) : (
                       <span className="text-muted">—</span>
                     )}
@@ -161,7 +161,7 @@ export function StatesTable({
                   <span className="block truncate font-medium">{s.name}</span>
                   <ProgressBar
                     value={p?.countedPct ?? null}
-                    label={`${s.name} totalizado`}
+                    label={`${s.name}: urnas apuradas`}
                     className="mt-1.5"
                   />
                   {s.leader && (
@@ -181,7 +181,7 @@ export function StatesTable({
                     {p && p.status !== 'not-started' ? fmtPct(p.countedPct, 1) : '—'}
                   </span>
                   <span className="block text-[12px] text-muted">
-                    {s.sectionsLast5m > 0 ? `+${fmtInt(s.sectionsLast5m)} seções` : fmtCompact(p?.turnout)}
+                    {s.sectionsLast5m > 0 ? `+${fmtInt(s.sectionsLast5m)} urnas` : fmtCompact(p?.turnout)}
                   </span>
                 </span>
               </Link>

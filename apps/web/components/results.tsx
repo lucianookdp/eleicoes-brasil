@@ -221,7 +221,7 @@ export function PartyTable({ result }: { result: ResultDTO }) {
         </tbody>
       </table>
       {!result.final && (
-        <p className="mt-2 text-[12.5px] text-muted">As vagas só são definidas após a totalização final.</p>
+        <p className="mt-2 text-[12.5px] text-muted">As vagas só são definidas no fim da apuração.</p>
       )}
     </div>
   );
@@ -290,7 +290,7 @@ export function ResultPanel({
   const query = useResult(roundSlug, areaKey, office?.slug, limit);
   const result = query.data ?? (initial && initial.office.slug === office?.slug ? initial : undefined);
 
-  if (!office) return <EmptyState title="Nenhum cargo disponível para esta área." />;
+  if (!office) return <EmptyState title="Nenhum cargo em disputa aqui." />;
 
   return (
     <div>
@@ -312,8 +312,8 @@ export function ResultPanel({
         </div>
       )}
       {!result && query.error && (query.error as ApiError).status === 404 && (
-        <EmptyState title="Ainda não há resultados deste cargo aqui.">
-          Os números aparecem assim que o TSE publicar a totalização desta área.
+        <EmptyState title="Ainda não há resultados para este cargo.">
+          Os números aparecem assim que o TSE divulgar a primeira parcial deste local.
         </EmptyState>
       )}
       {!result && query.error && (query.error as ApiError).status !== 404 && (
@@ -323,13 +323,14 @@ export function ResultPanel({
         <div>
           {!result.votesPublishable && (
             <p className="mb-3 rounded-lg bg-surface-2 px-3 py-2 text-[13px] text-ink-2">
-              O TSE ainda não liberou a divulgação dos votos deste cargo. Os números aparecem quando a
-              divulgação for autorizada.
+              O TSE ainda não liberou os votos deste cargo. Os números aparecem assim que a divulgação for
+              autorizada.
             </p>
           )}
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[13px] text-muted">
             <span>
-              {fmtPct(result.progress.countedPct)} das seções · {fmtInt(result.votes.valid)} votos válidos
+              {fmtPct(result.progress.countedPct)} das urnas apuradas · {fmtInt(result.votes.valid)} votos
+              válidos
               {result.seats && result.seats > 1 ? ` · ${result.seats} vagas` : ''}
             </span>
             {result.office.kind === 'proportional' && (
@@ -372,13 +373,10 @@ export function Provenance({ result }: { result: ResultDTO }) {
   if (!result.provenance) return null;
   const p = result.provenance;
   return (
-    <p className="mt-4 text-[12px] text-muted">
-      Fonte: {p.provider === 'TSE' ? 'Tribunal Superior Eleitoral — TSE' : p.provider}
-      {result.progress.totalizedAt && <> · totalizado às {formatClock(result.progress.totalizedAt)} BRT</>} ·
-      recebido às {formatClock(p.retrievedAt)} BRT ·{' '}
-      <span className="break-all font-mono text-[11px]" title="Arquivo de origem">
-        {p.sourceFile.split('/').at(-1)}
-      </span>
+    <p className="mt-4 text-[12px] text-muted" title={`Arquivo de origem: ${p.sourceFile.split('/').at(-1)}`}>
+      Fonte: {p.provider === 'TSE' ? 'TSE' : p.provider}
+      {result.progress.totalizedAt && <> · divulgado às {formatClock(result.progress.totalizedAt)}</>} ·
+      recebido aqui às {formatClock(p.retrievedAt)}
     </p>
   );
 }

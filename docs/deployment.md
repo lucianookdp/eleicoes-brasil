@@ -46,7 +46,7 @@ exportação estática do Next servida por nginx. O worker aplica as migrações
    sem buffer e sem cache (`X-Accel-Buffering: no` já é enviado). Uma instância aguenta
    ~30 mil req/s de respostas em cache e milhares de conexões ao vivo; com CDN, a origem recebe
    poucas requisições por atualização.
-5. Acompanhe o painel **Ao vivo** (`/eleicao/ao-vivo/?e=2026&t=1`).
+5. Acompanhe a página **Bastidores** (`/eleicao/bastidores/?e=2026&t=1`).
 
 ## Endereço
 

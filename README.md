@@ -128,9 +128,10 @@ domínio. Mudança de formato do TSE = mudança só no adapter. Ver
 
 ## Eleições passadas
 
-Resultados finais de eleições anteriores vêm do
-[Portal de Dados Abertos do TSE](https://dadosabertos.tse.jus.br) e entram nas mesmas tabelas,
-aparecendo no seletor de eleições como qualquer outra:
+O site publicado mostra só a eleição em andamento (2026). Numa instalação própria, os resultados
+finais de eleições anteriores podem ser importados do
+[Portal de Dados Abertos do TSE](https://dadosabertos.tse.jus.br); eles entram nas mesmas tabelas e
+aparecem no seletor de eleições como qualquer outra:
 
 ```bash
 pnpm import:history --year 2022 --download        # baixa e importa (arquivos grandes)

@@ -210,7 +210,7 @@ export function EvolutionChart({ series, majority }: { series: SeriesDTO; majori
             className="pointer-events-none absolute top-2 z-10 min-w-44 rounded-lg border border-line-strong bg-surface px-3 py-2 text-[12.5px] shadow-lg"
             style={{ left: Math.min(Math.max(8, x(Date.parse(hp.at)) + 12), width - 190) }}
           >
-            <p className="font-mono text-muted">{formatClock(hp.at)} BRT</p>
+            <p className="font-mono text-muted">{formatClock(hp.at)}</p>
             {[...series.candidates]
               .sort((a, b) => (hp.values[b.key] ?? 0) - (hp.values[a.key] ?? 0))
               .map((c) => (
@@ -226,12 +226,14 @@ export function EvolutionChart({ series, majority }: { series: SeriesDTO; majori
                   <span className="font-medium">{fmtPct(hp.values[c.key], 3)}</span>
                 </p>
               ))}
-            <p className="mt-1 border-t border-line pt-1 text-muted">Totalização {fmtPct(hp.countedPct)}</p>
+            <p className="mt-1 border-t border-line pt-1 text-muted">
+              {fmtPct(hp.countedPct)} das urnas apuradas
+            </p>
           </div>
         )}
       </div>
       <p className="mt-2 text-[12.5px] text-muted">
-        Percentuais parciais refletem apenas os votos totalizados até cada momento e podem mudar até o fim da
+        Os percentuais parciais consideram só as urnas apuradas até cada momento e podem mudar até o fim da
         apuração.
       </p>
     </div>

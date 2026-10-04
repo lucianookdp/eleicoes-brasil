@@ -31,7 +31,6 @@ export function RoundTitle({ compact = false }: { compact?: boolean }) {
         {round.round}º turno · {DATE.format(new Date(`${round.date}T12:00:00Z`))}
         {round.environment === 'simulado2026' && ' · simulação oficial do TSE'}
         {round.environment === 'replay' && ' · reprodução de uma apuração gravada'}
-        {round.environment === 'dados-abertos' && ' · resultado final (Dados Abertos do TSE)'}
       </p>
     </div>
   );
@@ -68,11 +67,9 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
   };
 
   const headline = data?.headline ?? null;
-  const hasEvolution =
-    !!data?.round.offices.some((o) => o.scope === 'country') && round.environment !== 'dados-abertos';
-  // A remembered tab that this election does not have falls back to the map.
-  const activeTab: Tab = tab === 'evolucao' && !hasEvolution ? 'mapa' : tab;
   const headlineOffice = data?.round.offices.find((o) => o.scope === 'country');
+  // A remembered tab that this election does not have falls back to the map.
+  const activeTab: Tab = tab === 'evolucao' && !headlineOffice ? 'mapa' : tab;
   const series = useSeries(round.slug, tab === 'evolucao' ? headlineOffice?.slug : undefined, 'br');
   const events = useEvents(round.slug, 25);
 
@@ -114,18 +111,18 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
             <section aria-labelledby="corrida">
               <div className="mb-1 flex items-baseline justify-between gap-3">
                 <h2 id="corrida" className="text-[17px] font-semibold tracking-tight">
-                  {headlineOffice ? `${headlineOffice.name}` : 'Resultados'}
+                  {headlineOffice?.name ?? 'Resultados'}
                 </h2>
                 {headline && (
                   <span className="text-[12.5px] text-muted">
-                    {fmtPct(headline.progress.countedPct)} apurado no Brasil
+                    {fmtPct(headline.progress.countedPct)} das urnas apuradas
                   </span>
                 )}
               </div>
               {data.round.offices.length === 0 && (
-                <EmptyState title="O TSE ainda não publicou os arquivos desta eleição.">
-                  Os cargos, candidatos e resultados aparecem aqui automaticamente assim que a divulgação
-                  oficial começar.
+                <EmptyState title="O TSE ainda não publicou os dados desta eleição.">
+                  Cargos, candidatos e resultados aparecem aqui sozinhos assim que a divulgação oficial
+                  começar.
                 </EmptyState>
               )}
               {data.round.offices.length > 0 && !headlineOffice && (
@@ -135,7 +132,7 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
               )}
               {headlineOffice && !headline && (
                 <EmptyState title="Ainda não há votos apurados.">
-                  Os resultados aparecem aqui assim que o TSE publicar a primeira parcial.
+                  Os resultados aparecem aqui assim que o TSE divulgar a primeira parcial.
                 </EmptyState>
               )}
               {headline && (
@@ -157,9 +154,8 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
             tabs={[
               { value: 'mapa', label: 'Mapa' },
               { value: 'estados', label: 'Estados' },
-              // Imported elections only have final numbers: no evolution to show.
-              ...(hasEvolution ? [{ value: 'evolucao' as const, label: 'Evolução' }] : []),
-              { value: 'atividade', label: 'Atividade' },
+              ...(headlineOffice ? [{ value: 'evolucao' as const, label: 'Evolução' }] : []),
+              { value: 'atividade', label: 'Atualizações' },
             ]}
           >
             {activeTab === 'mapa' && (
@@ -174,8 +170,7 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
                 />
               </div>
             )}
-            {tab === 'evolucao' &&
-              round.environment !== 'dados-abertos' &&
+            {activeTab === 'evolucao' &&
               (series.data ? (
                 <EvolutionChart series={series.data} majority />
               ) : (
@@ -188,7 +183,7 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
                   href={href('/operations')}
                   className="mt-3 inline-flex min-h-10 items-center text-[13.5px] text-info"
                 >
-                  Abrir painel ao vivo
+                  Ver os bastidores da apuração
                 </Link>
               </>
             )}

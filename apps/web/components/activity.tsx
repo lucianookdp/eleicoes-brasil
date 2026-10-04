@@ -51,10 +51,10 @@ export function ActivityFeed({
             <span className="text-right">
               {issue ? (
                 <span className="text-muted" title={e.message ?? ''}>
-                  ver log
+                  detalhes
                 </span>
               ) : e.sectionsAdded && e.sectionsAdded > 0 ? (
-                <span className="text-live">+{fmtInt(e.sectionsAdded)} seções</span>
+                <span className="text-live">+{fmtInt(e.sectionsAdded)} urnas</span>
               ) : (
                 <span className="text-muted">{fmtPct(e.countedPct, 1)}</span>
               )}

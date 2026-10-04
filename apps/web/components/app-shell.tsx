@@ -62,10 +62,8 @@ function Inner({ children }: { children: ReactNode }) {
       <BasicShell>
         {elections.error ? (
           <div className="max-w-xl py-16">
-            <h1 className="text-2xl font-semibold">API indisponível</h1>
-            <p className="mt-2 text-ink-2">
-              Não foi possível carregar as eleições agora. Tente novamente em alguns instantes.
-            </p>
+            <h1 className="text-2xl font-semibold">Não foi possível carregar a apuração</h1>
+            <p className="mt-2 text-ink-2">Verifique sua conexão ou tente de novo em alguns instantes.</p>
           </div>
         ) : (
           <div className="grid gap-4">

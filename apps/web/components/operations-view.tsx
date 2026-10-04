@@ -20,32 +20,36 @@ function useNow(ms = 1000) {
 }
 
 const STATE_LABEL: Record<IngestionStatus['state'], { label: string; cls: string; hint: string }> = {
-  healthy: { label: 'Saudável', cls: 'text-live bg-live-soft', hint: 'Coletando normalmente.' },
+  healthy: {
+    label: 'funcionando',
+    cls: 'text-live bg-live-soft',
+    hint: 'Conferimos o TSE a cada poucos segundos.',
+  },
   degraded: {
-    label: 'Degradado',
+    label: 'instável',
     cls: 'text-warn bg-warn-soft',
-    hint: 'A última coleta teve falhas. Os dados podem estar atrasados.',
+    hint: 'A última tentativa teve falhas. Os dados podem atrasar um pouco.',
   },
   offline: {
-    label: 'Desconectado',
+    label: 'parada',
     cls: 'text-bad bg-bad-soft',
-    hint: 'O coletor não responde há mais de 2 minutos.',
+    hint: 'A coleta não responde há mais de 2 minutos.',
   },
   idle: {
-    label: 'Parado',
+    label: 'pausada',
     cls: 'text-muted bg-surface-2',
     hint: 'Nenhuma coleta em andamento para esta eleição.',
   },
   waiting: {
-    label: 'Aguardando o TSE',
+    label: 'aguardando o TSE',
     cls: 'text-info bg-surface-2',
-    hint: 'O TSE ainda não publicou os arquivos desta eleição. Conferimos a cada minuto.',
+    hint: 'O TSE ainda não publicou os dados desta eleição. Conferimos a cada minuto.',
   },
 };
 
 /**
- * Our infrastructure, not the TSE's: how fast data is arriving, how the collector is
- * talking to the source, and how fresh each area is.
+ * Behind the scenes ("Bastidores"): our infrastructure, not the TSE's. How fast data is
+ * arriving, how the collector is talking to the source, and how fresh each area is.
  */
 export function OperationsView() {
   const { round, meta } = useRound();
@@ -58,10 +62,10 @@ export function OperationsView() {
   return (
     <>
       <div className="mb-5">
-        <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Ao vivo</h1>
+        <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Bastidores</h1>
         <p className="text-[13.5px] text-muted">
-          O ritmo da apuração e o estado da nossa coleta de dados. Este painel não representa os sistemas
-          internos do TSE.
+          O ritmo da apuração e o funcionamento da nossa coleta de dados. Este painel mostra o nosso sistema,
+          não os sistemas do TSE.
         </p>
       </div>
 
@@ -71,13 +75,10 @@ export function OperationsView() {
             className={`size-2 rounded-full bg-current ${data.ingestion.state === 'healthy' ? 'pulse-dot' : ''}`}
             aria-hidden
           />
-          Coletor: {s.label}
+          Coleta {s.label}
         </span>
         <span className="text-ink-2">{s.hint}</span>
-        <span className="text-muted">
-          Modo {data.ingestion.mode ?? '—'} · último ciclo{' '}
-          {data.ingestion.lastCycleAt ? `há ${ago(data.ingestion.lastCycleAt, now)}` : '—'}
-        </span>
+        <span className="text-muted">Última verificação {sinceText(data.ingestion.lastCycleAt, now)}</span>
         {data.ingestion.lastError && (
           <span className="w-full truncate font-mono text-[12px] text-warn">{data.ingestion.lastError}</span>
         )}
@@ -89,7 +90,7 @@ export function OperationsView() {
         </SectionTitle>
         <div className="mb-3 rounded-xl border border-line bg-surface px-4 py-3">
           <p className="text-[13px] text-muted">
-            Atraso entre o TSE publicar e o dado estar aqui (Brasil e estados, últimos 15 min)
+            Tempo entre o TSE divulgar um número e ele aparecer aqui (Brasil e estados, últimos 15 min)
           </p>
           <p className="numeral text-[28px] leading-tight">
             {data.delay.avgSeconds != null
@@ -103,7 +104,7 @@ export function OperationsView() {
           </p>
         </div>
         <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Tile label="Seções por minuto" value={fmtInt(Math.round(data.processing.sectionsPerMinute))} />
+          <Tile label="Urnas por minuto" value={fmtInt(Math.round(data.processing.sectionsPerMinute))} />
           <Tile label="Votos por minuto" value={fmtCompact(data.processing.votesPerMinute)} />
           <Tile
             label="Atualizações de estados por minuto"
@@ -118,8 +119,8 @@ export function OperationsView() {
 
       <div className="mb-8 grid items-start gap-6 lg:grid-cols-12 [&>*]:min-w-0">
         <section aria-labelledby="calor" className="lg:col-span-5">
-          <SectionTitle id="calor" title="Onde a apuração andou">
-            Seções totalizadas por estado nos últimos 5 minutos.
+          <SectionTitle id="calor" title="Onde a apuração avançou">
+            Urnas apuradas por estado nos últimos 5 minutos.
           </SectionTitle>
           <Panel className="p-3 sm:p-4">
             <Heatmap heat={data.heat} />
@@ -135,27 +136,27 @@ export function OperationsView() {
 
       {meta?.features.advancedOperations !== false && (
         <section aria-labelledby="coleta" className="mb-8">
-          <SectionTitle id="coleta" title="Coleta">
-            Requisições do nosso coletor aos arquivos públicos do TSE nos últimos{' '}
-            {data.requests.windowMinutes} minutos.
+          <SectionTitle id="coleta" title="Nossa coleta">
+            Consultas do nosso sistema aos arquivos públicos do TSE nos últimos {data.requests.windowMinutes}{' '}
+            minutos.
           </SectionTitle>
           <dl className="mb-4 grid grid-cols-3 gap-3 lg:grid-cols-6">
-            <Tile label="Requisições" value={fmtInt(data.requests.total)} />
-            <Tile label="HTTP 200" value={fmtInt(data.requests.ok)} />
-            <Tile label="HTTP 304" value={fmtInt(data.requests.notModified)} detail="sem mudança" />
+            <Tile label="Consultas" value={fmtInt(data.requests.total)} />
+            <Tile label="Com dados novos" value={fmtInt(data.requests.ok)} />
+            <Tile label="Sem mudança" value={fmtInt(data.requests.notModified)} />
             <Tile
               label="Erros"
               value={fmtInt(data.requests.errors)}
               tone={data.requests.errors > 0 ? 'bad' : undefined}
             />
             <Tile
-              label="Latência média"
+              label="Resposta média"
               value={
                 data.requests.avgLatencyMs != null ? `${Math.round(data.requests.avgLatencyMs)} ms` : '—'
               }
             />
             <Tile
-              label="Latência p95"
+              label="95% em até"
               value={
                 data.requests.p95LatencyMs != null ? `${Math.round(data.requests.p95LatencyMs)} ms` : '—'
               }
@@ -168,13 +169,20 @@ export function OperationsView() {
       )}
 
       <section aria-labelledby="frescor">
-        <SectionTitle id="frescor" title="Frescor dos dados">
-          Há quanto tempo cada área recebeu dados novos.
+        <SectionTitle id="frescor" title="Última atualização por local">
+          Há quanto tempo cada lugar recebeu dados novos.
         </SectionTitle>
         <Freshness items={data.freshness} now={now} />
       </section>
     </>
   );
+}
+
+/** "há 12 s", or "agora" (never "há agora"). */
+function sinceText(iso: string | null | undefined, now: number) {
+  if (!iso) return '—';
+  const a = ago(iso, now);
+  return a === 'agora' ? a : `há ${a}`;
 }
 
 function Tile({
@@ -204,7 +212,7 @@ function Heatmap({ heat }: { heat: OperationsDTO['heat'] }) {
       <div
         className="mx-auto grid max-w-[360px] grid-cols-7 gap-1"
         role="list"
-        aria-label="Seções totalizadas nos últimos 5 minutos por estado"
+        aria-label="Urnas apuradas nos últimos 5 minutos, por estado"
       >
         {heat.map((h) => {
           const pos = TILES[h.uf];
@@ -214,8 +222,8 @@ function Heatmap({ heat }: { heat: OperationsDTO['heat'] }) {
             <div
               key={h.uf}
               role="listitem"
-              aria-label={`${h.uf}: ${fmtInt(h.sections)} seções`}
-              title={`${h.uf}: ${fmtInt(h.sections)} seções, ${fmtInt(h.updates)} atualizações`}
+              aria-label={`${h.uf}: ${fmtInt(h.sections)} urnas`}
+              title={`${h.uf}: ${fmtInt(h.sections)} urnas, ${fmtInt(h.updates)} atualizações`}
               className="flex aspect-square flex-col items-center justify-center rounded-md text-[11px] font-semibold"
               style={{
                 gridColumn: pos[0] + 1,
@@ -239,7 +247,7 @@ function Heatmap({ heat }: { heat: OperationsDTO['heat'] }) {
           style={{ background: 'linear-gradient(90deg, var(--seq-low), var(--seq-high))' }}
           aria-hidden
         />
-        <span>mais seções</span>
+        <span>mais urnas</span>
       </div>
     </div>
   );
@@ -249,13 +257,15 @@ function Cycles({ cycles }: { cycles: CycleDTO[] }) {
   const list = [...cycles].reverse();
   const max = Math.max(1, ...list.map((c) => c.requests));
   if (list.length === 0)
-    return <p className="py-6 text-center text-[14px] text-muted">Nenhum ciclo de coleta registrado.</p>;
+    return (
+      <p className="py-6 text-center text-[14px] text-muted">Nenhuma rodada de coleta registrada ainda.</p>
+    );
   const last = list.at(-1)!;
   return (
     <div>
       <p className="mb-2 text-[13px] text-muted">
-        Requisições por ciclo (mais recente à direita). Último ciclo às {formatClock(last.startedAt)}:{' '}
-        {fmtInt(last.requests)} requisições em{' '}
+        Consultas por rodada (a mais recente à direita). Última rodada às {formatClock(last.startedAt)}:{' '}
+        {fmtInt(last.requests)} consultas em{' '}
         {last.durationMs != null
           ? `${(last.durationMs / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} s`
           : '—'}
@@ -264,12 +274,12 @@ function Cycles({ cycles }: { cycles: CycleDTO[] }) {
       <div
         className="flex h-24 items-end gap-[2px]"
         role="img"
-        aria-label={`${list.length} ciclos de coleta`}
+        aria-label={`${list.length} rodadas de coleta`}
       >
         {list.map((c) => (
           <div
             key={c.id}
-            title={`${formatClock(c.startedAt)} · ${c.requests} req · ${c.ok} ok · ${c.notModified} 304 · ${c.errors} erros · ${c.status}`}
+            title={`${formatClock(c.startedAt)} · ${c.requests} consultas · ${c.ok} com dados novos · ${c.notModified} sem mudança · ${c.errors} erros`}
             className="flex min-w-[3px] flex-1 flex-col-reverse overflow-hidden rounded-t-[3px]"
             style={{ height: `${Math.max(4, (c.requests / max) * 100)}%` }}
           >
@@ -282,10 +292,10 @@ function Cycles({ cycles }: { cycles: CycleDTO[] }) {
       </div>
       <ul className="mt-2 flex flex-wrap gap-x-4 text-[12px] text-muted">
         <li className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm bg-live" aria-hidden /> 200 (dados novos)
+          <span className="size-2.5 rounded-sm bg-live" aria-hidden /> dados novos
         </li>
         <li className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm bg-line-strong" aria-hidden /> 304 (sem mudança)
+          <span className="size-2.5 rounded-sm bg-line-strong" aria-hidden /> sem mudança
         </li>
         <li className="flex items-center gap-1.5">
           <span className="size-2.5 rounded-sm bg-bad" aria-hidden /> erros

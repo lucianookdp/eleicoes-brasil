@@ -51,7 +51,7 @@ export function BrazilMap({ states, allowLeader = true }: { states: StateRowDTO[
             value={mode}
             onChange={setMode}
             options={[
-              { value: 'progress', label: 'Totalização' },
+              { value: 'progress', label: 'Apuração' },
               { value: 'leader', label: 'Mais votado' },
             ]}
           />
@@ -76,7 +76,7 @@ export function BrazilMap({ states, allowLeader = true }: { states: StateRowDTO[
                 d={loc.path}
                 role="link"
                 tabIndex={0}
-                aria-label={`${loc.name}: ${pct == null ? 'sem dados' : `${fmtPct(pct)} totalizado`}${s?.leader && mode === 'leader' ? `, mais votado ${displayName(s.leader.name)}` : ''}`}
+                aria-label={`${loc.name}: ${pct == null ? 'sem dados' : `${fmtPct(pct)} apurado`}${s?.leader && mode === 'leader' ? `, mais votado ${displayName(s.leader.name)}` : ''}`}
                 fill={fill(s, mode)}
                 stroke={active === loc.id || pinned === loc.id ? 'var(--ink)' : 'var(--ground)'}
                 strokeWidth={active === loc.id || pinned === loc.id ? 1.6 : 0.8}
@@ -125,7 +125,7 @@ function StateCard({ state, pinned }: { state: StateRowDTO | undefined; pinned: 
       <p className="numeral text-[20px] leading-tight">
         {p && p.status !== 'not-started' ? `${fmtPct(p.countedPct)}` : '—'}
       </p>
-      <p className="text-muted">totalizado</p>
+      <p className="text-muted">das urnas apuradas</p>
       <p className="mt-1 text-ink-2">{fmtCompact(p?.turnout)} votos</p>
       {state.leader && (
         <p className="mt-1 flex items-center gap-1.5 text-ink-2">
@@ -138,7 +138,7 @@ function StateCard({ state, pinned }: { state: StateRowDTO | undefined; pinned: 
         </p>
       )}
       <p className="mt-1 text-[12px] text-muted">
-        Última atualização {p?.totalizedAt ? `${formatClock(p.totalizedAt)} BRT` : '—'}
+        {p?.totalizedAt ? `Atualizado às ${formatClock(p.totalizedAt)}` : 'Sem atualização ainda'}
       </p>
       {pinned && (
         <Link
@@ -173,7 +173,7 @@ function Legend({ mode, leaders }: { mode: Mode; leaders: { name: string; color:
     <div
       className="flex items-center gap-2 text-[12px] text-muted"
       role="img"
-      aria-label="Legenda: de 0% a 100% totalizado"
+      aria-label="Legenda: de 0% a 100% das urnas apuradas"
     >
       <span>0%</span>
       <span

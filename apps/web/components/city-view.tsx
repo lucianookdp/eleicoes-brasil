@@ -37,9 +37,7 @@ export function CityView({ uf, city, initial }: { uf: string; city: string; init
         <div>
           <h1 className="text-[28px] font-semibold tracking-tight sm:text-[32px]">{data.city.name}</h1>
           <p className="text-[13px] text-muted">
-            {data.city.isCapital ? `Capital · ${data.stateName}` : data.stateName} · código TSE{' '}
-            {data.city.code}
-            {data.city.ibgeCode && ` · IBGE ${data.city.ibgeCode}`}
+            {data.city.isCapital ? `Capital de ${data.stateName}` : data.stateName}
           </p>
         </div>
         <FavoriteButton
@@ -55,32 +53,13 @@ export function CityView({ uf, city, initial }: { uf: string; city: string; init
         progress={data.progress}
         votes={(current.data ?? initialResult)?.votes}
         votesFor={office?.name}
-        title={`Totalização em ${data.city.name}`}
+        title={`Apuração em ${data.city.name}`}
       />
 
       <section aria-labelledby="resultados" className="mt-8 max-w-3xl">
         <SectionTitle id="resultados" title="Resultados por cargo" />
         <ResultPanel roundSlug={round.slug} areaKey={key} offices={offices} initial={initialResult} />
       </section>
-
-      {data.city.zones.length > 0 && (
-        <section aria-labelledby="zonas" className="mt-12 max-w-3xl">
-          <SectionTitle id="zonas" title="Zonas eleitorais">
-            Zonas que atendem este município segundo o cadastro da Justiça Eleitoral.
-          </SectionTitle>
-          <ul className="flex flex-wrap gap-2">
-            {data.city.zones.map((z) => (
-              <li key={z} className="rounded-md border border-line px-2.5 py-1 font-mono text-[13px]">
-                Zona {z}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-[13px] text-muted">
-            Resultados por zona e a lista de seções serão exibidos quando essa coleta for ativada. Esta versão
-            mostra apenas o que já é coletado.
-          </p>
-        </section>
-      )}
     </>
   );
 }

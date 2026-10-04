@@ -17,7 +17,7 @@ const base = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 export const metadata: Metadata = {
   title: { default: 'Eleições Brasil', template: '%s · Eleições Brasil' },
   description:
-    'Acompanhamento em tempo real da totalização das eleições brasileiras com dados públicos oficiais do Tribunal Superior Eleitoral (TSE).',
+    'Apuração das eleições 2026 em tempo real, com os dados oficiais do Tribunal Superior Eleitoral (TSE).',
   applicationName: 'Eleições Brasil',
   icons: {
     icon: `${base}/icon-32.png`,

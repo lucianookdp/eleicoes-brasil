@@ -9,7 +9,7 @@ async function openDemo(page: Page) {
 
 test('opens Brazil with counting progress and the headline race', async ({ page }) => {
   await openDemo(page);
-  await expect(page.getByText('Eleição demonstrativa com candidatos e partidos fictícios')).toBeVisible();
+  await expect(page.getByText('Eleição de demonstração, com candidatos e partidos fictícios')).toBeVisible();
   await expect(page.locator('#apuracao')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Presidente' })).toBeVisible();
   // Never a horizontal scroll on the page, on any viewport.
@@ -38,7 +38,7 @@ test('selects a state, changes office and opens a city', async ({ page }) => {
 
 test('opens the historical timeline', async ({ page }) => {
   await page.goto('/eleicao/historico/?e=demo&t=1');
-  await expect(page.getByRole('heading', { name: 'Histórico da apuração' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Linha do tempo' })).toBeVisible();
   const slider = page.getByRole('slider', { name: 'Momento da apuração' });
   await expect(slider).toBeVisible();
   await slider.focus();
@@ -46,10 +46,10 @@ test('opens the historical timeline', async ({ page }) => {
   await expect(page.getByText('Como estava às')).toBeVisible();
 });
 
-test('opens live operations', async ({ page }) => {
-  await page.goto('/eleicao/ao-vivo/?e=demo&t=1');
-  await expect(page.getByRole('heading', { name: 'Ao vivo' })).toBeVisible();
-  await expect(page.getByText(/Coletor:/)).toBeVisible();
+test('opens behind the scenes', async ({ page }) => {
+  await page.goto('/eleicao/bastidores/?e=demo&t=1');
+  await expect(page.getByRole('heading', { name: 'Bastidores' })).toBeVisible();
+  await expect(page.getByText(/^Coleta /)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Ritmo da apuração' })).toBeVisible();
 });
 

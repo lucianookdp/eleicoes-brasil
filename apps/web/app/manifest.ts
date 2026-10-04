@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Eleições Brasil',
     short_name: 'Eleições',
-    description: 'Apuração das eleições brasileiras em tempo real, com dados oficiais do TSE.',
+    description: 'Apuração das eleições 2026 em tempo real, com os dados oficiais do TSE.',
     lang: 'pt-BR',
     start_url: `${base}/`,
     scope: `${base}/`,

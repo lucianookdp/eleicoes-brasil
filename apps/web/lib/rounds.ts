@@ -40,7 +40,7 @@ export function defaultElection(elections: ElectionSummary[]): ElectionSummary |
 const SECTIONS: Record<string, string> = {
   '': '/eleicao/',
   '/states': '/eleicao/estados/',
-  '/operations': '/eleicao/ao-vivo/',
+  '/operations': '/eleicao/bastidores/',
   '/historico': '/eleicao/historico/',
   '/compare': '/eleicao/comparar/',
 };

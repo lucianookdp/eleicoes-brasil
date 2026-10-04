@@ -24,9 +24,9 @@ export default function Home() {
     <div className="max-w-xl py-16">
       <p className="text-ink-2">
         {error
-          ? 'Não foi possível falar com a API agora. Tente novamente em alguns instantes.'
+          ? 'Não foi possível carregar a apuração agora. Tente de novo em alguns instantes.'
           : data && !election
-            ? 'Nenhuma eleição foi carregada ainda.'
+            ? 'Nenhuma eleição disponível no momento.'
             : 'Carregando a apuração…'}
       </p>
     </div>

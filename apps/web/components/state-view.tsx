@@ -50,7 +50,7 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
         progress={data.progress}
         votes={result.data?.votes}
         votesFor={office?.name}
-        title={`Totalização em ${data.name}`}
+        title={`Apuração em ${data.name}`}
       />
 
       <section aria-labelledby="cargos" className="mt-8">
@@ -86,10 +86,10 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
 const CITY_SORTS = [
   { value: 'default', label: 'Capital primeiro' },
   { value: 'name', label: 'Nome' },
-  { value: 'counted-desc', label: 'Maior totalização' },
-  { value: 'counted-asc', label: 'Menor totalização' },
+  { value: 'counted-desc', label: 'Mais apurados' },
+  { value: 'counted-asc', label: 'Menos apurados' },
   { value: 'turnout', label: 'Mais votos' },
-  { value: 'updated', label: 'Atualização recente' },
+  { value: 'updated', label: 'Atualizados agora' },
 ];
 
 function Cities({ uf, total }: { uf: string; total: number }) {
@@ -167,12 +167,12 @@ function Cities({ uf, total }: { uf: string; total: number }) {
                 </span>
                 <ProgressBar
                   value={p?.countedPct ?? null}
-                  label={`${c.name} totalizado`}
+                  label={`${c.name}: urnas apuradas`}
                   className="mt-1.5"
                 />
                 <span className="mt-1 flex justify-between text-[12.5px] text-muted">
                   <span>
-                    {fmtInt(p?.sectionsCounted)} / {fmtInt(p?.sectionsTotal)} seções
+                    {fmtInt(p?.sectionsCounted)} de {fmtInt(p?.sectionsTotal)} urnas
                   </span>
                   <span>{p?.turnout != null ? `${fmtInt(p.turnout)} votos` : ''}</span>
                 </span>

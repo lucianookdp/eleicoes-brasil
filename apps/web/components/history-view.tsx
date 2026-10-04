@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { displayName, fmtPct } from '@/lib/format';
 import { useOverview, useSeries, useTimeline, useTimelineAt } from '@/lib/queries';
-import { electionHref } from '@/lib/rounds';
 import { TILES } from '@/lib/tiles';
 import { EvolutionChart } from './evolution-chart';
 import { CandidateList, RaceBar } from './results';
@@ -14,7 +13,7 @@ import { EmptyState, ErrorNotice, Panel, SectionTitle, Skeleton } from './ui';
 
 /** "Como estava a eleição às 19:32?" — pick a moment and see the count as it was. */
 export function HistoryView() {
-  const { round, elections, href, meta } = useRound();
+  const { round, href } = useRound();
   const timeline = useTimeline(round.slug);
   const overview = useOverview(round.slug);
   const office = overview.data?.round.offices.find((o) => o.scope === 'country');
@@ -25,7 +24,6 @@ export function HistoryView() {
   const i = index ?? points.length - 1;
   const at = points[i]?.at ?? null;
   const snapshot = useTimelineAt(round.slug, at);
-  const replays = elections.filter((e) => e.slug === `replay-${round.electionSlug}`).flatMap((e) => e.rounds);
 
   useEffect(() => {
     if (!playing) return;
@@ -42,24 +40,16 @@ export function HistoryView() {
   return (
     <>
       <div className="mb-5">
-        <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Histórico da apuração</h1>
+        <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Linha do tempo</h1>
         <p className="text-[13.5px] text-muted">
-          Volte a qualquer momento da totalização e veja os números como estavam naquela hora.
+          Volte a qualquer momento da apuração e veja os números como estavam naquela hora.
         </p>
       </div>
 
       {timeline.error && <ErrorNotice error={timeline.error} retry={() => timeline.refetch()} />}
       {timeline.data && points.length < 2 && (
-        <EmptyState
-          title={
-            round.environment === 'dados-abertos'
-              ? 'Esta eleição tem apenas o resultado final.'
-              : 'Ainda não há histórico suficiente.'
-          }
-        >
-          {round.environment === 'dados-abertos'
-            ? 'Ela foi importada dos Dados Abertos do TSE, que publicam só os números finais, sem o registro minuto a minuto da apuração.'
-            : 'O histórico começa a ser gravado com as primeiras parciais da apuração.'}
+        <EmptyState title="A linha do tempo ainda está vazia.">
+          Ela começa a ser gravada com as primeiras parciais da apuração.
         </EmptyState>
       )}
       {!timeline.data && !timeline.error && <Skeleton className="h-40" />}
@@ -73,7 +63,7 @@ export function HistoryView() {
                 <p className="numeral text-[34px] leading-none">{at ? formatClock(at) : '—'}</p>
               </div>
               <div className="text-right">
-                <p className="text-[13px] text-muted">Apuração naquele momento</p>
+                <p className="text-[13px] text-muted">Urnas apuradas</p>
                 <p className="numeral text-[34px] leading-none">{fmtPct(points[i]?.countedPct)}</p>
               </div>
             </div>
@@ -124,7 +114,7 @@ export function HistoryView() {
                   <CandidateList result={snapshot.data.headline} collapsed={4} />
                 </>
               ) : (
-                <p className="py-6 text-[14px] text-muted">Sem votos apurados neste momento.</p>
+                <p className="py-6 text-[14px] text-muted">Ainda não havia votos apurados nesse momento.</p>
               )}
             </Panel>
             <Panel className="p-4 sm:p-5 lg:col-span-5">
@@ -162,7 +152,7 @@ export function HistoryView() {
                 })}
               </div>
               <p className="mt-3 text-center text-[12px] text-muted">
-                Cor: percentual apurado. Ponto: mais votado para {office?.name?.toLowerCase() ?? 'o cargo'}.
+                Cor: urnas apuradas. Ponto: mais votado para {office?.name?.toLowerCase() ?? 'o cargo'}.
               </p>
             </Panel>
           </div>
@@ -180,34 +170,6 @@ export function HistoryView() {
             </section>
           )}
         </>
-      )}
-
-      {meta?.features.replay !== false && (
-        <section aria-labelledby="replay" className="max-w-2xl">
-          <SectionTitle id="replay" title="Modo replay" />
-          <p className="text-[14px] text-ink-2">
-            Uma apuração gravada pode ser reproduzida como se estivesse acontecendo de novo, em velocidade
-            acelerada, com o comando{' '}
-            <code className="rounded bg-surface-2 px-1 font-mono text-[13px]">
-              pnpm replay --election {round.slug} --speed 10
-            </code>
-            .
-          </p>
-          {replays.length > 0 && (
-            <ul className="mt-3 flex flex-wrap gap-2">
-              {replays.map((r) => (
-                <li key={r.slug}>
-                  <Link
-                    href={electionHref(r)}
-                    className="inline-flex min-h-10 items-center rounded-lg border border-line px-3 text-[14px] hover:border-line-strong"
-                  >
-                    Abrir replay do {r.round}º turno
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
       )}
     </>
   );
