@@ -64,3 +64,13 @@ export function ago(iso: string | null | undefined, now = Date.now()): string {
   if (s < 86_400) return `${Math.floor(s / 3600)} h`;
   return `${Math.floor(s / 86_400)} d`;
 }
+
+/**
+ * The TSE sometimes stamps the national total with a time that has not happened yet (a section
+ * abroad reporting its local clock). Never show a time later than when we received the data.
+ */
+export function shownTime(totalizedAt: string | null | undefined, receivedAt: string | null | undefined) {
+  if (!totalizedAt) return null;
+  if (receivedAt && Date.parse(totalizedAt) > Date.parse(receivedAt)) return receivedAt;
+  return totalizedAt;
+}

@@ -3,7 +3,7 @@
 import type { ProgressDTO, StateRowDTO, VoteTotals } from '@eleicoes/election-core';
 import { formatClock, percent } from '@eleicoes/election-core';
 import { useState } from 'react';
-import { fmtCompact, fmtInt, fmtPct } from '@/lib/format';
+import { fmtCompact, fmtInt, fmtPct, shownTime } from '@/lib/format';
 import { useRound } from './shell';
 import { Stat } from './ui';
 
@@ -48,7 +48,10 @@ export function CountingHero({
         </p>
         {started && progress.totalizedAt && (
           <p className="hidden pb-1.5 text-right text-[13px] text-ink-2 sm:block">
-            atualizado às <span className="font-medium text-ink">{formatClock(progress.totalizedAt)}</span>
+            atualizado às{' '}
+            <span className="font-medium text-ink">
+              {formatClock(shownTime(progress.totalizedAt, progress.updatedAt))}
+            </span>
           </p>
         )}
       </div>
@@ -63,7 +66,7 @@ export function CountingHero({
               : `das urnas apuradas · ${fmtInt(progress.sectionsCounted)} de ${fmtInt(progress.sectionsTotal)} (faltam ${fmtInt(pending)})`}
         {started && progress.totalizedAt && (
           <span className="block text-[13px] text-muted sm:hidden">
-            atualizado às {formatClock(progress.totalizedAt)}
+            atualizado às {formatClock(shownTime(progress.totalizedAt, progress.updatedAt))}
           </span>
         )}
       </p>

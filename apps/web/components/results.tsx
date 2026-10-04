@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import type { ApiError } from '@/lib/api';
 import { API_URL } from '@/lib/api';
-import { displayName, fmtInt, fmtPct, fmtPp, fmtSigned, initials } from '@/lib/format';
+import { displayName, fmtInt, fmtPct, fmtPp, fmtSigned, initials, shownTime } from '@/lib/format';
 import { useResult } from '@/lib/queries';
 import { useRound } from './shell';
 import { EmptyState, ErrorNotice, Segmented, Skeleton } from './ui';
@@ -375,8 +375,10 @@ export function Provenance({ result }: { result: ResultDTO }) {
   return (
     <p className="mt-4 text-[12px] text-muted" title={`Arquivo de origem: ${p.sourceFile.split('/').at(-1)}`}>
       Fonte: {p.provider === 'TSE' ? 'TSE' : p.provider}
-      {result.progress.totalizedAt && <> · divulgado às {formatClock(result.progress.totalizedAt)}</>} ·
-      recebido aqui às {formatClock(p.retrievedAt)}
+      {result.progress.totalizedAt && (
+        <> · divulgado às {formatClock(shownTime(result.progress.totalizedAt, p.retrievedAt))}</>
+      )}{' '}
+      · recebido aqui às {formatClock(p.retrievedAt)}
     </p>
   );
 }
