@@ -139,7 +139,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
   const active = useActive();
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-ground/90 backdrop-blur supports-[backdrop-filter]:bg-ground/75">
-      <div className="mx-auto flex h-14 max-w-[1320px] items-center gap-3 px-4 sm:px-6">
+      <div className="mx-auto flex h-14 max-w-[1320px] items-center gap-2 px-4 sm:gap-3 sm:px-6">
         <Link
           href={href()}
           className="flex items-center gap-2 font-semibold tracking-tight"
@@ -174,7 +174,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
               ⌘K
             </kbd>
           </button>
-          <ThemeToggle className="hidden sm:flex" />
+          <ThemeToggle className="flex" />
         </div>
       </div>
     </header>
@@ -193,7 +193,7 @@ function ElectionSwitcher() {
           const r = elections.flatMap((x) => x.rounds).find((x) => x.slug === e.target.value);
           if (r) router.push(electionHref(r));
         }}
-        className="h-9 max-w-[46vw] cursor-pointer appearance-none truncate rounded-md border border-line bg-surface py-0 pl-2.5 pr-7 text-[13px] font-medium hover:border-line-strong"
+        className="h-9 max-w-[44vw] cursor-pointer appearance-none truncate rounded-md border border-line bg-surface py-0 pl-2.5 pr-7 text-[13px] font-medium hover:border-line-strong"
       >
         {elections.map((e) => (
           <optgroup key={e.slug} label={e.name}>
@@ -234,7 +234,7 @@ function LiveStatus() {
     label = 'Sem conexão';
   } else if (status === 'final') {
     tone = 'ink';
-    label = isReplay ? 'Reprodução encerrada' : 'Apuração encerrada';
+    label = isReplay ? 'Reprodução encerrada' : 'Encerrada';
   } else if (status === 'live') {
     if (connection === 'reconnecting') {
       tone = 'warn';
@@ -367,10 +367,6 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
                   </Link>
                 </li>
               ))}
-              <li className="flex min-h-12 items-center justify-between rounded-lg px-3">
-                <span>Tema</span>
-                <ThemeToggle className="flex" />
-              </li>
             </ul>
           </div>
         </div>

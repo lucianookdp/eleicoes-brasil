@@ -169,5 +169,17 @@ h3 {
 
 .scroll-x {
   overflow-x: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+}
+.scroll-x::-webkit-scrollbar {
+  display: none;
+}
+
+/* iOS Safari zooms into any field under 16px when it gets focus. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }

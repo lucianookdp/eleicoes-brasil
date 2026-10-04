@@ -110,9 +110,9 @@ export function CandidateRow({ c, result, rank }: { c: CandidateDTO; result: Res
     >
       <Avatar c={c} photo={photo} />
       <div className="min-w-0">
-        <p className="flex items-center gap-2 truncate font-medium">
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-medium">
           <span className="sr-only">{rank}º. </span>
-          <span className="truncate">{displayName(c.ballotName)}</span>
+          <span className="min-w-0 truncate">{displayName(c.ballotName)}</span>
           <StatusPill c={c} result={result} />
           {!hasValidVotes(c) && (
             <span

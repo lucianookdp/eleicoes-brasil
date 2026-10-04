@@ -44,7 +44,7 @@ export function BrazilMap({ states, allowLeader = true }: { states: StateRowDTO[
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="mb-2 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
         {allowLeader ? (
           <Segmented
             label="Colorir mapa por"
@@ -157,7 +157,10 @@ function StateCard({ state, pinned }: { state: StateRowDTO | undefined; pinned: 
 function Legend({ mode, leaders }: { mode: Mode; leaders: { name: string; color: string }[] }) {
   if (mode === 'leader') {
     return (
-      <ul className="flex flex-wrap justify-end gap-x-3 gap-y-1 text-[12px] text-ink-2" aria-label="Legenda">
+      <ul
+        className="flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-ink-2 sm:justify-end"
+        aria-label="Legenda"
+      >
         {leaders.map((l) => (
           <li key={l.name} className="flex items-center gap-1.5">
             <span

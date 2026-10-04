@@ -166,7 +166,8 @@ export function Breadcrumbs({ items }: { items: { label: string; href?: string }
     <nav aria-label="Você está em" className="mb-2 text-[13px] text-muted">
       <ol className="flex flex-wrap items-center gap-1">
         {items.map((it, i) => (
-          <li key={it.label} className="flex items-center gap-1">
+          // Index key: a city can share its state's name (São Paulo › São Paulo).
+          <li key={i} className="flex items-center gap-1">
             {i > 0 && <IconChevron width={12} height={12} />}
             {it.href ? (
               <Link href={it.href} className="hover:text-ink">
