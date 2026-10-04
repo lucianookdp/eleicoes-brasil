@@ -1,19 +1,12 @@
 # Deploy
 
-A aplicação é um Postgres e três processos Node. Nada depende de um provedor específico.
+Um Postgres e três processos: site estático, API e worker. Nada depende de um provedor
+específico.
 
-Em uso hoje: **web** no GitHub Pages (workflow `pages.yml`, variáveis de repositório
-`NEXT_PUBLIC_API_URL` e `NEXT_PUBLIC_BASE_PATH`), **api**, **worker**, **demo** e **Postgres** no
-Railway (projeto `eleicoes-brasil`; cada serviço usa o `Dockerfile` da raiz com a variável `APP`).
-
-| Componente | Sugestão barata | Alternativas |
-| --- | --- | --- |
-| web | GitHub Pages (exportação estática) | qualquer CDN de arquivos estáticos, ou a imagem `web` (nginx) |
-| api | Railway / Fly.io (imagem `api`) | VM, Render, Cloud Run |
-| worker | mesmo provedor da API (imagem `worker`), **uma única instância** | — |
-| PostgreSQL | Neon / Supabase / Railway | qualquer Postgres 14+ |
-
-Redis não é necessário (ver [ADR 006](adr/006-cache-without-redis.md)).
+Em uso hoje: **site** no GitHub Pages (workflow `pages.yml`, variáveis de repositório
+`NEXT_PUBLIC_API_URL` e `NEXT_PUBLIC_BASE_PATH`); **api** (2 instâncias), **worker** (sempre uma
+única instância) e **Postgres** no Railway, cada serviço com o `Dockerfile` da raiz e a variável
+`APP`.
 
 ## Imagens
 
@@ -47,12 +40,6 @@ exportação estática do Next servida por nginx. O worker aplica as migrações
    ~30 mil req/s de respostas em cache e milhares de conexões ao vivo; com CDN, a origem recebe
    poucas requisições por atualização.
 5. Acompanhe a página **Bastidores** (`/eleicao/bastidores/?e=2026&t=1`).
-
-## Endereço
-
-O site fica em `https://lucianookdp.github.io/eleicoes-brasil/` (base `/eleicoes-brasil`). Para usar
-um domínio próprio no futuro, basta apontar o DNS para o GitHub Pages, esvaziar
-`NEXT_PUBLIC_BASE_PATH` e incluir o domínio em `CORS_ORIGINS`.
 
 ## Postgres local sem Docker
 

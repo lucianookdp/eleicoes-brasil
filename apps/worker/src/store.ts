@@ -58,7 +58,7 @@ export interface CycleStats {
 const eventType = (a: AreaRef) =>
   a.type === 'country' ? 'country.updated' : a.type === 'state' ? 'state.updated' : 'city.updated';
 
-/** Snapshot candidate history for every area except city-level proportional races (ADR 004). */
+/** Snapshot candidate history for every area except city-level proportional races. */
 export const keepCandidateHistory = (office: Office, area: AreaRef) =>
   area.type === 'country' || area.type === 'state' || office.kind === 'majoritarian';
 

@@ -65,7 +65,7 @@ para que o modo demo continue exercitando o adapter novo; o teste
 APP_MODE=SIMULATION ELECTION_ROUND=2030-1 pnpm --filter @eleicoes/worker dev
 ```
 
-Durante a janela de testes do TSE, observe `/elections/2030/operations`: eventos `source.schema`
+Durante a janela de testes do TSE, acompanhe a página **Bastidores**: eventos `source.schema`
 mostram exatamente qual arquivo e qual campo divergiram.
 
 ## 6. Na eleição
@@ -89,4 +89,4 @@ rodada com `kind: 'municipal'`.
 - [ ] Servidor demo atualizado (se o formato mudou)
 - [ ] `pnpm lint && pnpm typecheck && pnpm test` verdes
 - [ ] Coleta validada no simulado oficial
-- [ ] `APP_VERSION` com major novo (ex.: v2.0) e nota no ROADMAP
+- [ ] `APP_VERSION` com major novo (ex.: v2.0)

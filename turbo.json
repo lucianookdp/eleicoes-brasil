@@ -38,5 +38,6 @@
     "CACHE_TTL_SECONDS",
     "ENABLE_*",
     "LOG_LEVEL"
-  ]
+  ],
+  "agentGuidance": false
 }

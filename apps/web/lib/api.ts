@@ -14,7 +14,7 @@ export class ApiError extends Error {
 
 /**
  * Latest data version announced by the realtime stream. Appended as `?v=` to round requests so
- * every reader asks for the same URL after an update and a CDN can serve it (see realtime.md).
+ * every reader asks for the same URL after an update and a CDN can serve it (see docs/architecture.md).
  */
 let dataVersion: { round: string; v: number } | null = null;
 export function setDataVersion(round: string, v: number) {

@@ -29,7 +29,7 @@ import {
 /**
  * One schema for every election. A new election is new rows, never new tables.
  * Current state lives in `area_progress` / `area_results` (one row per area); history lives in
- * `progress_snapshots` / `result_snapshots` (one row per change). See docs/data-model.md.
+ * `progress_snapshots` / `result_snapshots` (one row per change). See docs/architecture.md.
  */
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: 'string' });
@@ -241,7 +241,7 @@ export const resultSnapshots = pgTable(
     totalizedAt: ts('totalized_at'),
     countedPct: doublePrecision('counted_pct'),
     votes: jsonb('votes').$type<VoteTotals>().notNull(),
-    /** Compact [key, votes, percent][]; null for city-level proportional offices (see ADR 004). */
+    /** Compact [key, votes, percent][]; null for city-level proportional offices. */
     candidates: jsonb('candidates').$type<CompactCandidate[]>(),
     provenance: jsonb('provenance').$type<Provenance>().notNull(),
   },
