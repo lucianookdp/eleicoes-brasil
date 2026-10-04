@@ -148,7 +148,9 @@ function Cities({ uf, total }: { uf: string; total: number }) {
       {data && items.length === 0 && (
         <EmptyState title={`Nenhum município encontrado para “${debounced}”.`} />
       )}
-      <ul className={`grid gap-x-6 sm:grid-cols-2 xl:grid-cols-3 ${isFetching && !isFetchingNextPage ? 'opacity-70' : ''}`}>
+      <ul
+        className={`grid gap-x-6 sm:grid-cols-2 xl:grid-cols-3 ${isFetching && !isFetchingNextPage ? 'opacity-70' : ''}`}
+      >
         {items.map((c) => {
           const p = c.progress;
           return (
