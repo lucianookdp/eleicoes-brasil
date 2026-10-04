@@ -52,10 +52,16 @@ export function RaceBar({ result, top = 6 }: { result: ResultDTO; top?: number }
   );
 }
 
-function StatusPill({ c, result }: { c: CandidateDTO; result: ResultDTO }) {
+function StatusPill({ c, result, rank }: { c: CandidateDTO; result: ResultDTO; rank: number }) {
   let text: string | null = c.status || null;
   if (!text && c.elected && (result.final || result.mathematicallyDecided)) {
     text = result.mathematicallyDecided === 'runoff' ? '2º turno' : 'Eleito';
+  }
+  // The TSE flags a race as mathematically decided (md) well before it marks the candidate
+  // itself (that only comes with the final totalisation). Apply its decision to the leaders.
+  if (!text && result.mathematicallyDecided && hasValidVotes(c)) {
+    if (result.mathematicallyDecided === 'elected' && rank <= (result.seats ?? 1)) text = 'Eleito';
+    if (result.mathematicallyDecided === 'runoff' && rank <= 2) text = '2º turno';
   }
   if (!text) return null;
   const tone =
@@ -113,7 +119,7 @@ export function CandidateRow({ c, result, rank }: { c: CandidateDTO; result: Res
         <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-medium">
           <span className="sr-only">{rank}º. </span>
           <span className="min-w-0 truncate">{displayName(c.ballotName)}</span>
-          <StatusPill c={c} result={result} />
+          <StatusPill c={c} result={result} rank={rank} />
           {!hasValidVotes(c) && (
             <span
               className="rounded bg-warn-soft px-1.5 py-0.5 text-[11.5px] font-medium text-warn"
