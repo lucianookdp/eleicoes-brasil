@@ -58,7 +58,13 @@ export function CityView({ uf, city, initial }: { uf: string; city: string; init
 
       <section aria-labelledby="resultados" className="mt-8 max-w-3xl">
         <SectionTitle id="resultados" title="Resultados por cargo" />
-        <ResultPanel roundSlug={round.slug} areaKey={key} offices={offices} initial={initialResult} />
+        <ResultPanel
+          roundSlug={round.slug}
+          areaKey={key}
+          offices={offices}
+          initial={initialResult}
+          areaPct={data.progress?.countedPct}
+        />
       </section>
     </>
   );

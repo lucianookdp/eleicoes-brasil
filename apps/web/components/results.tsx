@@ -278,11 +278,14 @@ export function ResultPanel({
   areaKey,
   offices,
   initial,
+  areaPct,
 }: {
   roundSlug: string;
   areaKey: string;
   offices: OfficeInfo[];
   initial?: ResultDTO | null;
+  /** Share of this area's polling stations the TSE has already counted (counting file). */
+  areaPct?: number | null;
 }) {
   const [office, setOffice] = useOfficeParam(offices);
   const [view, setView] = useState<'candidates' | 'parties'>('candidates');
@@ -321,6 +324,7 @@ export function ResultPanel({
       )}
       {result && (
         <div>
+          <BehindNotice result={result} areaPct={areaPct} />
           {!result.votesPublishable && (
             <p className="mb-3 rounded-lg bg-surface-2 px-3 py-2 text-[13px] text-ink-2">
               O TSE ainda não liberou os votos deste cargo. Os números aparecem assim que a divulgação for
@@ -366,6 +370,25 @@ export function ResultPanel({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * The counting file (how many stations are in) arrives in seconds; per-city vote files wait in
+ * the collector's queue. When the votes shown are behind what the TSE already counted here, say
+ * so plainly instead of letting "100%" sit above older numbers.
+ */
+function BehindNotice({ result, areaPct }: { result: ResultDTO; areaPct?: number | null }) {
+  const shown = result.progress.countedPct;
+  if (areaPct == null || shown == null || areaPct - shown < 0.5 || !result.provenance) return null;
+  return (
+    <p className="mb-3 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-[13.5px] text-ink-2">
+      <span className="font-medium text-warn">
+        Votos das {formatClock(result.provenance.retrievedAt).slice(0, 5)}, com {fmtPct(shown, 1)} das urnas.
+      </span>{' '}
+      O TSE já apurou {fmtPct(areaPct, 1)} aqui. Os números atualizados estão a caminho e devem aparecer em
+      até 20 minutos.
+    </p>
   );
 }
 

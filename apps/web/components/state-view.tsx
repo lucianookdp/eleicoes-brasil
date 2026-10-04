@@ -61,7 +61,12 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
         ) : (
           <div className="grid gap-8 lg:grid-cols-12 [&>*]:min-w-0">
             <div className="lg:col-span-7">
-              <ResultPanel roundSlug={round.slug} areaKey={key} offices={offices} />
+              <ResultPanel
+                roundSlug={round.slug}
+                areaKey={key}
+                offices={offices}
+                areaPct={data.progress?.countedPct}
+              />
             </div>
             <div className="lg:col-span-5">
               {office?.kind === 'majoritarian' && (
