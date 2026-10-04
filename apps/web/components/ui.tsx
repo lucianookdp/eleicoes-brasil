@@ -169,7 +169,7 @@ export function FreshnessNotice({
     if (what)
       return (
         <Notice tone="warn" title="Aguardando o TSE">
-          O TSE {what}. A pausa é do TSE: assim que ele enviar novas informações, o site atualiza sozinho.
+          O TSE {what}. O atraso é do TSE: assim que ele enviar novas informações, o site atualiza sozinho.
         </Notice>
       );
   }
