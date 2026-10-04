@@ -3,12 +3,12 @@
 import type { CycleDTO, IngestionStatus, OperationsDTO } from '@eleicoes/election-core';
 import { formatClock } from '@eleicoes/election-core';
 import { useEffect, useState } from 'react';
-import { ago, fmtCompact, fmtInt } from '@/lib/format';
-import { useOperations } from '@/lib/queries';
+import { ago, fmtCompact, fmtInt, shownTime } from '@/lib/format';
+import { useOperations, useOverview } from '@/lib/queries';
 import { TILES } from '@/lib/tiles';
 import { ActivityFeed } from './activity';
 import { useRound } from './shell';
-import { ErrorNotice, Panel, SectionTitle, Skeleton } from './ui';
+import { ErrorNotice, FreshnessNotice, Panel, SectionTitle, Skeleton } from './ui';
 
 function useNow(ms = 1000) {
   const [now, setNow] = useState(() => Date.now());
@@ -54,6 +54,7 @@ const STATE_LABEL: Record<IngestionStatus['state'], { label: string; cls: string
 export function OperationsView() {
   const { round, meta } = useRound();
   const { data, error, refetch } = useOperations(round.slug);
+  const overview = useOverview(round.slug).data;
   const now = useNow();
   if (!data)
     return error ? <ErrorNotice error={error} retry={() => refetch()} /> : <Skeleton className="h-96" />;
@@ -69,6 +70,18 @@ export function OperationsView() {
         </p>
       </div>
 
+      {overview && (
+        <FreshnessNotice
+          ingestion={overview.ingestion}
+          progress={overview.progress}
+          roundStatus={overview.round.status}
+          votesAt={
+            overview.headline
+              ? shownTime(overview.headline.progress.totalizedAt, overview.headline.provenance?.retrievedAt)
+              : null
+          }
+        />
+      )}
       <Panel className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 text-[14px]">
         <span className={`inline-flex items-center gap-2 rounded-md px-2.5 py-1 font-medium ${s.cls}`}>
           <span
