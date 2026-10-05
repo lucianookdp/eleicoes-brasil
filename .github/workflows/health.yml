@@ -1,5 +1,4 @@
-# Watchdog: fails (GitHub emails the repository owner) and, when the NTFY_TOPIC secret is set,
-# pushes an alert to the phone (ntfy app subscribed to that topic) when the site or the API is down.
+# Watchdog: fails (GitHub emails the repository owner) when the site or the API is down.
 # Every hour on normal days; every 5 minutes on the 2nd-round night, when it also checks that the
 # collector keeps bringing fresh data. Times are UTC: 20:00–02:59 = 17h–23h59 Brasília.
 name: health
@@ -17,7 +16,6 @@ jobs:
     timeout-minutes: 3
     env:
       API: https://api-production-39d40.up.railway.app
-      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
     steps:
       - name: API is up
         run: curl -fsS --retry 3 --retry-delay 10 "$API/api/health"
@@ -31,10 +29,3 @@ jobs:
           age=$(echo "$ops" | jq -r '(now - (.ingestion.lastSuccessAt | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) | floor')
           echo "last successful collection ${age}s ago"
           test "$age" -lt 180
-      - name: Phone alert
-        if: failure() && env.NTFY_TOPIC != ''
-        run: |
-          curl -fsS -H "Title: Eleicoes Brasil: alerta" -H "Priority: high" -H "Tags: warning" \
-            -H "Click: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            -d "O site, a API ou a coleta parou de responder. Toque para ver o detalhe." \
-            "https://ntfy.sh/$NTFY_TOPIC"
