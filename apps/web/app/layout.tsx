@@ -1,15 +1,31 @@
 import type { Metadata, Viewport } from 'next';
-import { Archivo, JetBrains_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
 import type { ReactNode } from 'react';
 import './globals.css';
 import { Providers } from './providers';
 
-const archivo = Archivo({ subsets: ['latin'], axes: ['wdth'], variable: '--font-archivo', display: 'swap' });
-const mono = JetBrains_Mono({
-  subsets: ['latin'],
+// Fonts ship with the site (Fontsource packages of the same Google fonts): builds and first paint
+// never depend on fonts.googleapis.com.
+const archivo = localFont({
+  src: '../node_modules/@fontsource-variable/archivo/files/archivo-latin-standard-normal.woff2',
+  variable: '--font-archivo',
+  display: 'swap',
+  weight: '100 900',
+  declarations: [{ prop: 'font-stretch', value: '62% 125%' }],
+});
+const mono = localFont({
+  src: [
+    {
+      path: '../node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2',
+      weight: '400',
+    },
+    {
+      path: '../node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-500-normal.woff2',
+      weight: '500',
+    },
+  ],
   variable: '--font-jetbrains',
   display: 'swap',
-  weight: ['400', '500'],
 });
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
