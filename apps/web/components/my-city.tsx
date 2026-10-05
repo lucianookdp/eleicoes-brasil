@@ -25,7 +25,7 @@ export function MyCityCard({ headlineOffice }: { headlineOffice?: string }) {
       <button
         type="button"
         onClick={() => setPicking(true)}
-        className="mb-4 flex min-h-11 items-center gap-2 text-[14px] text-ink-2 hover:text-ink"
+        className="flex min-h-11 items-center gap-2 text-[14px] text-ink-2 hover:text-ink"
       >
         <IconPin className="text-live" /> Escolher minha cidade
       </button>
@@ -63,7 +63,7 @@ function Picker({
     debounced.trim().length >= 2 ? (data ?? []).filter((h) => h.kind === 'city').slice(0, 6) : [];
 
   return (
-    <section aria-label="Minha cidade" className="mb-4 rounded-xl border border-line bg-surface p-3 sm:p-4">
+    <section aria-label="Minha cidade" className="rounded-xl border border-line bg-surface p-3 sm:p-4">
       <div className="mb-2 flex items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-[14px] font-medium">
           <IconPin className="text-live" /> Qual é a sua cidade?
@@ -131,7 +131,7 @@ function Chosen({
   const path = `/states/${city.uf}/cities/${city.code}`;
 
   return (
-    <section aria-label="Minha cidade" className="mb-4 rounded-xl border border-line bg-surface p-3 sm:p-4">
+    <section aria-label="Minha cidade" className="rounded-xl border border-line bg-surface p-3 sm:p-4">
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-[12px] text-muted">

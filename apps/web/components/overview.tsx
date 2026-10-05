@@ -45,8 +45,9 @@ const TAB_KEY = 'eleicoes:overview-tab';
 
 /**
  * Home, organised by priority:
- *   1. how much is counted (one number)
- *   2. who is ahead (the headline race)
+ *   1. the race itself (in a runoff, the two finalists face to face), with turnout, blank and
+ *      null votes right under it once the count ends
+ *   2. how much is counted (one number)
  *   3. everything else behind tabs the reader chooses: map, states, evolution, activity.
  * On phones the blocks stack in that order; on desktop 1–2 sit left and the tabs right.
  */
@@ -95,11 +96,11 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
 
   // The map has no shape for votes abroad; the states list shows them as "Exterior".
   const states = data.states.filter((s) => s.uf !== 'ZZ');
+  const faceOff = !!headline && isHeadToHead(headline, round.round);
   return (
     <>
       <RoundTitle />
       {headline && <DecidedBanner result={headline} />}
-      {headline && <EndSummary data={data} />}
       <FreshnessNotice
         ingestion={data.ingestion}
         progress={data.progress}
@@ -107,20 +108,10 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
         // When the new votes reached us: the TSE's own stamp on the file can be 20 minutes older.
         votesAt={headline?.provenance?.retrievedAt ?? null}
       />
-      <MyCityCard headlineOffice={headlineOffice?.slug} />
-      <Favorites data={data} />
-
       <div className="grid items-start gap-4 lg:grid-cols-12 [&>*]:min-w-0 lg:gap-6">
         <div className="grid gap-4 lg:col-span-7 lg:gap-6 [&>*]:min-w-0">
-          <Panel className="p-4 sm:p-5">
-            <CountingHero
-              progress={data.progress}
-              states={data.states}
-              votes={headline?.votes}
-              votesFor={headlineOffice?.name}
-            />
-          </Panel>
-
+          {/* 1st round over: the summary (finalists' photos when there is a runoff) leads. */}
+          {headline && !faceOff && <EndSummary data={data} />}
           <Panel className="p-4 sm:p-5">
             <section aria-labelledby="corrida">
               <div className="mb-1 flex items-baseline justify-between gap-3">
@@ -151,7 +142,7 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
               )}
               {headline && (
                 <>
-                  {isHeadToHead(headline, round.round) ? (
+                  {faceOff ? (
                     <HeadToHead result={headline} />
                   ) : (
                     <>
@@ -164,6 +155,18 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
                 </>
               )}
             </section>
+          </Panel>
+          {/* Runoff: the face-off above already names both; here only turnout, blank and null. */}
+          {headline && faceOff && <EndSummary data={data} statsOnly />}
+          <MyCityCard headlineOffice={headlineOffice?.slug} />
+          <Favorites data={data} />
+          <Panel className="p-4 sm:p-5">
+            <CountingHero
+              progress={data.progress}
+              states={data.states}
+              votes={headline?.votes}
+              votesFor={headlineOffice?.name}
+            />
           </Panel>
         </div>
 
@@ -262,7 +265,7 @@ function DecidedBanner({ result }: { result: ResultDTO }) {
 }
 
 /** Once 100% is counted: the night in one card (lead, turnout, blank and null votes). */
-function EndSummary({ data }: { data: OverviewDTO }) {
+function EndSummary({ data, statsOnly = false }: { data: OverviewDTO; statsOnly?: boolean }) {
   const { round } = useRound();
   const p = data.progress;
   const h = data.headline;
@@ -292,9 +295,11 @@ function EndSummary({ data }: { data: OverviewDTO }) {
   // Photos only once the runoff is certain (the TSE marks it), never as a default.
   const runoff = round.round === 1 && outcome.decided === 'runoff' && a && b;
   return (
-    <section aria-label="Resumo da apuração" className="mb-4 rounded-xl border border-line bg-surface p-4">
-      <p className="text-[13px] font-medium text-muted">Apuração concluída · {h.office.name}</p>
-      {runoff && gap != null ? (
+    <section aria-label="Resumo da apuração" className="rounded-xl border border-line bg-surface p-4">
+      <p className="text-[13px] font-medium text-muted">
+        {statsOnly ? 'Comparecimento e votos' : `Apuração concluída · ${h.office.name}`}
+      </p>
+      {statsOnly ? null : runoff && gap != null ? (
         <div className="mt-3">
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2">
             {[a, b].map((c, i) => (
@@ -359,7 +364,7 @@ function Favorites({ data }: { data: OverviewDTO }) {
   const { href } = useRound();
   if (favorites.length === 0) return null;
   return (
-    <section id="favoritos" aria-label="Favoritos" className="mb-4">
+    <section id="favoritos" aria-label="Favoritos">
       <ul className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
         {favorites.map((f) => {
           const state = data.states.find((s) => s.uf.toLowerCase() === f.key);

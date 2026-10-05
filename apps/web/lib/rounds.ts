@@ -15,13 +15,21 @@ export function pickRound(
   elections: ElectionSummary[],
   electionSlug: string,
   turno?: string | null,
+  now = new Date(),
 ): RoundSummary | null {
   const election = elections.find((e) => e.slug === electionSlug);
   if (!election) return null;
   if (turno) return election.rounds.find((r) => String(r.round) === turno) ?? null;
-  // Latest round that already started; otherwise the first one.
-  const started = election.rounds.filter((r) => r.status !== 'scheduled');
+  // Latest round that already started or whose day has come (on runoff day the site opens on the
+  // runoff from midnight, not only once the count starts); otherwise the first one.
+  const today = todayInBrasilia(now);
+  const started = election.rounds.filter((r) => r.status !== 'scheduled' || r.date <= today);
   return started.at(-1) ?? election.rounds[0] ?? null;
+}
+
+/** "2026-10-25": the calendar day in Brasília, where election days are counted. */
+export function todayInBrasilia(now = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(now);
 }
 
 /** Election opened at "/": a live round, else the newest real election with data, else the demo. */

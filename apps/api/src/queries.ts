@@ -131,7 +131,29 @@ export class Queries {
     };
   }
 
-  async round(
+  /**
+   * Every request starts here (and every realtime connection): kept for 5 seconds, so thousands of
+   * readers reconnecting at once after a restart cost a few queries, not two each.
+   */
+  private readonly rounds = new Map<string, { at: number; value: ReturnType<Queries['loadRound']> }>();
+
+  round(slug: string) {
+    const hit = this.rounds.get(slug);
+    if (hit && Date.now() - hit.at < 5000) return hit.value;
+    const value = this.loadRound(slug);
+    this.rounds.set(slug, { at: Date.now(), value });
+    value.catch(() => this.rounds.delete(slug));
+    if (this.rounds.size > 200) this.rounds.clear();
+    return value;
+  }
+
+  /** The worker announced a change: the round may have new offices or a new status. */
+  forgetRound(slug?: string) {
+    if (slug) this.rounds.delete(slug);
+    else this.rounds.clear();
+  }
+
+  private async loadRound(
     slug: string,
   ): Promise<Omit<RoundDetail, 'offices'> & { id: string; provider: string; offices: OfficeRow[] }> {
     const [r] = await this.sql<RoundRow[]>`

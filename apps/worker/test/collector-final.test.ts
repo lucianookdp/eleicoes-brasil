@@ -19,10 +19,18 @@ const suite = url ? describe : describe.skip;
 const PORT = 4912;
 
 suite('collector at the end of the count', () => {
-  it('stores the "Eleito" mark that arrives after 100%', async () => {
+  it('stores the "Eleito" mark that arrives after 100%', () => runToTheEnd(0, PORT), 90_000);
+
+  // Chaos: the TSE answers 30% of requests with an error. The count must still reach 100% and
+  // the winner, with the circuit breaker and retries doing their job.
+  it('gets there even when 30% of the TSE requests fail', () => runToTheEnd(0.3, PORT + 1), 90_000);
+});
+
+async function runToTheEnd(errorRate: number, port: number) {
+  {
     process.env.DEMO_ROUND = '2';
     // A 6-second runoff count; the demo marks the winner 10 seconds after it ends.
-    const demo = startDemoServer({ port: PORT, durationMinutes: 0.1, waitSeconds: 0 });
+    const demo = startDemoServer({ port, durationMinutes: 0.1, waitSeconds: 0, errorRate });
     await runMigrations(url!);
     const { db, sql, close } = createDatabase(url!, { max: 4 });
     const round = findRound('demo-2')!;
@@ -38,7 +46,7 @@ suite('collector at the end of the count', () => {
     });
     const provider = createProvider(http, round, {
       ...round.sources.DEVELOPMENT!,
-      baseUrl: `http://localhost:${PORT}`,
+      baseUrl: `http://localhost:${port}`,
     });
     const collector = new Collector(provider, store, log, {
       mode: 'DEVELOPMENT',
@@ -59,7 +67,7 @@ suite('collector at the end of the count', () => {
       return row?.status ?? null;
     };
     try {
-      const deadline = Date.now() + 30_000;
+      const deadline = Date.now() + 60_000;
       let status: string | null = null;
       while (!status && Date.now() < deadline) {
         await collector.runCycle();
@@ -67,11 +75,16 @@ suite('collector at the end of the count', () => {
         if (!status) await new Promise((r) => setTimeout(r, 1000));
       }
       expect(status).toBe('Eleito');
+      const [br] = await sql<{ pct: number }[]>`
+        select p.counted_pct as pct from area_progress p
+          join election_rounds e on e.id = p.round_id and e.slug = ${round.slug}
+        where p.area_key = 'br'`;
+      expect(br?.pct).toBe(100);
     } finally {
       collector.stop();
       await demo.close();
       await close();
       delete process.env.DEMO_ROUND;
     }
-  }, 60_000);
-});
+  }
+}

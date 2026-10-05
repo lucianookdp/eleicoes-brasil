@@ -254,8 +254,10 @@ test("cities: who won each city, and a candidate's votes city by city", async ({
 });
 
 test('STF: every minister with photo, who appointed them, and the open seat', async ({ page }) => {
-  await page.goto('/stf/');
-  await expect(page.getByRole('heading', { level: 1, name: 'Supremo Tribunal Federal' })).toBeVisible();
+  // Inside Bancadas, as its third tab (also reachable with ?casa=stf).
+  await page.goto('/eleicao/bancadas/?e=demo&t=1');
+  await page.getByRole('radio', { name: 'STF' }).click();
+  await expect(page.getByRole('heading', { name: 'Os ministros' })).toBeVisible();
   const photos = page.getByRole('img', { name: /^Foto de / });
   await expect(photos).toHaveCount(10);
   for (const img of await photos.all())

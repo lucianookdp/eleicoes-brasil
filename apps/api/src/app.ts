@@ -375,6 +375,7 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
       );
       cache.invalidate(event.electionId);
       cache.invalidate('*');
+      queries.forgetRound(event.electionId);
       hub.broadcast(event, versions.get(event.electionId)!);
     } catch (err) {
       app.log.warn({ err }, 'ignoring malformed event');

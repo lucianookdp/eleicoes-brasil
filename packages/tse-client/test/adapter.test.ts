@@ -205,11 +205,33 @@ describe('TSEAdapter2026.getResult', () => {
   });
 });
 
+/** The official file as it should look once the TSE adds the 2026 runoff (same shape as 3220). */
+function withRunoff(): string {
+  const file = JSON.parse(fixture('ele-c-oficial-2026.json'));
+  const first = file.pl.find((p: { cd: string }) => p.cd === '3220');
+  file.pl.push({
+    ...first,
+    cd: '3221',
+    dt: '25/10/2026',
+    e: first.e
+      .filter((e: { cdt2?: string }) => e.cdt2)
+      .map((e: { cdt2: string; nm: string }) => ({
+        ...e,
+        cd: e.cdt2,
+        cdt2: undefined,
+        t: '2',
+        nm: e.nm.replace('1º Turno', '2º Turno'),
+      })),
+  });
+  return JSON.stringify(file);
+}
+
 describe('picking the runoff in the official configuration', () => {
-  const official = (round: 1 | 2, date: string) => {
+  const official = (round: 1 | 2, date: string, config = fixture('ele-c-oficial-2026.json')) => {
     const tse = fakeTse({
-      '/oficial/comum/config/ele-c.json': fixture('ele-c-oficial-2026.json'),
+      '/oficial/comum/config/ele-c.json': config,
       '/oficial/ele2026/6257/config/mun-e006257-cm.json': fixture('mun-cm.json'),
+      '/oficial/ele2026/6258/config/mun-e006258-cm.json': fixture('mun-cm.json'),
     });
     const http = new TseHttpClient({
       requestsPerSecond: 1000,
@@ -235,6 +257,13 @@ describe('picking the runoff in the official configuration', () => {
     const attempt = official(2, '2026-10-25').getElectionConfig();
     await expect(attempt).rejects.toBeInstanceOf(ProviderNotFoundError);
     await expect(attempt).rejects.toThrow('no pleito for round 2 of 2026');
+  });
+  it('picks up the 2026 runoff as soon as the TSE publishes it', async () => {
+    const config = await official(2, '2026-10-25', withRunoff()).getElectionConfig();
+    expect(config.providerRoundId).toBe('3221');
+    expect(config.offices.map((o) => o.slug)).toContain('presidente');
+    // The 1st round still resolves to its own pleito in the same file.
+    expect((await official(1, '2026-10-04', withRunoff()).getElectionConfig()).providerRoundId).toBe('3220');
   });
 });
 

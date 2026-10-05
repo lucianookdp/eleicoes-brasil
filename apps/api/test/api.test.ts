@@ -339,6 +339,8 @@ suite('API (integration)', () => {
     await insert(deputies.id, 'rj', [person('22001', 'PBB', true), person('22002', 'PAA', false)], false);
     await insert(senators.id, 'sp', [person('33001', 'PAA', true, 'PAA / PBB')], true);
 
+    // As the worker does after storing: announce the change.
+    built.onEvent(JSON.stringify({ electionId: 'test-1', timestamp: new Date().toISOString() }));
     const res = await built.app.inject('/api/elections/test-1/benches');
     expect(res.statusCode).toBe(200);
     const { chambers } = res.json() as BenchesDTO;
