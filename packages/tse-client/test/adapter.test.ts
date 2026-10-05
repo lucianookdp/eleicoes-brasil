@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { area, ProviderPayloadError } from '@eleicoes/election-core';
+import { area, ProviderNotFoundError, ProviderPayloadError } from '@eleicoes/election-core';
 import { describe, expect, it } from 'vitest';
 import { TSEAdapter2026 } from '../src/adapter-2026';
 import { TseHttpClient } from '../src/http';
@@ -202,5 +202,38 @@ describe('TSEAdapter2026.getResult', () => {
     });
     expect((await adapter.getCountryProgress('21270')).changed).toBe(true);
     expect((await adapter.getCountryProgress('21270')).changed).toBe(false);
+  });
+});
+
+describe('picking the runoff in the official configuration', () => {
+  const official = (round: number, date: string) => {
+    const tse = fakeTse({
+      '/oficial/comum/config/ele-c.json': fixture('ele-c-oficial-2026.json'),
+      '/oficial/ele2026/6257/config/mun-e006257-cm.json': fixture('mun-cm.json'),
+    });
+    const http = new TseHttpClient({
+      requestsPerSecond: 1000,
+      concurrency: 4,
+      timeoutMs: 1000,
+      maxRetries: 0,
+      fetchImpl: tse.fetchImpl,
+    });
+    return new TSEAdapter2026(
+      http,
+      { baseUrl: 'https://resultados.tse.jus.br', environment: 'oficial' },
+      { round, date },
+    );
+  };
+
+  it('finds the 1st round by its date', async () => {
+    const config = await official(1, '2026-10-04').getElectionConfig();
+    expect(config.providerRoundId).toBe('3220');
+  });
+
+  it('waits for the 2026 runoff instead of picking the 2024 municipal one', async () => {
+    // The official file of 4 Oct 2026 lists the 2024 municipal runoff but not the 2026 one yet.
+    const attempt = official(2, '2026-10-25').getElectionConfig();
+    await expect(attempt).rejects.toBeInstanceOf(ProviderNotFoundError);
+    await expect(attempt).rejects.toThrow('no pleito for round 2 of 2026');
   });
 });

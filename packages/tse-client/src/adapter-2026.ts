@@ -20,6 +20,7 @@ import {
   type OfficeKind,
   type OfficeScope,
   type PartyResult,
+  ProviderNotFoundError,
   ProviderPayloadError,
   type ProviderSource,
   pad,
@@ -170,9 +171,14 @@ export class TSEAdapter2026 implements ElectionProvider {
     const byCode = wanted ? file.pl.find((p) => p.cd === wanted) : undefined;
     const round = String(this.round.round);
     const byDate = file.pl.find((p) => isoDate(p.dt) === this.round.date && p.e.some((e) => e.t === round));
-    const pleito = byCode ?? byDate ?? file.pl.find((p) => p.e.some((e) => e.t === round));
-    if (!pleito)
-      throw new ProviderPayloadError(`no pleito for round ${round} (${wanted ?? 'any'})`, url, null);
+    // The file also lists past cycles (e.g. the 2024 municipal runoff): never fall back outside
+    // this round's year.
+    const year = this.round.date.slice(0, 4);
+    const sameCycle = (p: (typeof file.pl)[number]) =>
+      p.c === `ele${year}` || (isoDate(p.dt) ?? '').startsWith(year);
+    const pleito = byCode ?? byDate ?? file.pl.find((p) => sameCycle(p) && p.e.some((e) => e.t === round));
+    // Not published yet (the runoff appears in ele-c.json closer to its date): the collector waits.
+    if (!pleito) throw new ProviderNotFoundError(`${url} (no pleito for round ${round} of ${year})`);
     return pleito;
   }
 
