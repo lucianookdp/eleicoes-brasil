@@ -827,7 +827,7 @@ export class Queries {
         select c.state_code as uf, c.provider_id as code, c.name from cities c
         left join area_progress p
           on p.round_id = ${round.id} and p.area_key = lower(c.state_code) || '-' || c.provider_id
-        where c.provider = ${round.provider} and c.search_name like ${like} and c.state_code <> 'ZZ'
+        where c.provider = ${round.provider} and c.search_name like ${like}
         -- Names starting with the query first, then the biggest cities (by electorate).
         order by c.search_name like ${`${key}%`} desc, c.is_capital desc,
                  (p.progress->>'electorateTotal')::bigint desc nulls last, c.search_name

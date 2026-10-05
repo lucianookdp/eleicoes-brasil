@@ -33,6 +33,7 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
   const offices = data?.offices ?? [];
   const [office] = useOfficeParam(offices);
   const key = uf.toLowerCase();
+  const abroad = uf.toUpperCase() === 'ZZ';
   const result = useResult(round.slug, key, office?.slug);
   const series = useSeries(round.slug, office?.kind === 'majoritarian' ? office.slug : undefined, key);
 
@@ -51,8 +52,14 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
         progress={data.progress}
         votes={result.data?.votes}
         votesFor={office?.name}
-        title={`Apuração em ${data.name}`}
+        title={abroad ? 'Apuração no exterior' : `Apuração em ${data.name}`}
       />
+      {abroad && (
+        <p className="mt-3 text-[13.5px] text-muted">
+          No exterior só se vota para presidente, das 8h às 17h no horário local de cada país. Por isso os
+          resultados de cada cidade chegam em horários diferentes.
+        </p>
+      )}
 
       <section aria-labelledby="cargos" className="mt-8">
         <SectionTitle id="cargos" title="Resultados por cargo" />
@@ -84,7 +91,7 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
         )}
       </section>
 
-      <Cities uf={uf} total={data.cityCount} />
+      <Cities uf={uf} total={data.cityCount} abroad={abroad} />
     </>
   );
 }
@@ -98,7 +105,7 @@ const CITY_SORTS = [
   { value: 'updated', label: 'Atualizados agora' },
 ];
 
-function Cities({ uf, total }: { uf: string; total: number }) {
+function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: boolean }) {
   const { round, href } = useRound();
   const [q, setQ] = useState('');
   const [debounced, setDebounced] = useState('');
@@ -117,8 +124,8 @@ function Cities({ uf, total }: { uf: string; total: number }) {
 
   return (
     <section aria-labelledby="municipios" className="mt-12">
-      <SectionTitle id="municipios" title="Municípios">
-        {fmtInt(total)} municípios
+      <SectionTitle id="municipios" title={abroad ? 'Cidades no exterior' : 'Municípios'}>
+        {fmtInt(total)} {abroad ? 'cidades' : 'municípios'}
       </SectionTitle>
       <div className="mb-3 flex flex-wrap gap-2">
         <label className="flex h-11 min-w-0 flex-1 basis-60 items-center gap-2 rounded-xl border border-line bg-surface px-3 focus-within:border-live">
@@ -129,7 +136,7 @@ function Cities({ uf, total }: { uf: string; total: number }) {
             enterKeyHint="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar município"
+            placeholder={abroad ? 'Buscar cidade' : 'Buscar município'}
             autoComplete="off"
             className="h-full min-w-0 flex-1 bg-transparent text-[14px] placeholder:text-muted"
             style={{ outline: 'none' }}

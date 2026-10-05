@@ -143,6 +143,8 @@ export class DemoModel {
     });
 
     const all = () => true;
+    // Abroad (ZZ) only votes for president.
+    const domestic = (uf: string) => uf !== 'ZZ';
     this.offices = [
       {
         code: '1',
@@ -163,7 +165,7 @@ export class DemoModel {
         kind: 'majoritarian',
         votesPerVoter: 1,
         seats: () => 1,
-        appliesTo: all,
+        appliesTo: domestic,
         blankRate: 0.03,
         nullRate: 0.05,
         legendRate: 0,
@@ -175,7 +177,7 @@ export class DemoModel {
         kind: 'majoritarian',
         votesPerVoter: 2,
         seats: () => 2,
-        appliesTo: all,
+        appliesTo: domestic,
         blankRate: 0.06,
         nullRate: 0.06,
         legendRate: 0,
@@ -187,7 +189,7 @@ export class DemoModel {
         kind: 'proportional',
         votesPerVoter: 1,
         seats: (uf) => Math.min(8, DEP_FED_SEATS[uf] ?? 8),
-        appliesTo: all,
+        appliesTo: domestic,
         blankRate: 0.04,
         nullRate: 0.05,
         legendRate: 0.08,
@@ -199,7 +201,7 @@ export class DemoModel {
         kind: 'proportional',
         votesPerVoter: 1,
         seats: () => 8,
-        appliesTo: (uf) => uf !== 'DF',
+        appliesTo: (uf) => uf !== 'DF' && uf !== 'ZZ',
         blankRate: 0.04,
         nullRate: 0.05,
         legendRate: 0.07,

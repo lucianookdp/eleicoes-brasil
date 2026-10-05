@@ -52,6 +52,7 @@
     "SC": [["Florianópolis", 370], ["Joinville", 450], ["Blumenau", 280], ["São José", 190], ["Itajaí", 170], ["Chapecó", 170], ["Criciúma", 160], ["Palhoça", 140], ["Jaraguá do Sul", 130], ["Lages", 120]],
     "SP": [["São Paulo", 9300], ["Guarulhos", 950], ["Campinas", 850], ["São Bernardo do Campo", 650], ["Santo André", 560], ["Osasco", 550], ["Sorocaba", 530], ["São José dos Campos", 520], ["Ribeirão Preto", 520], ["Santos", 360], ["Mauá", 330], ["Mogi das Cruzes", 330], ["Jundiaí", 320], ["Piracicaba", 310], ["Diadema", 300], ["Bauru", 280]],
     "SE": [["Aracaju", 450], ["Nossa Senhora do Socorro", 120], ["Lagarto", 75], ["Itabaiana", 70], ["São Cristóvão", 60], ["Estância", 50]],
-    "TO": [["Palmas", 220], ["Araguaína", 120], ["Gurupi", 65], ["Porto Nacional", 40], ["Paraíso do Tocantins", 35], ["Colinas do Tocantins", 25]]
+    "TO": [["Palmas", 220], ["Araguaína", 120], ["Gurupi", 65], ["Porto Nacional", 40], ["Paraíso do Tocantins", 35], ["Colinas do Tocantins", 25]],
+    "ZZ": [["Lisboa", 45], ["Miami", 30], ["Vancouver", 12]]
   }
 }

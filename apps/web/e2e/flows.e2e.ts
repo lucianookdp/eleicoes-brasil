@@ -71,3 +71,19 @@ test('old-style links still work', async ({ page }) => {
   await expect(page).toHaveURL(/\/eleicao\/estado\/\?e=demo&t=1&uf=sp/);
   await expect(page.getByRole('heading', { level: 1, name: 'São Paulo' })).toBeVisible();
 });
+
+test('votes abroad: listed after the states and searchable', async ({ page, isMobile }) => {
+  await page.goto('/eleicao/estados/?e=demo&t=1');
+  const names = page.getByRole('link', { name: /Exterior/ });
+  await expect(names.first()).toBeVisible();
+  if (isMobile)
+    await page
+      .getByRole('navigation', { name: 'Navegação principal' })
+      .getByRole('button', { name: 'Buscar' })
+      .click();
+  else await page.keyboard.press('Control+k');
+  await page.getByPlaceholder('Cidade, estado ou candidato').fill('vancouver');
+  await page.getByRole('option', { name: /Vancouver/ }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Vancouver' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Você está em' })).toContainText('Exterior');
+});

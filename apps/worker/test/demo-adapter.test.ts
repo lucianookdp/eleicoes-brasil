@@ -45,7 +45,7 @@ describe('demo TSE server + TSEAdapter2026', () => {
     expect(progress.status).toBe('in-progress');
     expect(countedPct(progress)).toBeGreaterThan(0);
     expect(countedPct(progress)).toBeLessThan(100);
-    expect(states).toHaveLength(27);
+    expect(states).toHaveLength(28) // 26 states + DF + abroad (ZZ), as in the TSE files;
     const sum = states.reduce((s, x) => s + (x.progress.sectionsCounted ?? 0), 0);
     expect(sum).toBe(progress.sectionsCounted);
 

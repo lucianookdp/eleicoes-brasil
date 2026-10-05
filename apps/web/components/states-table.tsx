@@ -46,7 +46,8 @@ export function StatesTable({
 }) {
   const { href } = useRound();
   const [sort, setSort] = useState<SortKey>('name');
-  const rows = [...states].sort(SORTS[sort].fn);
+  // Votes abroad ("Exterior") always close the list, whatever the sort.
+  const rows = [...states].sort(SORTS[sort].fn).sort((a, b) => Number(a.uf === 'ZZ') - Number(b.uf === 'ZZ'));
 
   return (
     <div>
