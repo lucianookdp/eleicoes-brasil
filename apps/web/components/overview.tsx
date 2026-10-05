@@ -13,6 +13,7 @@ import { CountingHero } from './counting';
 import { EvolutionChart } from './evolution-chart';
 import { LeadChart } from './lead-chart';
 import { CandidateList, HeadToHead, isHeadToHead, Provenance, RaceBar } from './results';
+import { ShareButton } from './share-button';
 import { useRound } from './shell';
 import { StatesTable } from './states-table';
 import { EmptyState, ErrorNotice, FreshnessNotice, Panel, Skeleton, Tabs } from './ui';
@@ -155,6 +156,7 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
                       <CandidateList result={headline} collapsed={4} />
                     </>
                   )}
+                  <ShareButton result={headline} />
                   <Provenance result={headline} />
                 </>
               )}

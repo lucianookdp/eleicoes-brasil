@@ -8,6 +8,7 @@ import type { ApiError } from '@/lib/api';
 import { API_URL } from '@/lib/api';
 import { displayName, fmtInt, fmtPct, fmtPp, fmtSigned, initials, shownTime } from '@/lib/format';
 import { useResult } from '@/lib/queries';
+import { ShareButton } from './share-button';
 import { useRound } from './shell';
 import { EmptyState, ErrorNotice, Segmented, Skeleton } from './ui';
 
@@ -463,6 +464,7 @@ export function ResultPanel({
           ) : (
             <PartyTable result={result} />
           )}
+          <ShareButton result={result} />
           <Provenance result={result} />
         </div>
       )}

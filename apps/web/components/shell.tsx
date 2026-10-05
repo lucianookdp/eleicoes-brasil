@@ -24,6 +24,7 @@ import {
   Logo,
 } from './icons';
 import { SearchPalette } from './search';
+import { shareSite } from './share-button';
 
 interface RoundContextValue {
   round: RoundSummary;
@@ -367,11 +368,46 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
                   </Link>
                 </li>
               ))}
+              <li>
+                <ShareSiteItem />
+              </li>
             </ul>
           </div>
         </div>
       )}
     </>
+  );
+}
+
+function ShareSiteItem() {
+  const [label, setLabel] = useState('Compartilhar o site');
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        const r = await shareSite();
+        if (r === 'copied') setLabel('Link copiado');
+        if (r === 'failed') setLabel('Não foi possível compartilhar');
+      }}
+      className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left hover:bg-surface-2"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        width={18}
+        height={18}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.75}
+        aria-hidden
+      >
+        <path
+          d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      {label}
+    </button>
   );
 }
 

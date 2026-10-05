@@ -96,7 +96,9 @@ test('runoff: head-to-head card with the vote difference', async ({ page, reques
   );
   test.skip(!hasRunoff, 'demo runoff not running');
   await page.goto('/eleicao/?e=demo&t=2');
-  await expect(page.getByText(/está à frente por [\d.]+ votos|Aguardando os primeiros votos/)).toBeVisible();
+  await expect(
+    page.getByText(/(está à frente|venceu) por [\d.]+ votos|Aguardando os primeiros votos/),
+  ).toBeVisible();
   await expect(page.getByText(/faltam .* das urnas|venceu por/)).toBeVisible();
   // A runoff never shows the 1st-round list of candidates.
   await expect(page.getByRole('button', { name: /Ver todos os/ })).toHaveCount(0);
@@ -105,4 +107,18 @@ test('runoff: head-to-head card with the vote difference', async ({ page, reques
   await expect(page.getByText(/Maior vantagem: [\d.]+ votos/)).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test('share: result image and WhatsApp text with the site link', async ({ page }) => {
+  await openDemo(page);
+  await page.getByRole('button', { name: 'Compartilhar' }).first().click();
+  const dialog = page.getByRole('dialog', { name: 'Compartilhar resultado' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('img', { name: 'Imagem do resultado' })).toBeVisible();
+  const text = await dialog.locator('pre').innerText();
+  expect(text).toContain('Presidente · Brasil');
+  expect(text).toContain('Acompanhe ao vivo: http');
+  // A 1st-round leader is "à frente", never "venceu", unless the TSE marks them elected.
+  expect(text).not.toContain('venceu');
+  await expect(dialog.getByRole('link', { name: 'WhatsApp' })).toHaveAttribute('href', /wa\.me/);
 });
