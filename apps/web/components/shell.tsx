@@ -133,7 +133,6 @@ const NAV = [
     main: true,
   },
   { path: '/benches', label: 'Bancadas e STF', short: 'Bancadas', icon: IconSeats, main: true },
-  { path: '/historico', label: 'Linha do tempo', short: 'Linha do tempo', icon: IconHistory, main: false },
   {
     path: '/compare',
     label: 'Comparar estados',
@@ -142,8 +141,17 @@ const NAV = [
     main: false,
     flag: 'comparison' as const,
   },
+  { path: '/historico', label: 'Linha do tempo', short: 'Linha do tempo', icon: IconHistory, main: false },
   { path: '/operations', label: 'Bastidores', short: 'Bastidores', icon: IconPulse, main: false },
 ];
+
+/** The state-offices section says what is actually disputed: in a runoff, only governors. */
+function navText(n: (typeof NAV)[number], round: number) {
+  if (n.path !== '/offices') return n;
+  return round === 2
+    ? { label: 'Governadores', short: 'Governadores' }
+    : { label: 'Governadores e senadores', short: 'Gov. e Senado' };
+}
 
 /** Hides sections switched off by feature flags (ENABLE_* on the API). */
 function useNav() {
@@ -171,7 +179,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
       className={`flex h-11 items-center gap-2 whitespace-nowrap border-b-2 border-transparent px-3 text-[15px] hover:text-ink aria-[current=page]:border-live aria-[current=page]:font-medium aria-[current=page]:text-ink ${n.main ? 'text-ink-2' : 'text-muted'}`}
     >
       <n.icon width={18} height={18} />
-      {n.label}
+      {navText(n, round.round).label}
     </Link>
   );
   return (
@@ -321,9 +329,21 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
 }
 
 function BottomNav({ onSearch }: { onSearch: () => void }) {
-  const { href, meta } = useRound();
+  const { round, href, meta } = useRound();
   const active = useActive();
   const [more, setMore] = useState(false);
+  const moreLink = (l: { to: string; label: string; icon: typeof IconInfo }) => (
+    <li key={l.label}>
+      <Link
+        href={l.to}
+        onClick={() => setMore(false)}
+        className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-[16px] hover:bg-surface-2"
+      >
+        <l.icon />
+        {l.label}
+      </Link>
+    </li>
+  );
   const item =
     'flex min-h-16 flex-1 flex-col items-center justify-center gap-0.5 text-[12px] text-muted aria-[current=page]:font-medium aria-[current=page]:text-ink';
   return (
@@ -342,7 +362,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             <span className="flex size-8 items-center justify-center">
               <n.icon />
             </span>
-            {n.short}
+            {navText(n, round.round).short}
           </Link>
         ))}
         <button type="button" onClick={onSearch} className={item}>
@@ -361,7 +381,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             <span className="flex size-8 items-center justify-center">
               <n.icon />
             </span>
-            {n.short}
+            {navText(n, round.round).short}
           </Link>
         ))}
         <button type="button" onClick={() => setMore(true)} className={item} aria-expanded={more}>
@@ -396,34 +416,23 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
                 <IconClose />
               </button>
             </div>
+            {/* By what people look for most; the behind-the-scenes pages come last. */}
             <ul className="grid gap-1">
               {[
                 { to: href('/benches'), label: 'Bancadas eleitas', icon: IconSeats },
-                { to: href('/historico'), label: 'Linha do tempo', icon: IconHistory },
+                { to: href('/benches', { casa: 'stf' }), label: 'STF', icon: IconCourt },
                 ...(meta?.features.comparison === false
                   ? []
                   : [{ to: href('/compare'), label: 'Comparar estados', icon: IconCompare }]),
-                { to: href('/operations'), label: 'Bastidores da coleta', icon: IconPulse },
-                {
-                  to: href('/benches', { casa: 'stf' }),
-                  label: 'STF: quem são os ministros',
-                  icon: IconCourt,
-                },
                 { to: `${href()}#favoritos`, label: 'Favoritos', icon: IconStar },
+              ].map(moreLink)}
+              <li className="my-1 border-t border-line" aria-hidden />
+              {[
+                { to: href('/historico'), label: 'Linha do tempo', icon: IconHistory },
+                { to: href('/operations'), label: 'Bastidores da coleta', icon: IconPulse },
                 { to: '/como-funciona', label: 'Como funciona', icon: IconInfo },
                 { to: '/sobre', label: 'Sobre os dados', icon: IconInfo },
-              ].map((l) => (
-                <li key={l.label}>
-                  <Link
-                    href={l.to}
-                    onClick={() => setMore(false)}
-                    className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-[16px] hover:bg-surface-2"
-                  >
-                    <l.icon />
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
+              ].map(moreLink)}
               <li>
                 <ShareSiteItem />
               </li>

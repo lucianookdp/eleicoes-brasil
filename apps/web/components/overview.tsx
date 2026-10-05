@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useFavorites } from '@/lib/favorites';
 import { displayName, fmtInt, fmtPct } from '@/lib/format';
-import { useEvents, useOverview, useSeries } from '@/lib/queries';
+import { useEvents, useOfficeStates, useOverview, useSeries } from '@/lib/queries';
 import { ActivityFeed } from './activity';
 import { BrazilMap } from './brazil-map';
 import { CountingHero } from './counting';
@@ -17,7 +17,7 @@ import { CandidateList, FacePhoto, HeadToHead, isHeadToHead, Provenance, RaceBar
 import { ShareButton } from './share-button';
 import { useRound } from './shell';
 import { StatesTable } from './states-table';
-import { EmptyState, ErrorNotice, FreshnessNotice, Panel, Skeleton, Tabs } from './ui';
+import { EmptyState, ErrorNotice, FreshnessNotice, Panel, Skeleton, StateFlag, Tabs } from './ui';
 
 const DATE = new Intl.DateTimeFormat('pt-BR', {
   day: 'numeric',
@@ -168,6 +168,7 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
               votesFor={headlineOffice?.name}
             />
           </Panel>
+          <GovernorRunoffs data={data} />
         </div>
 
         <Panel className="lg:sticky lg:top-20 lg:col-span-5">
@@ -377,6 +378,53 @@ function Favorites({ data }: { data: OverviewDTO }) {
               >
                 <span className="font-medium">{f.label}</span>
                 <span className="text-muted">{pct != null ? fmtPct(pct, 1) : f.detail}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * Runoff: the governor races, kept low on the page and short (the presidency is the focus): one
+ * line per state with who leads, and a link to the full page.
+ */
+function GovernorRunoffs({ data }: { data: OverviewDTO }) {
+  const { round, href } = useRound();
+  const office = data.round.offices.find((o) => o.slug === 'governador');
+  const { data: states } = useOfficeStates(round.slug, round.round === 2 ? office?.slug : undefined);
+  if (round.round !== 2 || !office || !states?.results.length) return null;
+  return (
+    <section aria-labelledby="governadores-2t" className="rounded-xl border border-line bg-surface p-4">
+      <div className="mb-1 flex items-baseline justify-between gap-3">
+        <h2 id="governadores-2t" className="text-[15px] font-semibold">
+          Governadores no 2º turno
+        </h2>
+        <Link href={href('/offices')} className="shrink-0 text-[13.5px] text-info">
+          Ver todos
+        </Link>
+      </div>
+      <ul className="divide-y divide-line">
+        {states.results.map((r) => {
+          const [lead] = r.candidates.filter(hasValidVotes);
+          const won = lead && /^eleit/i.test(lead.status ?? '');
+          return (
+            <li key={r.areaKey}>
+              <Link
+                href={href(`/states/${r.areaKey}`, { cargo: office.slug })}
+                className="grid min-h-11 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 py-1.5 text-[14px]"
+              >
+                <StateFlag uf={r.areaKey} size={18} />
+                <span className="min-w-0 truncate">
+                  <span className="text-muted">{r.areaKey.toUpperCase()} · </span>
+                  {lead && r.votesPublishable ? displayName(lead.ballotName) : 'Aguardando votos'}
+                  {won && <span className="ml-1.5 text-[12px] font-medium text-live">{lead.status}</span>}
+                </span>
+                <span className="numeral text-muted">
+                  {lead && r.votesPublishable ? fmtPct(lead.percent, 1) : ''}
+                </span>
               </Link>
             </li>
           );

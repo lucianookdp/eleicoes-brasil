@@ -24,10 +24,12 @@ export function OfficesView() {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">
-            Governadores e senadores
+            {round.round === 2 ? 'Governadores no 2º turno' : 'Governadores e senadores'}
           </h1>
           <p className="text-[13.5px] text-muted">
-            Quem lidera em cada estado. Toque em um estado para ver tudo.
+            {round.round === 2
+              ? 'Os estados onde a disputa para governador foi ao 2º turno. Toque em um estado para ver tudo.'
+              : 'Quem lidera em cada estado. Toque em um estado para ver tudo.'}
           </p>
         </div>
         {offices.length > 1 && office && (
@@ -87,7 +89,7 @@ function Summary({ results }: { results: ResultDTO[] }) {
   );
 }
 
-function StateCard({ result }: { result: ResultDTO }) {
+export function StateCard({ result }: { result: ResultDTO }) {
   const { href } = useRound();
   const top = result.candidates.filter(hasValidVotes).slice(0, (result.seats ?? 1) + 1);
   return (
@@ -111,7 +113,8 @@ function StateCard({ result }: { result: ResultDTO }) {
               <span className="size-2.5 shrink-0 rounded-full" style={{ background: c.color }} aria-hidden />
               <span className="truncate text-[14px]">{displayName(c.ballotName)}</span>
               <span className="shrink-0 text-[12px] text-muted">{c.party.abbreviation}</span>
-              <StatusPill c={c} result={result} rank={i + 1} />
+              {/* "Não eleito" next to every runner-up is noise in a card this small. */}
+              {!/^n[aã]o eleit/i.test(c.status ?? '') && <StatusPill c={c} result={result} rank={i + 1} />}
             </span>
             <span className="numeral text-[14px]">{result.votesPublishable ? fmtPct(c.percent) : '—'}</span>
           </span>

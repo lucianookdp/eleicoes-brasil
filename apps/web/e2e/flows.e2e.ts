@@ -283,3 +283,23 @@ test('runoff over: the winner banner, only once the TSE marks "Eleito"', async (
   await expect(banner).toContainText(new RegExp(elected.ballotName, 'i'));
   await expect(page.getByText(/Aguardando o TSE/)).toHaveCount(0);
 });
+
+test('governors: named for what is disputed, and listed low on the runoff home page', async ({
+  page,
+  isMobile,
+}) => {
+  await page.goto('/eleicao/?e=demo&t=1');
+  const nav = isMobile
+    ? page.getByRole('navigation', { name: 'Navegação principal' })
+    : page.getByRole('navigation', { name: 'Seções' });
+  await expect(
+    nav.getByRole('link', { name: isMobile ? 'Gov. e Senado' : 'Governadores e senadores' }),
+  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Governadores no 2º turno' })).toHaveCount(0);
+
+  await page.goto('/eleicao/?e=demo&t=2');
+  await expect(nav.getByRole('link', { name: 'Governadores', exact: true })).toBeVisible();
+  const section = page.getByRole('region', { name: 'Governadores no 2º turno' });
+  await expect(section).toBeVisible();
+  await expect(section.getByRole('link').first()).toBeVisible();
+});

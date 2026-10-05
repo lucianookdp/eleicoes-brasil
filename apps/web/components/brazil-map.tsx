@@ -15,16 +15,25 @@ const MAP = brazil as unknown as { viewBox: string; locations: { id: string; nam
 
 type Mode = 'progress' | 'leader';
 
+/**
+ * Counted share in clear steps, not a smooth gradient: late in the night most states sit between
+ * 80% and 100%, and a gradient makes them look the same. The steps are finer at the top.
+ */
+const STEPS = [
+  { below: 50, label: 'até 50%', mix: 18 },
+  { below: 80, label: '50–80%', mix: 42 },
+  { below: 95, label: '80–95%', mix: 64 },
+  { below: 100, label: '95–99%', mix: 82 },
+  { below: Number.POSITIVE_INFINITY, label: '100%', mix: 100 },
+];
+const stepColor = (mix: number) => `color-mix(in oklab, var(--seq-high) ${mix}%, var(--seq-low))`;
+
 function fill(s: StateRowDTO | undefined, mode: Mode): string {
   if (!s?.progress || s.progress.status === 'not-started') return 'var(--surface-2)';
-  if (mode === 'leader') {
-    if (!s.leader) return 'var(--surface-2)';
-    // Stronger colour for a wider win: the leader's share of valid votes, 30% → light, 65%+ → full.
-    const t = Math.max(0, Math.min(1, ((s.leader.percent ?? 0) - 30) / 35));
-    return `color-mix(in oklab, ${s.leader.color} ${Math.round(40 + 55 * t)}%, var(--surface))`;
-  }
-  const p = Math.max(0, Math.min(100, s.progress.countedPct ?? 0));
-  return `color-mix(in oklab, var(--seq-high) ${p}%, var(--seq-low))`;
+  // The leader's own colour, solid: who leads, nothing more.
+  if (mode === 'leader') return s.leader ? s.leader.color : 'var(--surface-2)';
+  const p = s.progress.countedPct ?? 0;
+  return stepColor(STEPS.find((step) => p < step.below)!.mix);
 }
 
 /**
@@ -174,23 +183,24 @@ function Legend({ mode, leaders }: { mode: Mode; leaders: { name: string; color:
             {displayName(l.name)}
           </li>
         ))}
-        <li className="w-full text-muted sm:text-right">Cor mais forte: vitória mais folgada</li>
       </ul>
     );
   }
   return (
-    <div
-      className="flex items-center gap-2 text-[12px] text-muted"
-      role="img"
-      aria-label="Legenda: de 0% a 100% das urnas apuradas"
+    <ul
+      className="flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-ink-2 sm:justify-end"
+      aria-label="Legenda: urnas apuradas"
     >
-      <span>0%</span>
-      <span
-        className="h-2 w-24 rounded-full"
-        style={{ background: 'linear-gradient(90deg, var(--seq-low), var(--seq-high))' }}
-        aria-hidden
-      />
-      <span>100%</span>
-    </div>
+      {STEPS.map((step) => (
+        <li key={step.label} className="flex items-center gap-1.5">
+          <span
+            className="inline-block size-2.5 rounded-sm"
+            style={{ background: stepColor(step.mix) }}
+            aria-hidden
+          />
+          {step.label}
+        </li>
+      ))}
+    </ul>
   );
 }
