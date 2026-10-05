@@ -44,6 +44,16 @@ test('opens the historical timeline', async ({ page }) => {
   await slider.focus();
   await page.keyboard.press('Home');
   await expect(page.getByText('Como estava às')).toBeVisible();
+
+  // Replay: the button toggles and the moment moves forward on its own.
+  await slider.focus();
+  await page.keyboard.press('Home');
+  const start = await slider.inputValue();
+  await page.getByRole('button', { name: 'Reproduzir' }).click();
+  await expect(page.getByRole('button', { name: 'Pausar' })).toBeVisible();
+  await expect.poll(() => slider.inputValue(), { timeout: 5000 }).not.toBe(start);
+  await page.getByRole('button', { name: 'Pausar' }).click();
+  await expect(page.getByRole('button', { name: 'Reproduzir' })).toBeVisible();
 });
 
 test('opens behind the scenes', async ({ page }) => {

@@ -1,9 +1,9 @@
 'use client';
 
-import { formatClock } from '@eleicoes/election-core';
+import { formatClock, hasValidVotes } from '@eleicoes/election-core';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { displayName, fmtPct } from '@/lib/format';
+import { displayName, fmtInt, fmtPct } from '@/lib/format';
 import { useOverview, useSeries, useTimeline, useTimelineAt } from '@/lib/queries';
 import { TILES } from '@/lib/tiles';
 import { EvolutionChart } from './evolution-chart';
@@ -19,22 +19,29 @@ export function HistoryView() {
   const overview = useOverview(round.slug);
   const office = overview.data?.round.offices.find((o) => o.scope === 'country');
   const series = useSeries(round.slug, office?.slug, 'br');
-  const points = timeline.data?.points ?? [];
+  // Snapshots taken before the first partial (days earlier, all at 0%) would squash the night.
+  const all = timeline.data?.points ?? [];
+  const started = all.filter((p) => (p.countedPct ?? 0) > 0);
+  const points = started.length >= 2 ? started : all;
   const [index, setIndex] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   const i = index ?? points.length - 1;
   const at = points[i]?.at ?? null;
   const snapshot = useTimelineAt(round.slug, at);
+  const [first, second] = snapshot.data?.headline?.candidates.filter(hasValidVotes) ?? [];
+  const lead = first && second ? (first.votes ?? 0) - (second.votes ?? 0) : 0;
 
+  // The whole night in about 30 seconds: ~60 frames, half a second each.
   useEffect(() => {
     if (!playing) return;
+    const step = Math.max(1, Math.ceil(points.length / 60));
     const t = setInterval(() => {
       setIndex((prev) => {
-        const next = (prev ?? 0) + 1;
+        const next = (prev ?? 0) + step;
         if (next >= points.length - 1) setPlaying(false);
         return Math.min(next, points.length - 1);
       });
-    }, 350);
+    }, 500);
     return () => clearInterval(t);
   }, [playing, points.length]);
 
@@ -43,7 +50,7 @@ export function HistoryView() {
       <div className="mb-5">
         <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Linha do tempo</h1>
         <p className="text-[13.5px] text-muted">
-          Volte a qualquer momento da apuração e veja os números como estavam naquela hora.
+          Volte a qualquer momento da apuração ou toque em Reproduzir para ver a noite inteira em 30 segundos.
         </p>
       </div>
 
@@ -68,6 +75,19 @@ export function HistoryView() {
                 <p className="numeral text-[34px] leading-none">{fmtPct(points[i]?.countedPct)}</p>
               </div>
             </div>
+            {first && lead > 0 && (
+              <p className="mb-2 flex items-center gap-2 text-[14px] text-ink-2" data-testid="replay-lead">
+                <span
+                  className="size-2.5 shrink-0 rounded-full"
+                  style={{ background: first.color }}
+                  aria-hidden
+                />
+                <span>
+                  {displayName(first.ballotName)} à frente por{' '}
+                  <span className="numeral font-semibold text-ink">{fmtInt(lead)}</span> votos
+                </span>
+              </p>
+            )}
             <Pace points={points} index={i} />
             <div className="mt-3 flex items-center gap-3">
               <button
