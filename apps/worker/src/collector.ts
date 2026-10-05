@@ -355,16 +355,12 @@ export class Collector {
   /** Photos of majoritarian candidates, once each: a few hundred files, ahead of deputies and cities. */
   private queuePhotos(office: StoredOffice, target: AreaRef, candidates: { key: string }[]) {
     const provider = this.provider;
-    if (
-      !provider.getCandidatePhoto ||
-      office.kind !== 'majoritarian' ||
-      target.type === 'city' ||
-      target.type === 'zone'
-    )
-      return;
+    if (!provider.getCandidatePhoto || target.type === 'city' || target.type === 'zone') return;
+    // President/governor/senator photos early; deputies' (thousands) only after every result.
+    const priority = office.kind === 'majoritarian' ? 3 : 13;
     for (const c of candidates) {
       if (this.store.knownPhotos.has(c.key) || this.background.has(`photo:${c.key}`)) continue;
-      this.enqueue(`photo:${c.key}`, 3, async () => {
+      this.enqueue(`photo:${c.key}`, priority, async () => {
         try {
           await this.store.savePhoto(c.key, await provider.getCandidatePhoto!(office, target.state, c.key));
           return true;
@@ -438,8 +434,8 @@ export class Collector {
   /**
    * Queues every office of this provider election that applies to the area.
    * Headline (next cycle, high priority): Brazil, and president/governor/senator per state.
-   * Background: EA15 reads (0), candidate photos (3), state-level deputies (5), capitals (10),
-   * other municipalities (11), deputies per municipality (12): what readers look at first.
+   * Background: EA15 reads (0), photos of majoritarian candidates (3), state-level deputies (5), capitals (10),
+   * other municipalities (11), deputies per municipality (12), deputies' photos (13): what readers look at first.
    */
   private queueArea(code: string, target: AreaRef) {
     for (const office of this.offices) {

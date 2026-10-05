@@ -4,6 +4,7 @@ import type { SearchHitDTO } from '@eleicoes/election-core';
 import { DOMESTIC_STATES } from '@eleicoes/election-core';
 import { useRouter } from 'next/navigation';
 import { type ComponentType, type SVGProps, useEffect, useId, useRef, useState } from 'react';
+import { API_URL } from '@/lib/api';
 import { useSearch } from '@/lib/queries';
 import { IconClose, IconFlag, IconOverview, IconPerson, IconPin, IconSearch, IconStates } from './icons';
 import { useRound } from './shell';
@@ -137,12 +138,7 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
                 onKeyDown={() => {}}
                 className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl px-3 py-2 aria-selected:bg-surface-2"
               >
-                <span
-                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-2"
-                  title={kind.label}
-                >
-                  <kind.icon />
-                </span>
+                <HitIcon hit={h} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{h.label}</span>
                   <span className="block truncate text-[13px] text-muted">
@@ -186,5 +182,31 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Kind icon, or the candidate's official photo when there is one. */
+function HitIcon({ hit }: { hit: SearchHitDTO }) {
+  const { round } = useRound();
+  const [failed, setFailed] = useState(false);
+  const kind = KIND[hit.kind];
+  return (
+    <span
+      className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-2 text-ink-2"
+      title={kind.label}
+    >
+      <kind.icon />
+      {hit.photo && !failed && (
+        // biome-ignore lint/performance/noImgElement: static export, no image optimisation server
+        <img
+          src={`${API_URL}/api/elections/${round.slug}/photos/${hit.photo}`}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailed(true)}
+          className="absolute inset-0 size-full object-cover object-[center_22%]"
+        />
+      )}
+    </span>
   );
 }

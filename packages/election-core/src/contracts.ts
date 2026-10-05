@@ -268,6 +268,8 @@ export interface SearchHitDTO {
   path: string;
   /** Extra query parameters, e.g. { cargo: "governador" }. */
   params?: Record<string, string>;
+  /** Candidate key, for the official photo (candidates only). */
+  photo?: string;
 }
 
 export interface CompareDTO {

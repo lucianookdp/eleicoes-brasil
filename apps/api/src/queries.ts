@@ -857,13 +857,14 @@ export class Queries {
           ballotName: string;
           number: string;
           party: string;
+          key: string;
           uf: string | null;
           office: string;
           officeSlug: string;
           scope: string;
         }[]
       >`
-        select c.ballot_name as "ballotName", c.number, c.party_abbreviation as party, c.state_code as uf,
+        select c.provider_id as key, c.ballot_name as "ballotName", c.number, c.party_abbreviation as party, c.state_code as uf,
                o.name as office, o.slug as "officeSlug", o.scope
         from candidates c join offices o on o.id = c.office_id
         where c.round_id = ${round.id} and (c.search_name like ${like} or c.number = ${q.trim()})
@@ -890,6 +891,7 @@ export class Queries {
         detail: `${c.number} · ${c.party} · ${c.office}${c.uf ? ` · ${c.uf}` : ''}`,
         path: where,
         params: { cargo: c.officeSlug },
+        photo: c.key,
       });
     }
     for (const p of partyRows) {

@@ -75,12 +75,22 @@ export function StatusPill({ c, result, rank }: { c: CandidateDTO; result: Resul
 }
 
 /** Official photo when the TSE publishes one (served by our API), initials otherwise. */
-function Avatar({ c, photo, large = false }: { c: CandidateDTO; photo: boolean; large?: boolean }) {
+function Avatar({
+  c,
+  photo,
+  large = false,
+  small = false,
+}: {
+  c: CandidateDTO;
+  photo: boolean;
+  large?: boolean;
+  small?: boolean;
+}) {
   const { round } = useRound();
   const [failed, setFailed] = useState(false);
   return (
     <span
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold ${large ? 'size-16 text-[18px]' : photo ? 'size-12 text-[14px]' : 'size-9 text-[12px]'}`}
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold ${large ? 'size-16 text-[18px]' : small ? 'size-9 text-[12px]' : 'size-12 text-[14px]'}`}
       style={{
         background: `color-mix(in srgb, ${c.color} 18%, transparent)`,
         color: c.color,
@@ -115,7 +125,8 @@ export function CandidateRow({ c, result, rank }: { c: CandidateDTO; result: Res
     <li
       className={`grid items-center gap-x-3 gap-y-1.5 py-3 ${photo ? 'grid-cols-[48px_minmax(0,1fr)_auto]' : 'grid-cols-[36px_minmax(0,1fr)_auto]'}`}
     >
-      <Avatar c={c} photo={photo} />
+      {/* Every candidate's official photo; deputies' (long lists) are smaller. */}
+      <Avatar c={c} photo small={!photo} />
       <div className="min-w-0">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-medium">
           <span className="sr-only">{rank}º. </span>
