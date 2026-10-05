@@ -199,9 +199,19 @@ test('counts the visit privately (random id, no cookie)', async ({ page, context
   expect(await context.cookies()).toHaveLength(0);
 });
 
-test('bancadas: seats per party, one dot per seat, and the votes each decision needs', async ({ page }) => {
+test('bancadas: seats per party, one dot per seat, and the votes each decision needs', async ({
+  page,
+  request,
+}) => {
   await page.goto('/eleicao/bancadas/?e=demo&t=1');
   await expect(page.getByRole('heading', { level: 1, name: 'Bancadas eleitas' })).toBeVisible();
+  // The Constitution's numbers are always there; the seats only once every state is final.
+  await expect(page.getByRole('rowheader', { name: /Mudar a Constituição/ })).toBeVisible();
+  const { chambers } = await (await request.get('http://localhost:4000/api/elections/demo-1/benches')).json();
+  if (chambers.some((c: { statesFinal: number; statesTotal: number }) => c.statesFinal < c.statesTotal)) {
+    await expect(page.getByText(/aparecem quando o TSE terminar/)).toBeVisible();
+    return;
+  }
   const chart = page.getByRole('img', { name: /cadeiras:/ });
   await expect(chart).toBeVisible();
   const label = (await chart.getAttribute('aria-label')) ?? '';
@@ -209,7 +219,6 @@ test('bancadas: seats per party, one dot per seat, and the votes each decision n
   expect(await chart.locator('circle').count()).toBe(total);
   await page.getByRole('radio', { name: 'Senado' }).click();
   await expect(page.getByText(/senadores eleitos em 2026/)).toBeVisible();
-  await expect(page.getByRole('rowheader', { name: /Mudar a Constituição/ })).toBeVisible();
 });
 
 test('state flags next to state names', async ({ page }) => {
