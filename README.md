@@ -17,6 +17,9 @@ Acompanhe a apuração das eleições brasileiras em tempo real, direto do celul
 Todos os números vêm dos arquivos públicos de resultados do **Tribunal Superior Eleitoral
 (TSE)**. O site só busca, confere e mostra esses dados, sem opinião, pesquisa ou previsão.
 
+Os votos necessários para cada decisão no Congresso vêm da Constituição Federal. As bandeiras
+dos estados são símbolos oficiais (domínio público), em miniaturas do Wikimedia Commons.
+
 Este é um projeto independente, sem vínculo com a Justiça Eleitoral. Resultados parciais podem
 mudar até o fim da apuração.
 

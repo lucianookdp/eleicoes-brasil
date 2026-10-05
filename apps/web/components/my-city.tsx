@@ -8,6 +8,7 @@ import { useMyCity } from '@/lib/my-city';
 import { useCity, useSearch } from '@/lib/queries';
 import { IconPin } from './icons';
 import { useRound } from './shell';
+import { StateFlag } from './ui';
 
 /**
  * "Minha cidade" at the top of the home page: on a first visit a small prompt to pick it (or
@@ -139,7 +140,8 @@ function Chosen({
           <Link href={href(path)} className="block truncate text-[17px] font-semibold hover:underline">
             {city.name}
           </Link>
-          <p className="text-[12.5px] text-muted">
+          <p className="flex items-center gap-1.5 text-[12.5px] text-muted">
+            <StateFlag uf={city.uf} size={16} />
             {city.state}
             {result && ` · ${result.office.name} · ${fmtPct(result.progress.countedPct, 1)} das urnas`}
           </p>

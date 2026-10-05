@@ -7,7 +7,7 @@ import { displayName, fmtPct } from '@/lib/format';
 import { useOfficeStates, useOverview } from '@/lib/queries';
 import { StatusPill, useOfficeParam } from './results';
 import { useRound } from './shell';
-import { EmptyState, ErrorNotice, Segmented, Skeleton } from './ui';
+import { EmptyState, ErrorNotice, Segmented, Skeleton, StateFlag } from './ui';
 
 /** Governor or senator in every state on one screen: who leads, who is elected, who goes to a runoff. */
 export function OfficesView() {
@@ -96,7 +96,10 @@ function StateCard({ result }: { result: ResultDTO }) {
       className="block h-full rounded-xl border border-line bg-surface p-3 hover:border-line-strong"
     >
       <span className="mb-2 flex items-baseline justify-between gap-2">
-        <span className="truncate font-semibold">{result.areaName}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <StateFlag uf={result.areaKey} />
+          <span className="truncate font-semibold">{result.areaName}</span>
+        </span>
         <span className="shrink-0 text-[12px] text-muted">
           {fmtPct(result.progress.countedPct, 1)} das urnas
         </span>

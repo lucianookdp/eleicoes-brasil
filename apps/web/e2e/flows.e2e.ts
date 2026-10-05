@@ -198,3 +198,23 @@ test('counts the visit privately (random id, no cookie)', async ({ page, context
   expect(req.postData()).toMatch(/^[0-9a-f-]{36}$/);
   expect(await context.cookies()).toHaveLength(0);
 });
+
+test('bancadas: seats per party, one dot per seat, and the votes each decision needs', async ({ page }) => {
+  await page.goto('/eleicao/bancadas/?e=demo&t=1');
+  await expect(page.getByRole('heading', { level: 1, name: 'Bancadas eleitas' })).toBeVisible();
+  const chart = page.getByRole('img', { name: /cadeiras:/ });
+  await expect(chart).toBeVisible();
+  const label = (await chart.getAttribute('aria-label')) ?? '';
+  const total = Number(/^(\d+) cadeiras/.exec(label)?.[1]);
+  expect(await chart.locator('circle').count()).toBe(total);
+  await page.getByRole('radio', { name: 'Senado' }).click();
+  await expect(page.getByText(/senadores eleitos em 2026/)).toBeVisible();
+  await expect(page.getByRole('rowheader', { name: /Mudar a Constituição/ })).toBeVisible();
+});
+
+test('state flags next to state names', async ({ page }) => {
+  await page.goto('/eleicao/estado/?e=demo&t=1&uf=sp');
+  const flag = page.getByRole('heading', { level: 1 }).locator('img');
+  await expect(flag).toHaveAttribute('src', /\/flags\/sp\.png$/);
+  await expect.poll(() => flag.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+});

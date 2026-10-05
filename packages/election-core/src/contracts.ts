@@ -119,6 +119,28 @@ export interface OfficeStatesDTO {
   results: ResultDTO[];
 }
 
+/** Seats won per party in one chamber (Câmara: all 513; Senado: the seats disputed this year). */
+export interface BenchDTO {
+  office: OfficeInfo;
+  /** Seats already filled by an elected candidate. */
+  seats: number;
+  /** States whose result the TSE has finished totalling. The page waits for all of them. */
+  statesFinal: number;
+  statesTotal: number;
+  parties: {
+    abbreviation: string;
+    name: string;
+    color: string;
+    seats: number;
+    /** Official party federation as the TSE lists it (e.g. "PCDOB / PT / PV"), if any. */
+    federation: string | null;
+  }[];
+}
+
+export interface BenchesDTO {
+  chambers: BenchDTO[];
+}
+
 export interface LeaderDTO {
   name: string;
   party: string;

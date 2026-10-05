@@ -11,13 +11,14 @@ const PAGES = [
   '/eleicao/estado/?uf=zz',
   '/eleicao/municipio/?uf=sp&c=34020',
   '/eleicao/cargos/',
+  '/eleicao/bancadas/',
   '/eleicao/historico/',
   '/eleicao/bastidores/',
   '/eleicao/comparar/',
 ];
-const WIDTHS = [320, 375, 430];
+const WIDTHS = [320, 375, 430, 768, 1024, 1280, 1440];
 
-test.describe('fits phone screens', () => {
+test.describe('fits every screen width', () => {
   test.skip(({ isMobile }) => isMobile, 'widths are set by hand; once is enough');
 
   for (const round of ['1', '2'])

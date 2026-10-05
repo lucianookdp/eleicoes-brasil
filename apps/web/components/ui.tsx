@@ -311,3 +311,42 @@ export function Tabs<T extends string>({
     </div>
   );
 }
+
+const FLAG_BASE = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/flags`;
+
+/**
+ * State flag (official symbols, public domain; thumbnails from Wikimedia Commons). Decorative: the
+ * state's name or code is always next to it. Votes abroad (ZZ) get a globe instead.
+ */
+export function StateFlag({ uf, size = 20 }: { uf: string; size?: number }) {
+  const code = uf.toLowerCase();
+  const style = { width: size, height: Math.round(size * 0.7) };
+  if (code === 'zz')
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        style={style}
+        className="shrink-0 text-muted"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.6}
+        aria-hidden
+      >
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17" />
+      </svg>
+    );
+  if (code.length !== 2) return null;
+  return (
+    // biome-ignore lint/performance/noImgElement: static export, tiny pre-sized thumbnail
+    <img
+      src={`${FLAG_BASE}/${code}.png`}
+      alt=""
+      aria-hidden
+      loading="lazy"
+      decoding="async"
+      style={style}
+      className="shrink-0 rounded-[2px] object-cover ring-1 ring-line"
+    />
+  );
+}

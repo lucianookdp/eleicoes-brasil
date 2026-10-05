@@ -5,7 +5,7 @@ import { useCity, useResult } from '@/lib/queries';
 import { CountingHero } from './counting';
 import { ResultPanel, useOfficeParam } from './results';
 import { useRound } from './shell';
-import { Breadcrumbs, ErrorNotice, FavoriteButton, SectionTitle, Skeleton } from './ui';
+import { Breadcrumbs, ErrorNotice, FavoriteButton, SectionTitle, Skeleton, StateFlag } from './ui';
 
 export function CityView({ uf, city, initial }: { uf: string; city: string; initial: CityDetailDTO | null }) {
   const { round, href } = useRound();
@@ -36,7 +36,8 @@ export function CityView({ uf, city, initial }: { uf: string; city: string; init
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-[28px] font-semibold tracking-tight sm:text-[32px]">{data.city.name}</h1>
-          <p className="text-[13px] text-muted">
+          <p className="flex items-center gap-1.5 text-[13px] text-muted">
+            <StateFlag uf={uf} size={18} />
             {data.city.isCapital ? `Capital de ${data.stateName}` : data.stateName}
           </p>
         </div>

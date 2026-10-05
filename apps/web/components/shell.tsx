@@ -20,6 +20,7 @@ import {
   IconPerson,
   IconPulse,
   IconSearch,
+  IconSeats,
   IconStar,
   IconStates,
   IconSun,
@@ -105,7 +106,7 @@ export function ElectionShell({
             reais.
           </div>
         )}
-        <main id="conteudo" className="mx-auto w-full max-w-[1320px] px-4 pb-28 pt-5 sm:px-6 lg:pb-12">
+        <main id="conteudo" className="mx-auto w-full max-w-[1320px] px-4 pb-28 pt-5 sm:px-6 xl:pb-12">
           {children}
         </main>
         <Footer />
@@ -122,6 +123,7 @@ const NAV = [
   { path: '/operations', label: 'Bastidores', icon: IconPulse },
   { path: '/historico', label: 'Linha do tempo', icon: IconHistory },
   { path: '/offices', label: 'Governadores', icon: IconPerson },
+  { path: '/benches', label: 'Bancadas', icon: IconSeats },
   { path: '/compare', label: 'Comparar', icon: IconCompare, flag: 'comparison' as const },
 ];
 
@@ -155,7 +157,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
           <span className="hidden sm:inline">Eleições Brasil</span>
         </Link>
         <ElectionSwitcher />
-        <nav aria-label="Seções" className="ml-2 hidden items-center gap-1 lg:flex">
+        <nav aria-label="Seções" className="ml-2 hidden items-center gap-1 xl:flex">
           {nav.map((n) => (
             <Link
               key={n.path}
@@ -172,11 +174,12 @@ function Header({ onSearch }: { onSearch: () => void }) {
           <button
             type="button"
             onClick={onSearch}
+            aria-label="Buscar"
             className="hidden h-9 items-center gap-2 rounded-md border border-line px-2.5 text-[13px] text-muted hover:border-line-strong hover:text-ink sm:flex"
           >
             <IconSearch />
-            <span className="lg:hidden xl:inline">Buscar</span>
-            <kbd className="rounded border border-line px-1 font-mono text-[11px] lg:hidden xl:inline">
+            <span className="xl:hidden 2xl:inline">Buscar</span>
+            <kbd className="rounded border border-line px-1 font-mono text-[11px] xl:hidden 2xl:inline">
               ⌘K
             </kbd>
           </button>
@@ -264,7 +267,7 @@ function LiveStatus() {
         {label}
       </span>
       {updated && status !== 'scheduled' && (
-        <span className="hidden whitespace-nowrap text-muted md:inline lg:hidden xl:inline">
+        <span className="hidden whitespace-nowrap text-muted md:inline">
           <span className="sr-only">Última atualização às </span>
           <time dateTime={updated}>{formatClock(updated)}</time>
         </span>
@@ -305,7 +308,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
     <>
       <nav
         aria-label="Navegação principal"
-        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-ground/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-ground/95 pb-[env(safe-area-inset-bottom)] backdrop-blur xl:hidden"
       >
         {NAV.slice(0, 3).map((n) => (
           <Link
@@ -329,7 +332,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
       </nav>
       {more && (
         <div
-          className="fixed inset-0 z-40 lg:hidden"
+          className="fixed inset-0 z-40 xl:hidden"
           role="dialog"
           aria-modal="true"
           aria-label="Mais opções"
@@ -355,6 +358,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             <ul className="grid gap-1">
               {[
                 { to: href('/offices'), label: 'Governadores e senadores', icon: IconPerson },
+                { to: href('/benches'), label: 'Bancadas eleitas', icon: IconSeats },
                 { to: href('/historico'), label: 'Linha do tempo', icon: IconHistory },
                 ...(meta?.features.comparison === false
                   ? []
@@ -424,7 +428,7 @@ function Footer() {
 
 function SiteFooter({ version }: { version?: string }) {
   return (
-    <footer className="border-t border-line pb-24 lg:pb-0">
+    <footer className="border-t border-line pb-24 xl:pb-0">
       <div className="mx-auto flex max-w-[1320px] flex-col gap-2 px-4 py-6 text-[13px] text-muted sm:px-6 md:flex-row md:items-start md:justify-between">
         <div className="max-w-2xl">
           <p>

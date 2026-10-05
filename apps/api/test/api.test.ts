@@ -8,7 +8,7 @@ import {
   offices,
   runMigrations,
 } from '@eleicoes/database';
-import { emptyProgress } from '@eleicoes/election-core';
+import { type BenchesDTO, emptyProgress } from '@eleicoes/election-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app';
 
@@ -244,5 +244,115 @@ suite('API (integration)', () => {
     const body = res.json() as { totalVisitors: number; days: { day: string; visitors: number }[] };
     expect(body.totalVisitors).toBe(2);
     expect(body.days[0]?.visitors).toBe(2);
+  });
+
+  it('counts every elected deputy and senator per party, even far down the list', async () => {
+    const [round] = await sql<{ id: string }[]>`select id from election_rounds where slug = 'test-1'`;
+    const now = new Date().toISOString();
+    const office = async (
+      providerId: string,
+      slug: string,
+      name: string,
+      kind: 'majoritarian' | 'proportional',
+    ) =>
+      (
+        await db
+          .insert(offices)
+          .values({
+            roundId: round!.id,
+            providerId,
+            providerElectionCode: '1',
+            slug,
+            name,
+            kind,
+            scope: 'state',
+          })
+          .returning()
+      )[0]!;
+    const deputies = await office('6', 'deputado-federal', 'Deputado Federal', 'proportional');
+    const senators = await office('5', 'senador', 'Senador', 'majoritarian');
+    const person = (key: string, party: string, elected: boolean, federation: string | null = null) => ({
+      key,
+      number: key,
+      name: `CANDIDATO ${key}`,
+      ballotName: `CANDIDATO ${key}`,
+      party: { number: key.slice(0, 2), abbreviation: party, name: `PARTIDO ${party}` },
+      coalition: federation,
+      runningMates: [],
+      votes: 1000 - Number(key.slice(2)),
+      percent: 1,
+      elected,
+      status: elected ? 'Eleito por QP' : 'Suplente',
+      voteDestination: 'Válido',
+    });
+    const insert = (officeId: string, uf: string, candidates: ReturnType<typeof person>[], final: boolean) =>
+      db.insert(areaResults).values({
+        roundId: round!.id,
+        officeId,
+        areaKey: uf,
+        areaType: 'state',
+        countedPct: 100,
+        result: {
+          progress: { ...emptyProgress(), status: 'finished' as const },
+          votes: {
+            total: 0,
+            valid: 0,
+            nominal: 0,
+            legend: null,
+            blank: 0,
+            null: 0,
+            annulled: 0,
+            annulledSubJudice: 0,
+          },
+          candidates,
+          parties: [],
+          seats: 2,
+          final,
+          mathematicallyDecided: null,
+          votesPublishable: true,
+          noElectedReasons: [],
+        },
+        previousCandidates: [],
+        provenance: {
+          provider: 'TSE',
+          adapter: 'tse-2026@2026-v1',
+          sourceFile: '/x.json',
+          sourceId: '1',
+          retrievedAt: now,
+          sourceGeneratedAt: null,
+          etag: null,
+          checksum: 'abc',
+        },
+        checksum: 'abc',
+        updatedAt: now,
+      });
+    // 70 candidates in SP: the last one is elected, past the 60 the result screens list by default.
+    const sp = Array.from({ length: 70 }, (_, i) =>
+      person(
+        `11${String(i).padStart(3, '0')}`,
+        i === 0 || i === 69 ? 'PAA' : 'PBB',
+        i === 0 || i === 69,
+        i === 0 || i === 69 ? 'PAA / PCC' : null,
+      ),
+    );
+    await insert(deputies.id, 'sp', sp, true);
+    await insert(deputies.id, 'rj', [person('22001', 'PBB', true), person('22002', 'PAA', false)], false);
+    await insert(senators.id, 'sp', [person('33001', 'PAA', true, 'PAA / PBB')], true);
+
+    const res = await built.app.inject('/api/elections/test-1/benches');
+    expect(res.statusCode).toBe(200);
+    const { chambers } = res.json() as BenchesDTO;
+    const camara = chambers.find((c) => c.office.slug === 'deputado-federal')!;
+    expect(camara.seats).toBe(3);
+    expect(camara.statesFinal).toBe(1);
+    expect(camara.parties.map((p) => [p.abbreviation, p.seats, p.federation])).toEqual([
+      ['PAA', 2, 'PAA / PCC'],
+      ['PBB', 1, null],
+    ]);
+    // A senator's list is a coalition, not a federation.
+    const senado = chambers.find((c) => c.office.slug === 'senador')!;
+    expect(senado.parties).toEqual([
+      expect.objectContaining({ abbreviation: 'PAA', seats: 1, federation: null }),
+    ]);
   });
 });

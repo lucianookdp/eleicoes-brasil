@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { displayName, fmtCompact, fmtInt, fmtPct } from '@/lib/format';
 import { useRound } from './shell';
-import { ProgressBar } from './ui';
+import { ProgressBar, StateFlag } from './ui';
 
 const SORTS = {
   name: { label: 'Nome', fn: (a: StateRowDTO, b: StateRowDTO) => a.name.localeCompare(b.name, 'pt-BR') },
@@ -87,7 +87,12 @@ export function StatesTable({
               const p = s.progress;
               return (
                 <tr key={s.uf} className="border-b border-line/70 hover:bg-surface-2">
-                  <td className="py-2 pr-2 font-mono text-[13px] text-muted">{s.uf}</td>
+                  <td className="py-2 pr-2 font-mono text-[13px] text-muted">
+                    <span className="flex items-center gap-2">
+                      <StateFlag uf={s.uf} />
+                      {s.uf}
+                    </span>
+                  </td>
                   <td className="py-2 pr-4">
                     <Link
                       href={href(`/states/${s.uf.toLowerCase()}`)}
@@ -157,7 +162,10 @@ export function StatesTable({
                 href={href(`/states/${s.uf.toLowerCase()}`)}
                 className="grid min-h-14 grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 py-2.5"
               >
-                <span className="font-mono text-[13px] text-muted">{s.uf}</span>
+                <span className="flex flex-col items-center gap-1 font-mono text-[12px] text-muted">
+                  <StateFlag uf={s.uf} size={26} />
+                  {s.uf}
+                </span>
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{s.name}</span>
                   <ProgressBar

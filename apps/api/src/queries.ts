@@ -2,6 +2,7 @@ import type { Sql, StoredResult } from '@eleicoes/database';
 import {
   type ActivityEventDTO,
   assignColors,
+  type BenchesDTO,
   type CandidateDTO,
   type CityDetailDTO,
   type CityRowDTO,
@@ -337,6 +338,55 @@ export class Queries {
     );
     results.sort((a, b) => a.areaName.localeCompare(b.areaName, 'pt-BR'));
     return { office: publicOffice(office), results };
+  }
+
+  /** Elected deputies and senators per party, summed over every state. */
+  async benches(slug: string): Promise<BenchesDTO> {
+    const round = await this.round(slug);
+    const chambers: BenchesDTO['chambers'] = [];
+    for (const officeSlug of ['deputado-federal', 'senador']) {
+      const office = round.offices.find((o) => o.slug === officeSlug && o.scope === 'state');
+      if (!office) continue;
+      const keys = DOMESTIC_STATES.filter((s) => !office.states || office.states.includes(s.code)).map((s) =>
+        s.code.toLowerCase(),
+      );
+      const rows = await this.resultRows(round.id, [office.id], keys);
+      const results = await Promise.all(
+        // Every candidate: an elected deputy can rank below the default list size.
+        rows.map((row) =>
+          this.toResultDTO(round, office, row, stateName(row.areaKey.toUpperCase()), Number.MAX_SAFE_INTEGER),
+        ),
+      );
+      const parties = new Map<string, BenchesDTO['chambers'][number]['parties'][number]>();
+      let seats = 0;
+      for (const r of results)
+        for (const c of r.candidates) {
+          if (!c.elected || !c.party) continue;
+          seats++;
+          const key = c.party.abbreviation;
+          const p = parties.get(key);
+          if (p) p.seats++;
+          else
+            parties.set(key, {
+              abbreviation: key,
+              name: c.party.name,
+              color: c.color,
+              seats: 1,
+              // Federations only exist in the proportional vote; a senator's list is a coalition.
+              federation: office.kind === 'proportional' ? (c.coalition ?? null) : null,
+            });
+        }
+      chambers.push({
+        office: publicOffice(office),
+        seats,
+        statesFinal: results.filter((r) => r.final).length,
+        statesTotal: keys.length,
+        parties: [...parties.values()].sort(
+          (a, b) => b.seats - a.seats || a.abbreviation.localeCompare(b.abbreviation),
+        ),
+      });
+    }
+    return { chambers };
   }
 
   async result(

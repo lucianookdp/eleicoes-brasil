@@ -2,6 +2,7 @@
 
 import type {
   ActivityEventDTO,
+  BenchesDTO,
   CityDetailDTO,
   CityRowDTO,
   CompareDTO,
@@ -100,6 +101,10 @@ export const useTimelineAt = (round: string, at: string | null) =>
     placeholderData: keepPreviousData,
     staleTime: Number.POSITIVE_INFINITY,
   });
+
+/** Seats per party; always from the 1st round, where deputies and senators are elected. */
+export const useBenches = (round: string) =>
+  useQuery({ queryKey: [round, 'benches'], queryFn: () => api<BenchesDTO>(`${base(round)}/benches`) });
 
 export const useOfficeStates = (round: string, office: string | undefined) =>
   useQuery({

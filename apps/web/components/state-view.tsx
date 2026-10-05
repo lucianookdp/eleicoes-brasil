@@ -21,6 +21,7 @@ import {
   ProgressBar,
   SectionTitle,
   Skeleton,
+  StateFlag,
 } from './ui';
 
 export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO | null }) {
@@ -44,7 +45,10 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
     <>
       <Breadcrumbs items={[{ label: 'Brasil', href: href() }, { label: data.name }]} />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[28px] font-semibold tracking-tight sm:text-[32px]">{data.name}</h1>
+        <h1 className="flex items-center gap-3 text-[28px] font-semibold tracking-tight sm:text-[32px]">
+          <StateFlag uf={uf} size={40} />
+          {data.name}
+        </h1>
         <FavoriteButton favorite={{ key, label: data.name, detail: uf, path: `/states/${key}` }} />
       </div>
       <FreshnessNotice ingestion={data.ingestion} progress={data.progress} roundStatus={data.round.status} />

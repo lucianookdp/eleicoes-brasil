@@ -225,6 +225,12 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
     return send(reply, p.id, `office-states:${p.office}`, () => queries.officeStates(p.id, p.office));
   });
 
+  app.get('/api/elections/:id/benches', async (req, reply) => {
+    const p = roundParams.parse(req.params);
+    live(reply);
+    return send(reply, p.id, 'benches', () => queries.benches(p.id));
+  });
+
   app.get('/api/elections/:id/states/:uf/cities', async (req, reply) => {
     const p = stateParams.parse(req.params);
     const q = z

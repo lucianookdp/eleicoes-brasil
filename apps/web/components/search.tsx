@@ -8,6 +8,7 @@ import { API_URL } from '@/lib/api';
 import { useSearch } from '@/lib/queries';
 import { IconClose, IconFlag, IconOverview, IconPerson, IconPin, IconSearch, IconStates } from './icons';
 import { useRound } from './shell';
+import { StateFlag } from './ui';
 
 const KIND: Record<SearchHitDTO['kind'], { label: string; icon: ComponentType<SVGProps<SVGSVGElement>> }> = {
   state: { label: 'Estado', icon: IconStates },
@@ -190,6 +191,13 @@ function HitIcon({ hit }: { hit: SearchHitDTO }) {
   const { round } = useRound();
   const [failed, setFailed] = useState(false);
   const kind = KIND[hit.kind];
+  const uf = hit.kind === 'state' ? /^\/states\/([a-z]{2})$/.exec(hit.path)?.[1] : undefined;
+  if (uf)
+    return (
+      <span className="flex size-9 shrink-0 items-center justify-center" title={kind.label}>
+        <StateFlag uf={uf} size={30} />
+      </span>
+    );
   return (
     <span
       className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-2 text-ink-2"

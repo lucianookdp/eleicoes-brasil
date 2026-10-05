@@ -121,3 +121,9 @@ export const IconFlag = (p: SVGProps<SVGSVGElement>) => (
     <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
   </Icon>
 );
+export const IconSeats = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M3 19a9 9 0 0 1 18 0" />
+    <path d="M7.5 19a4.5 4.5 0 0 1 9 0" />
+  </Icon>
+);
