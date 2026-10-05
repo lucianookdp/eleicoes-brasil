@@ -180,7 +180,11 @@ export function isHeadToHead(result: ResultDTO, round: number) {
  * ahead and by how many votes.
  */
 export function HeadToHead({ result }: { result: ResultDTO }) {
+  const { round } = useRound();
   const [a, b] = result.candidates.filter(hasValidVotes) as [CandidateDTO, CandidateDTO];
+  // Same place and office in the 1st round, matched by ballot number (the candidacy is the same).
+  const first = useResult(`${round.electionSlug}-1`, result.areaKey, result.office.slug).data;
+  const firstPct = (c: CandidateDTO) => first?.candidates.find((x) => x.number === c.number)?.percent;
   const diff = Math.abs((a.votes ?? 0) - (b.votes ?? 0));
   const pp = Math.abs((a.percent ?? 0) - (b.percent ?? 0));
   const counted = result.progress.countedPct ?? 0;
@@ -200,6 +204,7 @@ export function HeadToHead({ result }: { result: ResultDTO }) {
       <p className="text-[13px] text-ink-2">
         {result.votesPublishable ? `${fmtInt(c.votes)} votos` : 'não divulgado'}
       </p>
+      {firstPct(c) != null && <p className="text-[12.5px] text-muted">1º turno: {fmtPct(firstPct(c))}</p>}
     </div>
   );
   return (

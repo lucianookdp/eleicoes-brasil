@@ -100,6 +100,8 @@ test('runoff: head-to-head card with the vote difference', async ({ page, reques
     page.getByText(/(está à frente|venceu) por [\d.]+ votos|Aguardando os primeiros votos/),
   ).toBeVisible();
   await expect(page.getByText(/faltam .* das urnas|venceu por/)).toBeVisible();
+  // Each finalist's share in the 1st round, same place.
+  await expect(page.getByText(/^1º turno: [\d,]+%$/).first()).toBeVisible();
   // A runoff never shows the 1st-round list of candidates.
   await expect(page.getByRole('button', { name: /Ver todos os/ })).toHaveCount(0);
   await page.getByRole('tab', { name: 'Evolução' }).click();
