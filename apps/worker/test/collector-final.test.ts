@@ -3,7 +3,7 @@ import { findRound } from '@eleicoes/election-core';
 import { createProvider, TseHttpClient } from '@eleicoes/tse-client';
 import { eq } from 'drizzle-orm';
 import pino from 'pino';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { Collector } from '../src/collector';
 import { startDemoServer } from '../src/demo/server';
 import { Store } from '../src/store';
@@ -14,11 +14,24 @@ import { Store } from '../src/store';
  * progress files. That mark must arrive within seconds, not at the next 5-minute reconciliation.
  * Needs TEST_DATABASE_URL (CI provides one).
  */
-const url = process.env.TEST_DATABASE_URL;
+const base = process.env.TEST_DATABASE_URL;
+// Its own database: other packages' tests run at the same time in CI and truncate the shared one.
+const url = base?.replace(/\/([^/?]+)(\?|$)/, '/$1_worker$2');
 const suite = url ? describe : describe.skip;
 const PORT = 4912;
 
 suite('collector at the end of the count', () => {
+  beforeAll(async () => {
+    const admin = createDatabase(base!, { max: 1 });
+    try {
+      await admin.sql.unsafe(`create database "${new URL(url!).pathname.slice(1)}"`);
+    } catch (err) {
+      if ((err as { code?: string }).code !== '42P04') throw err; // already exists
+    } finally {
+      await admin.close();
+    }
+  });
+
   it('stores the "Eleito" mark that arrives after 100%', () => runToTheEnd(0, PORT), 90_000);
 
   // Chaos: the TSE answers 30% of requests with an error. The count must still reach 100% and
