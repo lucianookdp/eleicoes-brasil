@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { displayName, fmtCompact, fmtPct } from '@/lib/format';
 import { useRound } from './shell';
-import { Segmented } from './ui';
+import { Segmented, StateFlag } from './ui';
 
 // Geometry: "Map of Brazil" by Victor Cazanave (svg-maps), CC BY 4.0.
 const MAP = brazil as unknown as { viewBox: string; locations: { id: string; name: string; path: string }[] };
@@ -135,7 +135,10 @@ function StateCard({ state, pinned }: { state: StateRowDTO | undefined; pinned: 
       className={`mt-2 rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-[13.5px] sm:absolute sm:bottom-0 sm:left-0 sm:mt-0 sm:w-56 ${pinned ? '' : 'pointer-events-none'}`}
       aria-live="polite"
     >
-      <p className="font-semibold">{state.name}</p>
+      <p className="flex items-center gap-2 font-semibold">
+        <StateFlag uf={state.uf} size={20} />
+        {state.name}
+      </p>
       <p className="numeral text-[20px] leading-tight">
         {p && p.status !== 'not-started' ? `${fmtPct(p.countedPct)}` : '—'}
       </p>
