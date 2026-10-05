@@ -17,8 +17,12 @@ type Mode = 'progress' | 'leader';
 
 function fill(s: StateRowDTO | undefined, mode: Mode): string {
   if (!s?.progress || s.progress.status === 'not-started') return 'var(--surface-2)';
-  if (mode === 'leader')
-    return s.leader ? `color-mix(in oklab, ${s.leader.color} 82%, var(--surface))` : 'var(--surface-2)';
+  if (mode === 'leader') {
+    if (!s.leader) return 'var(--surface-2)';
+    // Stronger colour for a wider win: the leader's share of valid votes, 30% → light, 65%+ → full.
+    const t = Math.max(0, Math.min(1, ((s.leader.percent ?? 0) - 30) / 35));
+    return `color-mix(in oklab, ${s.leader.color} ${Math.round(40 + 55 * t)}%, var(--surface))`;
+  }
   const p = Math.max(0, Math.min(100, s.progress.countedPct ?? 0));
   return `color-mix(in oklab, var(--seq-high) ${p}%, var(--seq-low))`;
 }
@@ -170,6 +174,7 @@ function Legend({ mode, leaders }: { mode: Mode; leaders: { name: string; color:
             {displayName(l.name)}
           </li>
         ))}
+        <li className="w-full text-muted sm:text-right">Cor mais forte: vitória mais folgada</li>
       </ul>
     );
   }

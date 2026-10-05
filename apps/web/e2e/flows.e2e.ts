@@ -159,3 +159,13 @@ test('governors and senators of every state on one screen', async ({ page }) => 
   await expect(page.getByRole('heading', { level: 1, name: 'São Paulo' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Senador' })).toHaveAttribute('aria-selected', 'true');
 });
+
+test('after the count: summary card with turnout and the lead', async ({ page, request }) => {
+  const overview = await (await request.get('http://localhost:4000/api/elections/demo-1/overview')).json();
+  test.skip((overview.progress?.countedPct ?? 0) < 100, 'demo count not finished');
+  await openDemo(page);
+  const summary = page.getByRole('region', { name: 'Resumo da apuração' });
+  await expect(summary).toBeVisible();
+  await expect(summary.getByText(/Diferença de [\d.]+ votos/)).toBeVisible();
+  await expect(summary.getByText('Comparecimento')).toBeVisible();
+});

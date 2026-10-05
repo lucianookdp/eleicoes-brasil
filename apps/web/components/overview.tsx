@@ -5,7 +5,7 @@ import { hasValidVotes } from '@eleicoes/election-core';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useFavorites } from '@/lib/favorites';
-import { displayName, fmtPct } from '@/lib/format';
+import { displayName, fmtInt, fmtPct } from '@/lib/format';
 import { useEvents, useOverview, useSeries } from '@/lib/queries';
 import { ActivityFeed } from './activity';
 import { BrazilMap } from './brazil-map';
@@ -99,6 +99,7 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
     <>
       <RoundTitle />
       {headline && <DecidedBanner result={headline} />}
+      {headline && <EndSummary data={data} />}
       <FreshnessNotice
         ingestion={data.ingestion}
         progress={data.progress}
@@ -248,6 +249,45 @@ function DecidedBanner({ result }: { result: ResultDTO }) {
           : `Resultado definido pelo TSE para ${result.office.name}.`}
       </p>
     </div>
+  );
+}
+
+/** Once 100% is counted: the night in one card (lead, turnout, blank and null votes). */
+function EndSummary({ data }: { data: OverviewDTO }) {
+  const p = data.progress;
+  const h = data.headline;
+  if (!p || !h || (p.countedPct ?? 0) < 100) return null;
+  const [a, b] = h.candidates.filter(hasValidVotes);
+  const gap = a && b ? (a.votes ?? 0) - (b.votes ?? 0) : null;
+  const total = h.votes.total || null;
+  const stats = [
+    { label: 'Comparecimento', value: fmtPct(p.turnoutPct, 1) },
+    { label: 'Abstenção', value: fmtPct(p.abstentionPct, 1) },
+    {
+      label: 'Brancos',
+      value: total && h.votes.blank != null ? fmtPct((100 * h.votes.blank) / total, 1) : '—',
+    },
+    { label: 'Nulos', value: total && h.votes.null != null ? fmtPct((100 * h.votes.null) / total, 1) : '—' },
+  ];
+  return (
+    <section aria-label="Resumo da apuração" className="mb-4 rounded-xl border border-line bg-surface p-4">
+      <p className="text-[13px] font-medium text-muted">Apuração concluída · {h.office.name}</p>
+      {a && b && gap != null && (
+        <p className="mt-1 text-[16px] font-semibold">
+          <span style={{ color: a.color }}>{displayName(a.ballotName)}</span> {fmtPct(a.percent)} ×{' '}
+          <span style={{ color: b.color }}>{displayName(b.ballotName)}</span> {fmtPct(b.percent)}
+          <span className="block text-[13.5px] font-normal text-ink-2">Diferença de {fmtInt(gap)} votos</span>
+        </p>
+      )}
+      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+        {stats.map((s) => (
+          <div key={s.label}>
+            <dt className="text-[12px] text-muted">{s.label}</dt>
+            <dd className="numeral text-[17px]">{s.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
 
