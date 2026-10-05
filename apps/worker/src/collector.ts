@@ -436,7 +436,7 @@ export class Collector {
    * Queues every office of this provider election that applies to the area.
    * Headline (next cycle, high priority): Brazil, and president/governor/senator per state.
    * Background: EA15 reads (0), candidate photos (3), state-level deputies (5), capitals (10),
-   * other municipalities (11).
+   * other municipalities (11), deputies per municipality (12): what readers look at first.
    */
   private queueArea(code: string, target: AreaRef) {
     for (const office of this.offices) {
@@ -452,7 +452,14 @@ export class Collector {
         job.priority = target.type === 'country' ? 0 : 1 + rank;
         this.headlineJobs.set(jobKey(job), job);
       } else {
-        const priority = target.type === 'state' ? 5 : this.capitals.has(target.key) ? 10 : 11;
+        const priority =
+          target.type === 'state'
+            ? 5
+            : office.kind !== 'majoritarian'
+              ? 12
+              : this.capitals.has(target.key)
+                ? 10
+                : 11;
         this.enqueue(`result:${jobKey(job)}`, priority, () => this.backgroundResult(job));
       }
     }

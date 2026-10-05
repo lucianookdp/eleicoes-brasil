@@ -45,7 +45,7 @@ if (!registered) {
 }
 const source = { ...registered, baseUrl: env.TSE_BASE_URL ?? registered.baseUrl };
 
-const { db, sql, close } = createDatabase(env.DATABASE_URL, { max: 5 });
+const { db, sql, close } = createDatabase(env.DATABASE_URL, { max: env.TSE_CONCURRENCY + 5 });
 if (round.demo && env.DEMO_EMBEDDED) {
   // Each run of the embedded demo is a fresh fictitious election: never mix two runs' history.
   await db.delete(electionRounds).where(eq(electionRounds.slug, round.slug));
