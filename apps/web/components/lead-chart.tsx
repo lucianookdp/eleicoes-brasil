@@ -31,9 +31,9 @@ export function LeadChart({ series }: { series: SeriesDTO }) {
   const points =
     a && b
       ? series.points
-          .filter((p) => p.votes?.[a.key] != null && p.votes?.[b.key] != null)
+          // From the first partial on: snapshots taken before the count (all zero) are skipped.
+          .filter((p) => (p.votes?.[a.key] ?? 0) + (p.votes?.[b.key] ?? 0) > 0)
           .map((p) => ({ at: Date.parse(p.at), lead: p.votes[a.key]! - p.votes[b.key]! }))
-          .filter((p, i, all) => i === 0 || p.lead !== 0 || all[i - 1]!.lead !== 0)
       : [];
   const ready = points.length >= 2 && points.some((p) => p.lead !== 0);
 
