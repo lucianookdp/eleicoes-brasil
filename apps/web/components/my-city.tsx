@@ -18,7 +18,17 @@ export function MyCityCard({ headlineOffice }: { headlineOffice?: string }) {
   const [picking, setPicking] = useState(false);
   if (city && !picking)
     return <Chosen headlineOffice={headlineOffice} onChange={() => setPicking(true)} clear={clear} />;
-  if (dismissed && !picking) return null;
+  // After "Agora não": a single quiet line, so the city can still be picked later.
+  if (dismissed && !picking)
+    return (
+      <button
+        type="button"
+        onClick={() => setPicking(true)}
+        className="mb-4 flex min-h-11 items-center gap-2 text-[14px] text-ink-2 hover:text-ink"
+      >
+        <IconPin className="text-live" /> Escolher minha cidade
+      </button>
+    );
   return (
     <Picker
       onPick={(c) => {

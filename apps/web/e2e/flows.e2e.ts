@@ -149,6 +149,17 @@ test('minha cidade: pick once, see it at the top of the home page', async ({ pag
   ).toBeVisible();
 });
 
+test('minha cidade: "Agora não" keeps a way back to pick it later', async ({ page }) => {
+  await openDemo(page);
+  await page.getByRole('region', { name: 'Minha cidade' }).getByRole('button', { name: 'Agora não' }).click();
+  await page.reload();
+  await page.getByRole('button', { name: 'Escolher minha cidade' }).click();
+  const card = page.getByRole('region', { name: 'Minha cidade' });
+  await card.getByPlaceholder('Digite o nome da cidade').fill('campinas');
+  await card.getByRole('button', { name: /Campinas/ }).click();
+  await expect(card.getByRole('link', { name: 'Campinas' })).toBeVisible();
+});
+
 test('during the count: where the most votes are still to be counted', async ({ page, request }) => {
   const overview = await (await request.get('http://localhost:4000/api/elections/demo-1/overview')).json();
   test.skip(overview.progress?.status !== 'in-progress', 'demo count not in progress');
