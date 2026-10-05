@@ -179,3 +179,11 @@ test('after the count: summary card with turnout and the lead', async ({ page, r
   await expect(summary.getByText(/Diferença de [\d.]+ votos/)).toBeVisible();
   await expect(summary.getByText('Comparecimento')).toBeVisible();
 });
+
+test('counts the visit privately (random id, no cookie)', async ({ page, context }) => {
+  const beacon = page.waitForRequest((r) => r.url().endsWith('/api/visit') && r.method() === 'POST');
+  await page.goto('/?e=demo&t=1');
+  const req = await beacon;
+  expect(req.postData()).toMatch(/^[0-9a-f-]{36}$/);
+  expect(await context.cookies()).toHaveLength(0);
+});

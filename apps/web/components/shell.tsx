@@ -5,6 +5,7 @@ import { formatClock } from '@eleicoes/election-core';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
+import { countVisit } from '@/lib/api';
 import { useOverview } from '@/lib/queries';
 import { RealtimeProvider, useRealtime } from '@/lib/realtime';
 import { electionHref, pickRound, SECTION_ROUTES } from '@/lib/rounds';
@@ -57,6 +58,8 @@ export function ElectionShell({
   const round = pickRound(elections, electionSlug, params.get('t'));
   const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
+
+  useEffect(countVisit, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

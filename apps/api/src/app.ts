@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { APP_NAME, APP_VERSION, type ApiEnv, featureFlagsFrom } from '@eleicoes/config';
 import type { Sql } from '@eleicoes/database';
 import { type ApiMeta, DEFAULT_TIMEZONE, isStateCode } from '@eleicoes/election-core';
@@ -116,6 +117,30 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
   app.get('/api/health', async () => {
     await sql`select 1`;
     return { status: 'ok', version: APP_VERSION, adapters: ADAPTER_VERSIONS, realtimeClients: hub.size };
+  });
+
+  // Private visitor counter: the page sends a random browser id once per visit (sendBeacon,
+  // text/plain, so no CORS preflight); only the owner reads the totals, with STATS_TOKEN.
+  const visitor = z.string().regex(/^[A-Za-z0-9-]{8,64}$/);
+  app.post('/api/visit', async (req, reply) => {
+    const id = visitor.parse(req.body);
+    await sql`insert into site_visits (day, visitor)
+      values ((now() at time zone 'America/Sao_Paulo')::date, ${id}) on conflict do nothing`;
+    return reply.status(204).send();
+  });
+
+  app.get('/api/stats/visits', async (req, reply) => {
+    const expected = Buffer.from(`Bearer ${env.STATS_TOKEN ?? ''}`);
+    const given = Buffer.from(req.headers.authorization ?? '');
+    if (!env.STATS_TOKEN || given.length !== expected.length || !timingSafeEqual(given, expected))
+      throw new NotFoundError('Route not found');
+    reply.header('cache-control', 'no-store');
+    const days = await sql<{ day: string; visitors: number }[]>`
+      select day::text as day, count(*)::int as visitors from site_visits
+      group by day order by day desc limit 60`;
+    const [all] = await sql<{ visitors: number }[]>`
+      select count(distinct visitor)::int as visitors from site_visits`;
+    return { totalVisitors: all?.visitors ?? 0, days };
   });
 
   app.get('/api/meta', async (_req, reply) => {

@@ -48,3 +48,20 @@ export async function serverApi<T>(path: string, revalidate = 5): Promise<T | nu
     return null;
   }
 }
+
+/**
+ * Private visitor counter: a random id kept in this browser, sent once per page load (the API
+ * counts it once a day). No cookie and nothing personal; failures are ignored.
+ */
+export function countVisit() {
+  try {
+    let id = localStorage.getItem('eleicoes:visitor');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('eleicoes:visitor', id);
+    }
+    navigator.sendBeacon?.(`${API_URL}/api/visit`, id);
+  } catch {
+    // Private mode or an old browser: just not counted.
+  }
+}

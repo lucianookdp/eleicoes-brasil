@@ -66,6 +66,8 @@ export const apiEnvSchema = z.object({
   API_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(6000),
   /** Seconds the in-memory cache may serve current data without a NOTIFY. Safety net only. */
   CACHE_TTL_SECONDS: z.coerce.number().positive().default(10),
+  /** Bearer token for the private visitor stats; without it the stats route does not exist. */
+  STATS_TOKEN: z.string().min(16).optional(),
 });
 export type ApiEnv = z.infer<typeof apiEnvSchema>;
 

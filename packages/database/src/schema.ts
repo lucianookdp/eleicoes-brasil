@@ -315,3 +315,16 @@ export const candidatePhotos = pgTable(
   },
   (t) => [primaryKey({ columns: [t.roundId, t.candidateKey] })],
 );
+
+/**
+ * Unique visitors per day (Brasília date), for the site owner only. The visitor is a random id the
+ * browser keeps; no IP or other personal data is stored.
+ */
+export const siteVisits = pgTable(
+  'site_visits',
+  {
+    day: date('day', { mode: 'string' }).notNull(),
+    visitor: text('visitor').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.visitor] })],
+);

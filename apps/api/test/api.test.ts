@@ -18,6 +18,7 @@ import { buildApp } from '../src/app';
  */
 const url = process.env.TEST_DATABASE_URL;
 const suite = url ? describe : describe.skip;
+const TOKEN = 'test-stats-token-0123456789';
 
 suite('API (integration)', () => {
   const { db, sql, close } = createDatabase(url ?? 'postgres://unused', { max: 2 });
@@ -25,7 +26,7 @@ suite('API (integration)', () => {
 
   beforeAll(async () => {
     await runMigrations(url!);
-    await sql`truncate elections, cities cascade`;
+    await sql`truncate elections, cities, site_visits cascade`;
     const [e] = await db
       .insert(elections)
       .values({ slug: 'test', name: 'Eleição de teste', year: 2026, kind: 'general', demo: true })
@@ -131,7 +132,7 @@ suite('API (integration)', () => {
       checksum: 'abc',
       updatedAt: now,
     });
-    const env = apiEnvSchema.parse({ DATABASE_URL: url });
+    const env = apiEnvSchema.parse({ DATABASE_URL: url, STATS_TOKEN: TOKEN });
     built = await buildApp({ sql, env, logger: false });
   });
 
@@ -214,5 +215,34 @@ suite('API (integration)', () => {
     );
     const late = await built.app.inject(`/api/elections/test-1/overview?v=${future}`);
     expect(late.headers['cache-control']).toContain('s-maxage=3600');
+  });
+
+  it('counts each visitor once a day and shows the totals only with the token', async () => {
+    const visit = (payload: string) =>
+      built.app.inject({
+        method: 'POST',
+        url: '/api/visit',
+        payload,
+        headers: { 'content-type': 'text/plain' },
+      });
+    expect((await visit('visitor-aaaa-1111')).statusCode).toBe(204);
+    expect((await visit('visitor-aaaa-1111')).statusCode).toBe(204);
+    expect((await visit('visitor-bbbb-2222')).statusCode).toBe(204);
+    expect((await visit('<script>')).statusCode).toBe(400);
+
+    expect((await built.app.inject({ url: '/api/stats/visits' })).statusCode).toBe(404);
+    const wrong = await built.app.inject({
+      url: '/api/stats/visits',
+      headers: { authorization: 'Bearer nope' },
+    });
+    expect(wrong.statusCode).toBe(404);
+    const res = await built.app.inject({
+      url: '/api/stats/visits',
+      headers: { authorization: `Bearer ${TOKEN}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as { totalVisitors: number; days: { day: string; visitors: number }[] };
+    expect(body.totalVisitors).toBe(2);
+    expect(body.days[0]?.visitors).toBe(2);
   });
 });
