@@ -87,3 +87,19 @@ test('votes abroad: listed after the states and searchable', async ({ page, isMo
   await expect(page.getByRole('heading', { level: 1, name: 'Vancouver' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Você está em' })).toContainText('Exterior');
 });
+
+test('runoff: head-to-head card with the vote difference', async ({ page, request }) => {
+  // Needs the demo running in runoff mode (DEMO_ROUND=2, ELECTION_ROUND=demo-2).
+  const elections = await (await request.get('http://localhost:4000/api/elections')).json();
+  const hasRunoff = elections.some((e: { rounds: { slug: string }[] }) =>
+    e.rounds.some((r) => r.slug === 'demo-2'),
+  );
+  test.skip(!hasRunoff, 'demo runoff not running');
+  await page.goto('/eleicao/?e=demo&t=2');
+  await expect(page.getByText(/está à frente por [\d.]+ votos|Aguardando os primeiros votos/)).toBeVisible();
+  await expect(page.getByText(/faltam .* das urnas|venceu por/)).toBeVisible();
+  // A runoff never shows the 1st-round list of candidates.
+  await expect(page.getByRole('button', { name: /Ver todos os/ })).toHaveCount(0);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+});

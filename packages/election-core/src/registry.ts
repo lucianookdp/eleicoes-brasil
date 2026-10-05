@@ -47,6 +47,21 @@ export const ELECTION_REGISTRY: RoundDefinition[] = [
     },
   },
   {
+    // Same fictitious server started with DEMO_ROUND=2: a runoff, for testing round-2 screens.
+    slug: 'demo-2',
+    electionSlug: 'demo',
+    electionName: 'Eleição demonstrativa (dados fictícios)',
+    year: 2026,
+    kind: 'general',
+    round: 2,
+    date: '2026-10-25',
+    adapter: 'tse-2026',
+    demo: true,
+    sources: {
+      DEVELOPMENT: { baseUrl: 'http://localhost:4010', environment: 'demo', providerRoundId: '900001' },
+    },
+  },
+  {
     slug: '2026-1',
     electionSlug: '2026',
     electionName: 'Eleições Gerais 2026',

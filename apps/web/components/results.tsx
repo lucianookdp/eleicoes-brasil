@@ -74,12 +74,12 @@ function StatusPill({ c, result, rank }: { c: CandidateDTO; result: ResultDTO; r
 }
 
 /** Official photo when the TSE publishes one (served by our API), initials otherwise. */
-function Avatar({ c, photo }: { c: CandidateDTO; photo: boolean }) {
+function Avatar({ c, photo, large = false }: { c: CandidateDTO; photo: boolean; large?: boolean }) {
   const { round } = useRound();
   const [failed, setFailed] = useState(false);
   return (
     <span
-      className={`relative flex items-center justify-center overflow-hidden rounded-full font-semibold ${photo ? 'size-12 text-[14px]' : 'size-9 text-[12px]'}`}
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold ${large ? 'size-16 text-[18px]' : photo ? 'size-12 text-[14px]' : 'size-9 text-[12px]'}`}
       style={{
         background: `color-mix(in srgb, ${c.color} 18%, transparent)`,
         color: c.color,
@@ -162,6 +162,88 @@ export function CandidateRow({ c, result, rank }: { c: CandidateDTO; result: Res
         {pp && delta && <span className="sr-only"> ({delta} votos)</span>}
       </p>
     </li>
+  );
+}
+
+/** Two finalists (a runoff): one card for both. Used only in round 2, never in the 1st round. */
+export function isHeadToHead(result: ResultDTO, round: number) {
+  return (
+    round === 2 &&
+    result.office.kind === 'majoritarian' &&
+    result.candidates.filter(hasValidVotes).length === 2
+  );
+}
+
+/**
+ * Runoff card: both candidates side by side, one split bar with the 50% mark, and above all who is
+ * ahead and by how many votes.
+ */
+export function HeadToHead({ result }: { result: ResultDTO }) {
+  const [a, b] = result.candidates.filter(hasValidVotes) as [CandidateDTO, CandidateDTO];
+  const diff = Math.abs((a.votes ?? 0) - (b.votes ?? 0));
+  const pp = Math.abs((a.percent ?? 0) - (b.percent ?? 0));
+  const counted = result.progress.countedPct ?? 0;
+  const over = result.final || counted >= 100;
+  const started = (a.votes ?? 0) + (b.votes ?? 0) > 0;
+  const leader = (a.votes ?? 0) >= (b.votes ?? 0) ? a : b;
+  const side = (c: CandidateDTO, right: boolean) => (
+    <div className={`flex min-w-0 flex-col gap-2 ${right ? 'items-end text-right' : 'items-start'}`}>
+      <Avatar c={c} photo large />
+      <p className="w-full truncate text-[15px] font-semibold">{displayName(c.ballotName)}</p>
+      <p className="-mt-2 text-[12.5px] text-muted">
+        {c.number} · {c.party.abbreviation}
+      </p>
+      <p className="numeral text-[30px] leading-none" style={{ color: c.color }}>
+        {result.votesPublishable ? fmtPct(c.percent) : '—'}
+      </p>
+      <p className="text-[13px] text-ink-2">
+        {result.votesPublishable ? `${fmtInt(c.votes)} votos` : 'não divulgado'}
+      </p>
+    </div>
+  );
+  return (
+    <div className="pt-2">
+      <div className="grid grid-cols-2 gap-4">
+        {side(a, false)}
+        {side(b, true)}
+      </div>
+      <div className="relative mt-4 pt-5">
+        <div
+          className="pointer-events-none absolute inset-y-0 left-1/2 z-10 flex flex-col items-center"
+          aria-hidden
+        >
+          <span className="-translate-y-0.5 whitespace-nowrap text-[11px] text-muted">50%</span>
+          <span className="w-px flex-1 bg-ink/70" />
+        </div>
+        <div
+          className="flex h-5 gap-[2px] overflow-hidden rounded-md bg-line"
+          role="img"
+          aria-label={`${displayName(a.ballotName)} ${fmtPct(a.percent)}, ${displayName(b.ballotName)} ${fmtPct(b.percent)}`}
+        >
+          <span className="bar h-full" style={{ width: `${a.percent ?? 0}%`, background: a.color }} />
+          <span className="flex-1" />
+          <span className="bar h-full" style={{ width: `${b.percent ?? 0}%`, background: b.color }} />
+        </div>
+      </div>
+      <div className="mt-4 rounded-xl bg-surface-2 px-4 py-3 text-center" aria-live="polite">
+        {!started || !result.votesPublishable ? (
+          <p className="text-[15px] text-ink-2">Aguardando os primeiros votos.</p>
+        ) : diff === 0 ? (
+          <p className="text-[17px] font-semibold">Empate</p>
+        ) : (
+          <>
+            <p className="text-[17px] font-semibold">
+              <span style={{ color: leader.color }}>{displayName(leader.ballotName)}</span>{' '}
+              {over ? 'venceu por' : 'está à frente por'} {fmtInt(diff)} votos
+            </p>
+            <p className="text-[13px] text-muted">
+              {pp.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} pontos de diferença
+              {!over && ` · faltam ${fmtPct(100 - counted, 1)} das urnas`}
+            </p>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -293,6 +375,7 @@ export function ResultPanel({
   /** Share of this area's polling stations the TSE has already counted (counting file). */
   areaPct?: number | null;
 }) {
+  const { round } = useRound();
   const [office, setOffice] = useOfficeParam(offices);
   const [view, setView] = useState<'candidates' | 'parties'>('candidates');
   const [limit, setLimit] = useState<number | undefined>(undefined);
@@ -359,8 +442,14 @@ export function ResultPanel({
           </div>
           {view === 'candidates' || result.office.kind !== 'proportional' ? (
             <>
-              {result.office.kind === 'majoritarian' && <RaceBar result={result} />}
-              <CandidateList result={result} />
+              {isHeadToHead(result, round.round) ? (
+                <HeadToHead result={result} />
+              ) : (
+                <>
+                  {result.office.kind === 'majoritarian' && <RaceBar result={result} />}
+                  <CandidateList result={result} />
+                </>
+              )}
               {result.candidatesTotal > result.candidates.length && (
                 <button
                   type="button"

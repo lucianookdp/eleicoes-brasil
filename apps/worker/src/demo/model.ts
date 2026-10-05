@@ -105,8 +105,13 @@ export function hash(text: string): number {
 /** Stable pseudo-random number in [0, 1) for a label. */
 export const noise = (label: string) => mulberry32(hash(label))();
 
+/** States with a governor runoff in the demo's 2nd round (DEMO_ROUND=2). */
+const RUNOFF_STATES = new Set(['SP', 'RJ', 'MG', 'BA', 'PE', 'RS', 'PR']);
+
 export class DemoModel {
   readonly fixture: Fixture;
+  /** 1 or 2: DEMO_ROUND=2 serves a runoff (president + some governors, two candidates each). */
+  readonly round = process.env.DEMO_ROUND === '2' ? 2 : 1;
   readonly cities: DemoCity[] = [];
   readonly offices: DemoOffice[];
   private readonly candidates = new Map<string, DemoCandidate[]>();
@@ -219,6 +224,11 @@ export class DemoModel {
         legendRate: 0.07,
       },
     ];
+    if (this.round === 2) {
+      this.offices = this.offices
+        .filter((o) => o.code === '1' || o.code === '3')
+        .map((o) => (o.code === '3' ? { ...o, appliesTo: (uf: string) => RUNOFF_STATES.has(uf) } : o));
+    }
   }
 
   statesWithCities(): StateCode[] {
@@ -241,7 +251,11 @@ export class DemoModel {
   }
 
   private presidentCandidates(): DemoCandidate[] {
-    return this.fixture.president.map((p) => ({
+    const field =
+      this.round === 2
+        ? [...this.fixture.president].sort((a, b) => b.base - a.base).slice(0, 2)
+        : this.fixture.president;
+    return field.map((p) => ({
       key: `9000${p.n}`,
       n: p.n,
       name: p.name,
@@ -256,16 +270,21 @@ export class DemoModel {
   private generated(office: DemoOffice, uf: string): DemoCandidate[] {
     const rand = mulberry32(hash(`${this.fixture.seed}:${office.code}:${uf}`));
     const count =
-      office.code === '3'
-        ? 3 + Math.floor(rand() * 2)
-        : office.code === '5'
-          ? 4 + Math.floor(rand() * 2)
-          : 18;
+      this.round === 2
+        ? 2
+        : office.code === '3'
+          ? 3 + Math.floor(rand() * 2)
+          : office.code === '5'
+            ? 4 + Math.floor(rand() * 2)
+            : 18;
     const { first, last } = this.fixture.names;
     const out: DemoCandidate[] = [];
     const usedNumbers = new Set<string>();
+    // In a runoff the two finalists always come from different parties.
+    const runoffOffset = this.round === 2 ? Math.floor(rand() * 6) : 0;
     for (let i = 0; i < count; i++) {
-      const party = this.fixture.parties[(i + Math.floor(rand() * 6)) % 6]!;
+      const party =
+        this.fixture.parties[(this.round === 2 ? i + runoffOffset : i + Math.floor(rand() * 6)) % 6]!;
       let n: string;
       if (office.code === '3') n = party.n;
       else if (office.code === '5') n = `${party.n}${i + 1}`;

@@ -218,7 +218,7 @@ export class DemoFiles {
               cd: elections.federal,
               sqele: '1',
               nm: 'Eleição Demonstrativa Federal',
-              t: '1',
+              t: String(this.model.round),
               tp: '8',
               abr: [{ cd: 'br', cp: [{ cd: '1', ds: 'Presidente', tp: '1' }] }],
             },
@@ -226,16 +226,33 @@ export class DemoFiles {
               cd: elections.state,
               sqele: '2',
               nm: 'Eleição Demonstrativa Estadual',
-              t: '1',
+              t: String(this.model.round),
               tp: '1',
-              abr: [
-                {
-                  cd: 'br',
-                  cp: this.model.offices
-                    .filter((o) => o.election === elections.state)
-                    .map((o) => ({ cd: o.code, ds: o.name, tp: o.kind === 'majoritarian' ? '1' : '2' })),
-                },
-              ],
+              // Like the real TSE: the 1st round lists state offices once for 'br'; the runoff
+              // lists them state by state, only where there is a runoff.
+              abr:
+                this.model.round === 2
+                  ? this.model
+                      .statesWithCities()
+                      .filter((uf) => uf !== 'ZZ')
+                      .flatMap((uf) => {
+                        const cp = this.model.offices
+                          .filter((o) => o.election === elections.state && o.appliesTo(uf))
+                          .map((o) => ({ cd: o.code, ds: o.name, tp: '1' }));
+                        return cp.length ? [{ cd: uf.toLowerCase(), cp }] : [];
+                      })
+                  : [
+                      {
+                        cd: 'br',
+                        cp: this.model.offices
+                          .filter((o) => o.election === elections.state)
+                          .map((o) => ({
+                            cd: o.code,
+                            ds: o.name,
+                            tp: o.kind === 'majoritarian' ? '1' : '2',
+                          })),
+                      },
+                    ],
             },
           ],
         },
@@ -277,7 +294,7 @@ export class DemoFiles {
     };
     return {
       ele,
-      t: '1',
+      t: String(this.model.round),
       ...this.header(c),
       abr: [
         entry('br', 'br', this.sum(this.model.cities, c)),
@@ -313,7 +330,7 @@ export class DemoFiles {
     };
     return {
       ele,
-      t: '1',
+      t: String(this.model.round),
       ...this.header(c),
       abr: [
         entry('uf', uf, this.sum(cities, c)),
@@ -356,7 +373,7 @@ export class DemoFiles {
     const g = this.header(c);
     return {
       ele,
-      t: '1',
+      t: String(this.model.round),
       ...g,
       sup: 'n',
       tpabr: scope.city ? 'mu' : uf ? 'uf' : 'br',

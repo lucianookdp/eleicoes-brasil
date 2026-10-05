@@ -387,6 +387,9 @@ export class Collector {
         now,
         target,
       );
+    } else if (err instanceof ProviderUnavailableError && err.message.startsWith('circuit open')) {
+      // Requests refused locally while the circuit is open: one issue was recorded when it opened.
+      log.debug({ what }, 'skipped: circuit open');
     } else if (err instanceof ProviderUnavailableError) {
       log.warn({ source: shortName(err.sourceFile), status: err.status }, `source unavailable: ${what}`);
       await this.store.recordIssue(
