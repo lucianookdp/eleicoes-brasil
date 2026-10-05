@@ -10,13 +10,27 @@ import { IconClose, IconFlag, IconOverview, IconPerson, IconPin, IconSearch, Ico
 import { useRound } from './shell';
 import { StateFlag } from './ui';
 
-const KIND: Record<SearchHitDTO['kind'], { label: string; icon: ComponentType<SVGProps<SVGSVGElement>> }> = {
-  state: { label: 'Estado', icon: IconStates },
-  city: { label: 'Município', icon: IconPin },
-  candidate: { label: 'Candidato', icon: IconPerson },
-  party: { label: 'Partido', icon: IconFlag },
-  office: { label: 'Cargo', icon: IconOverview },
+const KIND: Record<
+  SearchHitDTO['kind'],
+  { label: string; group: string; icon: ComponentType<SVGProps<SVGSVGElement>> }
+> = {
+  state: { label: 'Estado', group: 'Estados', icon: IconStates },
+  city: { label: 'Município', group: 'Cidades', icon: IconPin },
+  candidate: { label: 'Candidato', group: 'Candidatos', icon: IconPerson },
+  party: { label: 'Partido', group: 'Partidos', icon: IconFlag },
+  office: { label: 'Cargo', group: 'Cargos', icon: IconOverview },
 };
+const ORDER: SearchHitDTO['kind'][] = ['state', 'city', 'candidate', 'party', 'office'];
+
+/** "What are you looking for?" filters, in plain words. */
+const FILTERS = [
+  { value: 'all', label: 'Tudo' },
+  { value: 'city', label: 'Cidades' },
+  { value: 'candidate', label: 'Candidatos' },
+  { value: 'state', label: 'Estados' },
+] as const;
+type Filter = (typeof FILTERS)[number]['value'];
+const EXAMPLES = ['São Paulo', 'Curitiba', 'Bahia', 'Lula'];
 
 /**
  * Global search: states, cities, candidates, parties and offices.
@@ -29,11 +43,19 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
   const [q, setQ] = useState('');
   const [debounced, setDebounced] = useState('');
   const [index, setIndex] = useState(0);
+  const [filter, setFilter] = useState<Filter>('all');
   const input = useRef<HTMLInputElement>(null);
   const listId = useId();
   const { data, isFetching } = useSearch(round.slug, debounced);
   const typed = debounced.trim().length >= 2;
-  const hits = typed ? (data ?? []) : [];
+  // Grouped by kind (states, cities, candidates…) so the list reads in sections.
+  const hits = typed
+    ? (data ?? [])
+        .filter((h) => filter === 'all' || h.kind === filter)
+        .map((h, i) => ({ h, i }))
+        .sort((a, b) => ORDER.indexOf(a.h.kind) - ORDER.indexOf(b.h.kind) || a.i - b.i)
+        .map(({ h }) => h)
+    : [];
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -124,53 +146,102 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
+        <div
+          className="flex flex-wrap gap-1.5 border-b border-line px-3 py-2"
+          role="group"
+          aria-label="O que você procura"
+        >
+          {FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              aria-pressed={filter === f.value}
+              onClick={() => {
+                setFilter(f.value);
+                setIndex(0);
+                input.current?.focus();
+              }}
+              className="h-10 shrink-0 rounded-full border border-line px-3.5 text-[15px] text-ink-2 hover:border-line-strong aria-pressed:border-live aria-pressed:bg-live-soft aria-pressed:font-medium aria-pressed:text-ink"
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
         <div id={listId} role="listbox" aria-label="Resultados" className="flex-1 overflow-y-auto p-2">
           {hits.map((h, i) => {
             const kind = KIND[h.kind];
+            const heading = i === 0 || hits[i - 1]!.kind !== h.kind;
             return (
-              <div
-                key={`${h.kind}-${h.path}-${h.label}-${i}`}
-                id={`${listId}-${i}`}
-                role="option"
-                tabIndex={-1}
-                aria-selected={i === index}
-                onMouseEnter={() => setIndex(i)}
-                onClick={() => open(h.path, h.params)}
-                onKeyDown={() => {}}
-                className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl px-3 py-2 aria-selected:bg-surface-2"
-              >
-                <HitIcon hit={h} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{h.label}</span>
-                  <span className="block truncate text-[13px] text-muted">
-                    <span className="sr-only">{kind.label} · </span>
-                    {h.detail}
+              <div key={`${h.kind}-${h.path}-${h.label}-${i}`} role="presentation">
+                {heading && (
+                  <p
+                    className="px-3 pb-1 pt-3 text-[13px] font-semibold uppercase tracking-wide text-muted"
+                    role="presentation"
+                  >
+                    {kind.group}
+                  </p>
+                )}
+                <div
+                  id={`${listId}-${i}`}
+                  role="option"
+                  tabIndex={-1}
+                  aria-selected={i === index}
+                  onMouseEnter={() => setIndex(i)}
+                  onClick={() => open(h.path, h.params)}
+                  onKeyDown={() => {}}
+                  className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl px-3 py-2 aria-selected:bg-surface-2"
+                >
+                  <HitIcon hit={h} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[16px] font-medium">{h.label}</span>
+                    <span className="block truncate text-[14px] text-muted">
+                      <span className="sr-only">{kind.label} · </span>
+                      {h.detail}
+                    </span>
                   </span>
-                </span>
+                </div>
               </div>
             );
           })}
 
           {typed && !isFetching && hits.length === 0 && (
             <p className="px-3 py-10 text-center text-[15px] text-muted">
-              Nada encontrado para “{debounced}”.
+              Nada encontrado para “{debounced}”
+              {filter !== 'all' && ` em ${FILTERS.find((f) => f.value === filter)?.label.toLowerCase()}`}.
+              Confira a grafia ou tente só uma parte do nome.
             </p>
           )}
 
           {!typed && (
             <div className="px-2 py-3">
-              <p className="mb-3 text-[13px] font-medium text-muted">Estados</p>
-              <ul className="grid grid-cols-6 gap-1.5 sm:grid-cols-9">
+              <p className="mb-2 text-[14px] text-muted">Por exemplo:</p>
+              <div className="mb-5 flex flex-wrap gap-2">
+                {EXAMPLES.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => {
+                      setQ(e);
+                      input.current?.focus();
+                    }}
+                    className="h-10 rounded-full bg-surface-2 px-4 text-[15px] text-ink-2 hover:text-ink"
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+              <p className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-muted">Estados</p>
+              <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
                 {DOMESTIC_STATES.map((s) => (
                   <li key={s.code}>
                     <button
                       type="button"
                       onClick={() => open(`/states/${s.code.toLowerCase()}`)}
-                      title={s.name}
-                      aria-label={s.name}
-                      className="h-11 w-full rounded-lg border border-line bg-surface text-[14px] font-medium text-ink-2 hover:border-line-strong hover:text-ink"
+                      className="flex min-h-12 w-full items-center gap-2.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-left text-[15px] leading-tight text-ink-2 hover:border-line-strong hover:text-ink"
                     >
-                      {s.code}
+                      <StateFlag uf={s.code} size={24} />
+                      <span>{s.name}</span>
                     </button>
                   </li>
                 ))}

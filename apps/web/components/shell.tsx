@@ -117,14 +117,31 @@ export function ElectionShell({
   );
 }
 
+/**
+ * Sections. `main` ones lead the menu (and the phone's bottom bar, with `short` labels); the
+ * others sit to the right on computers and under "Mais" on phones.
+ */
 const NAV = [
-  { path: '', label: 'Resultados', icon: IconOverview },
-  { path: '/states', label: 'Estados', icon: IconStates },
-  { path: '/operations', label: 'Bastidores', icon: IconPulse },
-  { path: '/historico', label: 'Linha do tempo', icon: IconHistory },
-  { path: '/offices', label: 'Governadores', icon: IconPerson },
-  { path: '/benches', label: 'Bancadas', icon: IconSeats },
-  { path: '/compare', label: 'Comparar', icon: IconCompare, flag: 'comparison' as const },
+  { path: '', label: 'Resultados', short: 'Resultados', icon: IconOverview, main: true },
+  { path: '/states', label: 'Estados e cidades', short: 'Estados', icon: IconStates, main: true },
+  {
+    path: '/offices',
+    label: 'Governadores e senadores',
+    short: 'Governadores',
+    icon: IconPerson,
+    main: true,
+  },
+  { path: '/benches', label: 'Bancadas', short: 'Bancadas', icon: IconSeats, main: true },
+  { path: '/historico', label: 'Linha do tempo', short: 'Linha do tempo', icon: IconHistory, main: false },
+  {
+    path: '/compare',
+    label: 'Comparar estados',
+    short: 'Comparar',
+    icon: IconCompare,
+    main: false,
+    flag: 'comparison' as const,
+  },
+  { path: '/operations', label: 'Bastidores', short: 'Bastidores', icon: IconPulse, main: false },
 ];
 
 /** Hides sections switched off by feature flags (ENABLE_* on the API). */
@@ -145,47 +162,51 @@ function Header({ onSearch }: { onSearch: () => void }) {
   const { round, href } = useRound();
   const nav = useNav();
   const active = useActive();
+  const link = (n: (typeof NAV)[number]) => (
+    <Link
+      key={n.path}
+      href={href(n.path)}
+      aria-current={active(n.path) ? 'page' : undefined}
+      className={`flex h-11 items-center gap-2 whitespace-nowrap border-b-2 border-transparent px-3 text-[15px] hover:text-ink aria-[current=page]:border-live aria-[current=page]:font-medium aria-[current=page]:text-ink ${n.main ? 'text-ink-2' : 'text-muted'}`}
+    >
+      <n.icon width={18} height={18} />
+      {n.label}
+    </Link>
+  );
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-ground/90 backdrop-blur supports-[backdrop-filter]:bg-ground/75">
-      <div className="mx-auto flex h-14 max-w-[1320px] items-center gap-2 px-4 sm:gap-3 sm:px-6">
+      <div className="mx-auto flex h-14 max-w-[1320px] items-center gap-2 px-4 sm:gap-3 sm:px-6 lg:h-16">
         <Link
           href={href()}
           className="flex items-center gap-2 font-semibold tracking-tight"
           aria-label="Eleições Brasil — resultados"
         >
           <Logo />
-          <span className="hidden sm:inline">Eleições Brasil</span>
+          <span className="hidden whitespace-nowrap text-[16px] sm:inline md:hidden lg:inline">
+            Eleições Brasil
+          </span>
         </Link>
         <ElectionSwitcher />
-        <nav aria-label="Seções" className="ml-2 hidden items-center gap-1 xl:flex">
-          {nav.map((n) => (
-            <Link
-              key={n.path}
-              href={href(n.path)}
-              aria-current={active(n.path) ? 'page' : undefined}
-              className="whitespace-nowrap rounded-md px-2.5 py-1.5 text-[14px] text-ink-2 hover:bg-surface-2 hover:text-ink aria-[current=page]:bg-surface-2 aria-[current=page]:text-ink"
-            >
-              {n.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="ml-auto flex items-center gap-2">
+        {/* Looks like a search field on purpose: the first thing most people want to do. */}
+        <button
+          type="button"
+          onClick={onSearch}
+          className="mx-auto hidden h-11 w-full min-w-0 max-w-md items-center gap-2.5 rounded-xl border border-line-strong bg-surface px-4 text-left text-[15px] text-muted hover:border-live hover:text-ink-2 md:flex"
+        >
+          <IconSearch className="shrink-0" />
+          <span className="truncate">Buscar cidade, estado ou candidato</span>
+        </button>
+        <div className="ml-auto flex items-center gap-2 md:ml-0">
           <LiveStatus key={round.slug} />
-          <button
-            type="button"
-            onClick={onSearch}
-            aria-label="Buscar"
-            className="hidden h-9 items-center gap-2 rounded-md border border-line px-2.5 text-[13px] text-muted hover:border-line-strong hover:text-ink sm:flex"
-          >
-            <IconSearch />
-            <span className="xl:hidden 2xl:inline">Buscar</span>
-            <kbd className="rounded border border-line px-1 font-mono text-[11px] xl:hidden 2xl:inline">
-              ⌘K
-            </kbd>
-          </button>
           <ThemeToggle className="flex" />
         </div>
       </div>
+      <nav aria-label="Seções" className="hidden border-t border-line/60 xl:block">
+        <div className="mx-auto flex max-w-[1320px] items-center justify-between gap-2 px-3 sm:px-4">
+          <div className="flex items-center">{nav.filter((n) => n.main).map(link)}</div>
+          <div className="flex items-center">{nav.filter((n) => !n.main).map(link)}</div>
+        </div>
+      </nav>
     </header>
   );
 }
@@ -303,30 +324,49 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
   const active = useActive();
   const [more, setMore] = useState(false);
   const item =
-    'flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] text-muted aria-[current=page]:text-ink';
+    'flex min-h-16 flex-1 flex-col items-center justify-center gap-0.5 text-[12px] text-muted aria-[current=page]:font-medium aria-[current=page]:text-ink';
   return (
     <>
       <nav
         aria-label="Navegação principal"
         className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-ground/95 pb-[env(safe-area-inset-bottom)] backdrop-blur xl:hidden"
       >
-        {NAV.slice(0, 3).map((n) => (
+        {NAV.slice(0, 2).map((n) => (
           <Link
             key={n.path}
             href={href(n.path)}
             aria-current={active(n.path) ? 'page' : undefined}
             className={item}
           >
-            <n.icon />
-            {n.label}
+            <span className="flex size-8 items-center justify-center">
+              <n.icon />
+            </span>
+            {n.short}
           </Link>
         ))}
         <button type="button" onClick={onSearch} className={item}>
-          <IconSearch />
+          <span className="flex size-8 items-center justify-center rounded-full bg-live text-ground">
+            <IconSearch />
+          </span>
           Buscar
         </button>
+        {NAV.slice(2, 3).map((n) => (
+          <Link
+            key={n.path}
+            href={href(n.path)}
+            aria-current={active(n.path) ? 'page' : undefined}
+            className={item}
+          >
+            <span className="flex size-8 items-center justify-center">
+              <n.icon />
+            </span>
+            {n.short}
+          </Link>
+        ))}
         <button type="button" onClick={() => setMore(true)} className={item} aria-expanded={more}>
-          <IconMore />
+          <span className="flex size-8 items-center justify-center">
+            <IconMore />
+          </span>
           Mais
         </button>
       </nav>
@@ -357,21 +397,21 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             </div>
             <ul className="grid gap-1">
               {[
-                { to: href('/offices'), label: 'Governadores e senadores', icon: IconPerson },
                 { to: href('/benches'), label: 'Bancadas eleitas', icon: IconSeats },
                 { to: href('/historico'), label: 'Linha do tempo', icon: IconHistory },
                 ...(meta?.features.comparison === false
                   ? []
                   : [{ to: href('/compare'), label: 'Comparar estados', icon: IconCompare }]),
+                { to: href('/operations'), label: 'Bastidores da coleta', icon: IconPulse },
                 { to: `${href()}#favoritos`, label: 'Favoritos', icon: IconStar },
-                { to: '/como-funciona', label: 'Como funciona', icon: IconPulse },
+                { to: '/como-funciona', label: 'Como funciona', icon: IconInfo },
                 { to: '/sobre', label: 'Sobre os dados', icon: IconInfo },
               ].map((l) => (
                 <li key={l.label}>
                   <Link
                     href={l.to}
                     onClick={() => setMore(false)}
-                    className="flex min-h-12 items-center gap-3 rounded-lg px-3 hover:bg-surface-2"
+                    className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-[16px] hover:bg-surface-2"
                   >
                     <l.icon />
                     {l.label}

@@ -112,6 +112,11 @@ test('runoff: head-to-head card with the vote difference', async ({ page, reques
   await expect(page.getByText(/faltam .* das urnas|venceu por/)).toBeVisible();
   // Each finalist's share in the 1st round, same place.
   await expect(page.getByText(/^1º turno: [\d,]+%$/).first()).toBeVisible();
+  // Fixed sides: whoever came first in the 1st round is on the left, whatever the current lead.
+  const firsts = await page.getByText(/^1º turno: [\d,]+%$/).allTextContents();
+  const pct = (t: string) => Number(t.replace(/[^\d,]/g, '').replace(',', '.'));
+  expect(firsts).toHaveLength(2);
+  expect(pct(firsts[0]!)).toBeGreaterThanOrEqual(pct(firsts[1]!));
   // A runoff never shows the 1st-round list of candidates.
   await expect(page.getByRole('button', { name: /Ver todos os/ })).toHaveCount(0);
   await page.getByRole('tab', { name: 'Evolução' }).click();

@@ -115,8 +115,13 @@ function federations(bench: BenchDTO): Group[] {
   return [...groups.values()].sort((a, b) => b.seats - a.seats || a.label.localeCompare(b.label));
 }
 
+const TOP = 8;
+
 function Bench({ bench, groups }: { bench: BenchDTO; groups: Group[] }) {
   const [active, setActive] = useState<string | null>(null);
+  const [all, setAll] = useState(false);
+  // The largest benches first; the rest one tap away (the chart always shows every seat).
+  const shown = all || groups.length <= TOP + 1 ? groups : groups.slice(0, TOP);
   const senate = bench.office.slug === 'senador';
   const majority = Math.floor(bench.seats / 2) + 1;
   return (
@@ -137,30 +142,41 @@ function Bench({ bench, groups }: { bench: BenchDTO; groups: Group[] }) {
         </p>
       </Panel>
       <Panel className="p-2 sm:p-3 lg:col-span-5">
+        <p className="px-2 pb-1 pt-1 text-[13px] text-muted">
+          Toque em um partido para ver as cadeiras dele no gráfico.
+        </p>
         <ul aria-label="Cadeiras por partido">
-          {groups.map((g) => (
+          {shown.map((g) => (
             <li key={g.key}>
               <button
                 type="button"
                 aria-pressed={active === g.key}
                 onClick={() => setActive((a) => (a === g.key ? null : g.key))}
-                className={`grid min-h-12 w-full grid-cols-[0.75rem_minmax(0,1fr)_auto] items-center gap-x-3 rounded-lg px-2 py-1.5 text-left hover:bg-surface-2 ${active && active !== g.key ? 'opacity-45' : ''}`}
+                className={`grid min-h-11 w-full grid-cols-[0.75rem_minmax(0,1fr)_auto_3.5rem] items-center gap-x-3 rounded-lg px-2 py-1 text-left hover:bg-surface-2 aria-pressed:bg-surface-2 ${active && active !== g.key ? 'opacity-45' : ''}`}
               >
                 <span className="size-3 rounded-full" style={{ background: g.color }} aria-hidden />
-                <span className="min-w-0">
-                  <span className="block truncate font-medium">{g.label}</span>
-                  {g.detail && <span className="block text-[12.5px] text-muted">{g.detail}</span>}
+                <span className="min-w-0 truncate">
+                  <span className="font-semibold">{g.label}</span>
+                  {g.detail && <span className="text-[13px] text-muted"> · {g.detail}</span>}
                 </span>
-                <span className="text-right">
-                  <span className="numeral block text-[17px] leading-tight">{g.seats}</span>
-                  <span className="block text-[12px] text-muted">
-                    {fmtPct((100 * g.seats) / bench.seats, 1)}
-                  </span>
+                <span className="numeral text-right text-[17px]">{g.seats}</span>
+                <span className="text-right text-[13px] text-muted">
+                  {fmtPct((100 * g.seats) / bench.seats, 1)}
                 </span>
               </button>
             </li>
           ))}
         </ul>
+        {groups.length > TOP + 1 && (
+          <button
+            type="button"
+            onClick={() => setAll((v) => !v)}
+            aria-expanded={all}
+            className="mt-1 h-11 w-full rounded-lg border border-line text-[15px] font-medium text-ink-2 hover:border-line-strong hover:text-ink"
+          >
+            {all ? 'Mostrar só os maiores' : `Ver todos os ${groups.length}`}
+          </button>
+        )}
       </Panel>
     </div>
   );

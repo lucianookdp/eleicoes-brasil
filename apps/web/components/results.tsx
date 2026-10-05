@@ -192,20 +192,25 @@ export function isHeadToHead(result: ResultDTO, round: number) {
  */
 export function HeadToHead({ result }: { result: ResultDTO }) {
   const { round } = useRound();
-  const [a, b] = result.candidates.filter(hasValidVotes) as [CandidateDTO, CandidateDTO];
+  const [x, y] = result.candidates.filter(hasValidVotes) as [CandidateDTO, CandidateDTO];
   // Same place and office in the 1st round, matched by ballot number (the candidacy is the same).
-  const first = useResult(`${round.electionSlug}-1`, result.areaKey, result.office.slug).data;
-  const firstPct = (c: CandidateDTO) => first?.candidates.find((x) => x.number === c.number)?.percent;
+  const firstRound = `${round.electionSlug}-1`;
+  const first = useResult(firstRound, result.areaKey, result.office.slug).data;
+  const inFirst = (c: CandidateDTO) => first?.candidates.find((f) => f.number === c.number);
+  const firstPct = (c: CandidateDTO) => inFirst(c)?.percent;
+  // Fixed sides for the whole count: whoever came first in the 1st round on the left. The lead
+  // can change during the count; the photos never swap places.
+  const [a, b] = (inFirst(y)?.votes ?? -1) > (inFirst(x)?.votes ?? -1) ? [y, x] : [x, y];
   const diff = Math.abs((a.votes ?? 0) - (b.votes ?? 0));
   const pp = Math.abs((a.percent ?? 0) - (b.percent ?? 0));
   const counted = result.progress.countedPct ?? 0;
   const over = result.final || counted >= 100;
   const started = (a.votes ?? 0) + (b.votes ?? 0) > 0;
   const leader = (a.votes ?? 0) >= (b.votes ?? 0) ? a : b;
-  const side = (c: CandidateDTO, right: boolean) => (
-    <div className={`flex min-w-0 flex-col gap-2 ${right ? 'items-end text-right' : 'items-start'}`}>
-      <Avatar c={c} photo large />
-      <p className="w-full truncate text-[15px] font-semibold">{displayName(c.ballotName)}</p>
+  const side = (c: CandidateDTO) => (
+    <div className="flex min-w-0 flex-col items-center gap-2 text-center">
+      <FacePhoto c={c} fallbackRound={firstRound} />
+      <p className="w-full truncate text-[16px] font-semibold">{displayName(c.ballotName)}</p>
       <p className="-mt-2 text-[12.5px] text-muted">
         {c.number} · {c.party.abbreviation}
       </p>
@@ -220,9 +225,12 @@ export function HeadToHead({ result }: { result: ResultDTO }) {
   );
   return (
     <div className="pt-2">
-      <div className="grid grid-cols-2 gap-4">
-        {side(a, false)}
-        {side(b, true)}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:gap-4">
+        {side(a)}
+        <span className="mt-10 text-[22px] font-light text-muted sm:mt-12" aria-hidden>
+          ×
+        </span>
+        {side(b)}
       </div>
       <div className="relative mt-4 pt-5">
         <div
@@ -261,6 +269,42 @@ export function HeadToHead({ result }: { result: ResultDTO }) {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Large round photo for the head-to-head card. In a runoff the photo may still be on its way, so
+ * it falls back to the same candidate's 1st-round photo, then to initials.
+ */
+function FacePhoto({ c, fallbackRound }: { c: CandidateDTO; fallbackRound: string }) {
+  const { round } = useRound();
+  const sources = [...new Set([round.slug, fallbackRound])].map(
+    (slug) => `${API_URL}/api/elections/${slug}/photos/${c.key}`,
+  );
+  const [i, setI] = useState(0);
+  return (
+    <span
+      className="relative flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-full text-[26px] font-semibold sm:size-28"
+      style={{
+        background: `color-mix(in srgb, ${c.color} 18%, transparent)`,
+        color: c.color,
+        boxShadow: `inset 0 0 0 3px ${c.color}`,
+      }}
+      aria-hidden
+    >
+      {initials(c.ballotName)}
+      {i < sources.length && (
+        // biome-ignore lint/performance/noImgElement: static export, no image optimisation server
+        <img
+          key={sources[i]}
+          src={sources[i]}
+          alt=""
+          decoding="async"
+          onError={() => setI((n) => n + 1)}
+          className="absolute inset-[3px] size-[calc(100%-6px)] rounded-full object-cover object-[center_22%]"
+        />
+      )}
+    </span>
   );
 }
 
