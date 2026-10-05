@@ -474,7 +474,7 @@ function SiteFooter({ version }: { version?: string }) {
           <p>
             Fonte: Tribunal Superior Eleitoral (TSE). Este site não é um serviço oficial da Justiça Eleitoral.
             Resultados parciais consideram apenas as urnas já apuradas e podem mudar até o fim da apuração.
-            Horários de Brasília. Versão beta, em melhoria contínua.{' '}
+            Horários de Brasília. Versão 2 (beta), em melhoria contínua.{' '}
             <Link href="/como-funciona" className="text-ink-2 underline underline-offset-2">
               Como funciona
             </Link>

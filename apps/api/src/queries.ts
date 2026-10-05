@@ -511,10 +511,13 @@ export class Queries {
   async cities(
     slug: string,
     uf: string,
-    opts: { q?: string; sort: string; page: number; pageSize: number },
+    opts: { q?: string; sort: string; candidate?: string; page: number; pageSize: number },
   ): Promise<Paginated<CityRowDTO>> {
     const round = await this.round(slug);
     const like = opts.q ? `%${searchKey(opts.q)}%` : null;
+    // Headline office (president): who got the most votes in each city, and the picked candidate.
+    const headline = round.offices.find((o) => o.scope === 'country') ?? null;
+    const pick = opts.candidate ?? null;
     const order =
       {
         name: this.sql`c.search_name asc`,
@@ -522,6 +525,7 @@ export class Queries {
         'counted-asc': this.sql`p.counted_pct asc nulls first, c.search_name`,
         turnout: this.sql`p.turnout desc nulls last, c.search_name`,
         updated: this.sql`p.updated_at desc nulls last, c.search_name`,
+        candidate: pick ? this.sql`pick.votes desc nulls last, c.search_name` : this.sql`c.search_name asc`,
       }[opts.sort] ??
       // Default: capital, then the biggest cities (by electorate).
       this.sql`c.is_capital desc, (p.progress->>'electorateTotal')::bigint desc nulls last, c.search_name`;
@@ -535,12 +539,36 @@ export class Queries {
         countedPct: number | null;
         updatedAt: Date | null;
         total: number;
+        leadNumber: string | null;
+        leadName: string | null;
+        leadParty: string | null;
+        leadVotes: number | null;
+        leadPercent: number | null;
+        pickVotes: number | null;
+        pickPercent: number | null;
       }[]
     >`
       select c.provider_id as code, c.name, c.is_capital as "isCapital", p.area_key as "areaKey", p.progress,
-             p.counted_pct as "countedPct", p.updated_at as "updatedAt", count(*) over ()::int as total
+             p.counted_pct as "countedPct", p.updated_at as "updatedAt", count(*) over ()::int as total,
+             lead.number as "leadNumber", lead.name as "leadName", lead.party as "leadParty",
+             lead.votes as "leadVotes", lead.percent as "leadPercent",
+             pick.votes as "pickVotes", pick.percent as "pickPercent"
       from cities c
       left join area_progress p on p.round_id = ${round.id} and p.area_key = lower(c.state_code) || '-' || c.provider_id
+      left join area_results r on r.round_id = ${round.id} and r.office_id = ${headline?.id ?? null}
+        and r.area_key = lower(c.state_code) || '-' || c.provider_id
+      left join lateral (
+        select x->>'number' as number, x->>'ballotName' as name, x->'party'->>'abbreviation' as party,
+               (x->>'votes')::bigint as votes, (x->>'percent')::float8 as percent
+        from jsonb_array_elements(r.result->'candidates') x
+        where (x->>'voteDestination') is null or x->>'voteDestination' ~* '^v[aá]lido'
+        order by (x->>'votes')::bigint desc nulls last limit 1
+      ) lead on (lead.votes > 0)
+      left join lateral (
+        select (x->>'votes')::bigint as votes, (x->>'percent')::float8 as percent
+        from jsonb_array_elements(r.result->'candidates') x
+        where x->>'number' = ${pick} limit 1
+      ) pick on true
       where c.provider = ${round.provider} and c.state_code = ${uf}
         ${like ? this.sql`and c.search_name like ${like}` : this.sql``}
       order by ${like ? this.sql`c.search_name like ${`${searchKey(opts.q!)}%`} desc,` : this.sql``} ${order}
@@ -559,6 +587,19 @@ export class Queries {
                 updatedAt: r.updatedAt!,
               })
             : null,
+        leader:
+          r.leadNumber && r.leadName
+            ? {
+                number: r.leadNumber,
+                ballotName: r.leadName,
+                party: r.leadParty ?? '',
+                votes: Number(r.leadVotes),
+                percent: r.leadPercent,
+              }
+            : null,
+        ...(pick
+          ? { pick: r.pickVotes == null ? null : { votes: Number(r.pickVotes), percent: r.pickPercent } }
+          : {}),
       })),
       total: rows[0]?.total ?? 0,
       page: opts.page,

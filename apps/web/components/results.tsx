@@ -276,7 +276,15 @@ export function HeadToHead({ result }: { result: ResultDTO }) {
  * Large round photo for the head-to-head card. In a runoff the photo may still be on its way, so
  * it falls back to the same candidate's 1st-round photo, then to initials.
  */
-function FacePhoto({ c, fallbackRound }: { c: CandidateDTO; fallbackRound: string }) {
+export function FacePhoto({
+  c,
+  fallbackRound,
+  small = false,
+}: {
+  c: CandidateDTO;
+  fallbackRound: string;
+  small?: boolean;
+}) {
   const { round } = useRound();
   const sources = [...new Set([round.slug, fallbackRound])].map(
     (slug) => `${API_URL}/api/elections/${slug}/photos/${c.key}`,
@@ -284,7 +292,7 @@ function FacePhoto({ c, fallbackRound }: { c: CandidateDTO; fallbackRound: strin
   const [i, setI] = useState(0);
   return (
     <span
-      className="relative flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-full text-[26px] font-semibold sm:size-28"
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold ${small ? 'size-16 text-[18px]' : 'size-24 text-[26px] sm:size-28'}`}
       style={{
         background: `color-mix(in srgb, ${c.color} 18%, transparent)`,
         color: c.color,

@@ -13,7 +13,7 @@ import { CountingHero } from './counting';
 import { EvolutionChart } from './evolution-chart';
 import { LeadChart } from './lead-chart';
 import { MyCityCard } from './my-city';
-import { CandidateList, HeadToHead, isHeadToHead, Provenance, RaceBar } from './results';
+import { CandidateList, FacePhoto, HeadToHead, isHeadToHead, Provenance, RaceBar } from './results';
 import { ShareButton } from './share-button';
 import { useRound } from './shell';
 import { StatesTable } from './states-table';
@@ -226,14 +226,20 @@ function runoffDate(year: number) {
 }
 
 /** Shown only once the TSE itself marks the headline race as decided (runoff or elected). */
-function DecidedBanner({ result }: { result: ResultDTO }) {
-  const { round } = useRound();
+/** The race's outcome as the TSE states it. */
+function decision(result: ResultDTO) {
   const leaders = result.candidates.filter(hasValidVotes);
   // During the count the TSE flags the race (md); once final it marks the candidates instead.
   const inRunoff = leaders.filter((c) => /2º turno/i.test(c.status ?? ''));
   const elected = leaders.find((c) => /^eleit/i.test(c.status ?? ''));
   const decided =
     result.mathematicallyDecided ?? (inRunoff.length > 0 ? 'runoff' : elected ? 'elected' : null);
+  return { leaders, inRunoff, elected, decided };
+}
+
+function DecidedBanner({ result }: { result: ResultDTO }) {
+  const { round } = useRound();
+  const { leaders, inRunoff, elected, decided } = decision(result);
   if (!decided || round.round !== 1 || leaders.length < 2) return null;
   const pair = inRunoff.length >= 2 ? inRunoff : leaders;
   const a = displayName((decided === 'elected' ? (elected ?? leaders[0]) : pair[0])!.ballotName);
@@ -254,42 +260,90 @@ function DecidedBanner({ result }: { result: ResultDTO }) {
 
 /** Once 100% is counted: the night in one card (lead, turnout, blank and null votes). */
 function EndSummary({ data }: { data: OverviewDTO }) {
+  const { round } = useRound();
   const p = data.progress;
   const h = data.headline;
   if (!p || !h || (p.countedPct ?? 0) < 100) return null;
-  const [a, b] = h.candidates.filter(hasValidVotes);
+  const outcome = decision(h);
+  // The two finalists when the TSE has set a runoff; otherwise the top two.
+  const [a, b] = outcome.inRunoff.length >= 2 ? outcome.inRunoff : outcome.leaders;
   const gap = a && b ? (a.votes ?? 0) - (b.votes ?? 0) : null;
   const total = h.votes.total || null;
+  // Share and the number behind it (people / votes), so "2%" is never left without its size.
   const stats = [
-    { label: 'Comparecimento', value: fmtPct(p.turnoutPct, 1) },
-    { label: 'Abstenção', value: fmtPct(p.abstentionPct, 1) },
+    { label: 'Comparecimento', value: fmtPct(p.turnoutPct, 1), count: p.turnout, unit: 'eleitores' },
+    { label: 'Abstenção', value: fmtPct(p.abstentionPct, 1), count: p.abstention, unit: 'eleitores' },
     {
       label: 'Brancos',
       value: total && h.votes.blank != null ? fmtPct((100 * h.votes.blank) / total, 1) : '—',
+      count: h.votes.blank,
+      unit: 'votos',
     },
-    { label: 'Nulos', value: total && h.votes.null != null ? fmtPct((100 * h.votes.null) / total, 1) : '—' },
+    {
+      label: 'Nulos',
+      value: total && h.votes.null != null ? fmtPct((100 * h.votes.null) / total, 1) : '—',
+      count: h.votes.null,
+      unit: 'votos',
+    },
   ];
+  // Photos only once the runoff is certain (the TSE marks it), never as a default.
+  const runoff = round.round === 1 && outcome.decided === 'runoff' && a && b;
   return (
     <section aria-label="Resumo da apuração" className="mb-4 rounded-xl border border-line bg-surface p-4">
       <p className="text-[13px] font-medium text-muted">Apuração concluída · {h.office.name}</p>
-      {a && b && gap != null && (
-        <p className="mt-1 text-[16px] font-semibold">
-          {/* Each name stays with its percentage; on a narrow phone the line breaks at the "×". */}
-          <span className="whitespace-nowrap">
-            <span style={{ color: a.color }}>{displayName(a.ballotName)}</span> {fmtPct(a.percent)}
-          </span>{' '}
-          ×{' '}
-          <span className="whitespace-nowrap">
-            <span style={{ color: b.color }}>{displayName(b.ballotName)}</span> {fmtPct(b.percent)}
-          </span>
-          <span className="block text-[13.5px] font-normal text-ink-2">Diferença de {fmtInt(gap)} votos</span>
-        </p>
+      {runoff && gap != null ? (
+        <div className="mt-3">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2">
+            {[a, b].map((c, i) => (
+              <div
+                key={c.key}
+                className={`flex min-w-0 flex-col items-center gap-1 text-center ${i ? 'col-start-3' : ''}`}
+              >
+                <FacePhoto c={c} fallbackRound={round.slug} small />
+                <p className="w-full truncate text-[15px] font-semibold" style={{ color: c.color }}>
+                  {displayName(c.ballotName)}
+                </p>
+                <p className="numeral text-[20px] leading-none">{fmtPct(c.percent)}</p>
+                <p className="text-[12.5px] text-muted">{fmtInt(c.votes)} votos</p>
+              </div>
+            ))}
+            <span className="col-start-2 row-start-1 mt-5 text-[18px] text-muted" aria-hidden>
+              ×
+            </span>
+          </div>
+          <p className="mt-2 text-center text-[13.5px] text-ink-2">
+            Vão para o 2º turno · diferença de {fmtInt(gap)} votos
+          </p>
+        </div>
+      ) : (
+        a &&
+        b &&
+        gap != null && (
+          <p className="mt-1 text-[16px] font-semibold">
+            {/* Each name stays with its percentage; on a narrow phone the line breaks at the "×". */}
+            <span className="whitespace-nowrap">
+              <span style={{ color: a.color }}>{displayName(a.ballotName)}</span> {fmtPct(a.percent)}
+            </span>{' '}
+            ×{' '}
+            <span className="whitespace-nowrap">
+              <span style={{ color: b.color }}>{displayName(b.ballotName)}</span> {fmtPct(b.percent)}
+            </span>
+            <span className="block text-[13.5px] font-normal text-ink-2">
+              Diferença de {fmtInt(gap)} votos
+            </span>
+          </p>
+        )
       )}
       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
         {stats.map((s) => (
           <div key={s.label}>
             <dt className="text-[12px] text-muted">{s.label}</dt>
             <dd className="numeral text-[17px]">{s.value}</dd>
+            {s.count != null && (
+              <dd className="text-[12.5px] text-muted">
+                {fmtInt(s.count)} {s.unit}
+              </dd>
+            )}
           </div>
         ))}
       </dl>

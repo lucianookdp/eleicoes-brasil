@@ -183,6 +183,10 @@ export interface CityRowDTO {
   name: string;
   isCapital: boolean;
   progress: ProgressDTO | null;
+  /** Most voted candidate here for the headline office (president), when there are votes. */
+  leader: { number: string; ballotName: string; party: string; votes: number; percent: number | null } | null;
+  /** The candidate asked for with `?candidate=<number>`: their votes in this city. */
+  pick?: { votes: number; percent: number | null } | null;
 }
 
 export interface Paginated<T> {

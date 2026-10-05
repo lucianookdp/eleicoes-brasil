@@ -237,8 +237,13 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
       .object({
         q: z.string().trim().max(60).optional(),
         sort: z
-          .enum(['default', 'name', 'counted-desc', 'counted-asc', 'turnout', 'updated'])
+          .enum(['default', 'name', 'counted-desc', 'counted-asc', 'turnout', 'updated', 'candidate'])
           .default('default'),
+        // Ballot number of a headline candidate: adds their votes per city (and sorts by them).
+        candidate: z
+          .string()
+          .regex(/^\d{1,5}$/)
+          .optional(),
         page: z.coerce.number().int().min(1).max(10_000).default(1),
         pageSize: z.coerce.number().int().min(1).max(100).default(30),
       })

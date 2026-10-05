@@ -192,8 +192,11 @@ test('after the count: summary card with turnout and the lead', async ({ page, r
   await openDemo(page);
   const summary = page.getByRole('region', { name: 'Resumo da apuração' });
   await expect(summary).toBeVisible();
-  await expect(summary.getByText(/Diferença de [\d.]+ votos/)).toBeVisible();
+  await expect(summary.getByText(/[Dd]iferença de [\d.]+ votos/)).toBeVisible();
   await expect(summary.getByText('Comparecimento')).toBeVisible();
+  // Every share comes with its number: voters for turnout and abstention, votes for blank and null.
+  await expect(summary.getByText(/^[\d.]+ eleitores$/)).toHaveCount(2);
+  await expect(summary.getByText(/^[\d.]+ votos$/).last()).toBeVisible();
 });
 
 test('counts the visit privately (random id, no cookie)', async ({ page, context }) => {
@@ -231,4 +234,21 @@ test('state flags next to state names', async ({ page }) => {
   const flag = page.getByRole('heading', { level: 1 }).locator('img');
   await expect(flag).toHaveAttribute('src', /\/flags\/sp\.png$/);
   await expect.poll(() => flag.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+});
+
+test("cities: who won each city, and a candidate's votes city by city", async ({ page }) => {
+  await page.goto('/eleicao/estado/?e=demo&t=1&uf=sp');
+  await expect(page.getByRole('combobox', { name: 'Ordenar' })).toBeVisible();
+  await page.waitForTimeout(700);
+  test.skip((await page.getByText(/^Mais votado:$/).count()) === 0, 'no city votes counted yet');
+  const select = page.getByRole('combobox', { name: 'Ordenar' });
+  const option = select.locator('option[value^="candidate:"]').first();
+  const label = (await option.textContent())!.replace('Mais votos de ', '');
+  await select.selectOption((await option.getAttribute('value'))!);
+  const rows = page.getByText(new RegExp(`^${label}:$`));
+  await expect(rows.first()).toBeVisible();
+  // Sorted by that candidate's votes, largest first.
+  const votes = await page.locator('li .numeral.font-medium').allTextContents();
+  const n = votes.slice(0, 5).map((v) => Number(v.replace(/\D/g, '')));
+  expect(n).toEqual([...n].sort((a, b) => b - a));
 });

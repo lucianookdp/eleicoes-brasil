@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Application version shown in the UI and in /api/health. Keep in sync with the root package.json. */
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '2.0.0';
 export const APP_NAME = 'Eleições Brasil';
 
 export const RUN_MODES = ['PRODUCTION', 'SIMULATION', 'DEVELOPMENT', 'REPLAY'] as const;

@@ -50,12 +50,16 @@ export const useResult = (round: string, area: string, office: string | undefine
   });
 
 /** City list of a state, loaded 30 at a time ("Mostrar mais"). */
-export const useCities = (round: string, uf: string, params: { q: string; sort: string }) =>
+export const useCities = (
+  round: string,
+  uf: string,
+  params: { q: string; sort: string; candidate?: string },
+) =>
   useInfiniteQuery({
     queryKey: [round, 'cities', uf, params],
     queryFn: ({ pageParam }) =>
       api<Paginated<CityRowDTO>>(
-        `${base(round)}/states/${uf}/cities?page=${pageParam}&sort=${params.sort}${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}`,
+        `${base(round)}/states/${uf}/cities?page=${pageParam}&sort=${params.sort}${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}${params.candidate ? `&candidate=${params.candidate}` : ''}`,
       ),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page * last.pageSize < last.total ? last.page + 1 : undefined),

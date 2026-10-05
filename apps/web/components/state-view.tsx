@@ -1,11 +1,11 @@
 'use client';
 
 import type { StateDetailDTO } from '@eleicoes/election-core';
-import { formatClock } from '@eleicoes/election-core';
+import { formatClock, hasValidVotes } from '@eleicoes/election-core';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { fmtInt, fmtPct } from '@/lib/format';
-import { useCities, useResult, useSeries, useStateDetail } from '@/lib/queries';
+import { displayName, fmtInt, fmtPct } from '@/lib/format';
+import { useCities, useOverview, useResult, useSeries, useStateDetail } from '@/lib/queries';
 import { CountingHero } from './counting';
 import { EvolutionChart } from './evolution-chart';
 import { IconSearch } from './icons';
@@ -122,10 +122,16 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
     const t = setTimeout(() => setDebounced(q), 200);
     return () => clearTimeout(t);
   }, [q]);
+  // The headline race's candidates (president), with their colours: "Mais votos de …" options.
+  const headline = useOverview(round.slug).data?.headline;
+  const candidates = (headline?.candidates ?? []).filter(hasValidVotes).slice(0, 6);
+  const colorOf = (number: string) => candidates.find((c) => c.number === number)?.color ?? 'var(--muted)';
+  const picked = sort.startsWith('candidate:') ? sort.slice('candidate:'.length) : undefined;
+  const pickedName = candidates.find((c) => c.number === picked)?.ballotName;
   const { data, isFetching, isFetchingNextPage, hasNextPage, fetchNextPage } = useCities(
     round.slug,
     uf.toLowerCase(),
-    { q: debounced, sort },
+    { q: debounced, sort: picked ? 'candidate' : sort, candidate: picked },
   );
   const items = data?.pages.flatMap((p) => p.items) ?? [];
   const found = data?.pages[0]?.total ?? 0;
@@ -150,18 +156,27 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
             style={{ outline: 'none' }}
           />
         </label>
-        <label className="flex items-center gap-2 text-[13px] text-muted">
+        <label className="flex min-w-0 max-w-full items-center gap-2 text-[13px] text-muted">
           Ordenar
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="h-11 rounded-xl border border-line bg-surface px-2 text-[14px] text-ink"
+            className="h-11 min-w-0 max-w-full truncate rounded-xl border border-line bg-surface px-2 text-[14px] text-ink"
           >
             {CITY_SORTS.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>
             ))}
+            {candidates.length > 0 && (
+              <optgroup label={`Por candidato (${headline?.office.name.toLowerCase()})`}>
+                {candidates.map((c) => (
+                  <option key={c.number} value={`candidate:${c.number}`}>
+                    Mais votos de {displayName(c.ballotName)}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </label>
       </div>
@@ -201,6 +216,35 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
                   </span>
                   <span>{p?.turnout != null ? `${fmtInt(p.turnout)} votos` : ''}</span>
                 </span>
+                {picked && pickedName ? (
+                  <span className="mt-1.5 flex items-center gap-1.5 text-[13.5px]">
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ background: colorOf(picked) }}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 truncate text-ink-2">{displayName(pickedName)}:</span>
+                    <span className="numeral shrink-0 font-medium">
+                      {c.pick ? fmtInt(c.pick.votes) : '—'}
+                    </span>
+                    <span className="shrink-0 text-muted">
+                      {c.pick ? `votos · ${fmtPct(c.pick.percent)}` : 'sem votos apurados'}
+                    </span>
+                  </span>
+                ) : (
+                  c.leader && (
+                    <span className="mt-1.5 flex items-center gap-1.5 text-[13.5px]">
+                      <span
+                        className="size-2.5 shrink-0 rounded-full"
+                        style={{ background: colorOf(c.leader.number) }}
+                        aria-hidden
+                      />
+                      <span className="shrink-0 text-muted">Mais votado:</span>
+                      <span className="min-w-0 truncate font-medium">{displayName(c.leader.ballotName)}</span>
+                      <span className="shrink-0 text-muted">{fmtPct(c.leader.percent)}</span>
+                    </span>
+                  )
+                )}
                 {p?.totalizedAt && (
                   <span className="sr-only">Atualizado às {formatClock(p.totalizedAt)}</span>
                 )}
