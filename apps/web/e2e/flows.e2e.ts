@@ -138,3 +138,13 @@ test('minha cidade: pick once, see it at the top of the home page', async ({ pag
     page.getByRole('region', { name: 'Minha cidade' }).getByRole('link', { name: 'Campinas' }),
   ).toBeVisible();
 });
+
+test('during the count: where the most votes are still to be counted', async ({ page, request }) => {
+  const overview = await (await request.get('http://localhost:4000/api/elections/demo-1/overview')).json();
+  test.skip(overview.progress?.status !== 'in-progress', 'demo count not in progress');
+  await openDemo(page);
+  const list = page.getByRole('list', { name: 'Estados com mais eleitores em urnas ainda não apuradas' });
+  await expect(list).toBeVisible();
+  await expect(list.getByRole('listitem')).toHaveCount(5);
+  await expect(list.getByText(/eleitores · [\d.]+ urnas/).first()).toBeVisible();
+});

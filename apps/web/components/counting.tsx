@@ -88,6 +88,7 @@ export function CountingHero({
       )}
 
       {states && states.length > 0 && started && <RegionBreakdown states={states} />}
+      {states && started && progress.status !== 'finished' && <StillToCount states={states} />}
 
       {started && (
         <button
@@ -162,5 +163,48 @@ function RegionBreakdown({ states }: { states: StateRowDTO[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Where the count still has the most ground to cover: voters registered in polling stations not yet
+ * counted, per state. Plain TSE figures (no projection); it explains why totals will still move.
+ */
+function StillToCount({ states }: { states: StateRowDTO[] }) {
+  const rows = states
+    .filter((s) => s.progress && s.progress.status !== 'finished')
+    .map((s) => ({
+      s,
+      voters: (s.progress!.electorateTotal ?? 0) - (s.progress!.electorateCounted ?? 0),
+      stations: (s.progress!.sectionsTotal ?? 0) - (s.progress!.sectionsCounted ?? 0),
+    }))
+    .filter((r) => r.voters > 0)
+    .sort((a, b) => b.voters - a.voters)
+    .slice(0, 5);
+  if (rows.length === 0) return null;
+  const max = rows[0]!.voters;
+  return (
+    <div className="mt-4 border-t border-line pt-3">
+      <p className="mb-2 text-[13px] font-medium text-ink-2">Onde mais falta apurar</p>
+      <ul className="grid gap-2" aria-label="Estados com mais eleitores em urnas ainda não apuradas">
+        {rows.map(({ s, voters, stations }) => (
+          <li key={s.uf} className="text-[13px]">
+            <span className="flex items-baseline justify-between gap-2">
+              <span className="truncate text-ink-2">{s.name}</span>
+              <span className="whitespace-nowrap">
+                <span className="font-medium">{fmtCompact(voters)}</span>{' '}
+                <span className="text-muted">eleitores · {fmtInt(stations)} urnas</span>
+              </span>
+            </span>
+            <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-line" aria-hidden>
+              <span
+                className="bar block h-full rounded-full bg-ink-2/60"
+                style={{ width: `${(voters / max) * 100}%` }}
+              />
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
