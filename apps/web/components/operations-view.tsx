@@ -144,37 +144,45 @@ export function OperationsView() {
       </div>
 
       {meta?.features.advancedOperations !== false && (
-        <section aria-labelledby="coleta" className="mb-8">
-          <SectionTitle id="coleta" title="Nossa coleta">
-            Consultas do nosso sistema aos arquivos públicos do TSE nos últimos {data.requests.windowMinutes}{' '}
-            minutos.
-          </SectionTitle>
-          <dl className="mb-4 grid grid-cols-3 gap-3 lg:grid-cols-6">
-            <Tile label="Consultas" value={fmtInt(data.requests.total)} />
-            <Tile label="Com dados novos" value={fmtInt(data.requests.ok)} />
-            <Tile label="Sem mudança" value={fmtInt(data.requests.notModified)} />
-            <Tile
-              label="Erros"
-              value={fmtInt(data.requests.errors)}
-              tone={data.requests.errors > 0 ? 'bad' : undefined}
-            />
-            <Tile
-              label="Resposta média"
-              value={
-                data.requests.avgLatencyMs != null ? `${Math.round(data.requests.avgLatencyMs)} ms` : '—'
-              }
-            />
-            <Tile
-              label="95% em até"
-              value={
-                data.requests.p95LatencyMs != null ? `${Math.round(data.requests.p95LatencyMs)} ms` : '—'
-              }
-            />
-          </dl>
-          <Panel className="p-3 sm:p-4">
-            <Cycles cycles={data.cycles} />
-          </Panel>
-        </section>
+        <details className="group mb-8 rounded-xl border border-line bg-surface px-4 py-3">
+          <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between font-medium">
+            Detalhes técnicos da coleta
+            <span aria-hidden className="text-muted transition-transform group-open:rotate-45">
+              +
+            </span>
+          </summary>
+          <section aria-labelledby="coleta" className="mt-3">
+            <SectionTitle id="coleta" title="Nossa coleta">
+              Consultas do nosso sistema aos arquivos públicos do TSE nos últimos{' '}
+              {data.requests.windowMinutes} minutos.
+            </SectionTitle>
+            <dl className="mb-4 grid grid-cols-3 gap-3 lg:grid-cols-6">
+              <Tile label="Consultas" value={fmtInt(data.requests.total)} />
+              <Tile label="Com dados novos" value={fmtInt(data.requests.ok)} />
+              <Tile label="Sem mudança" value={fmtInt(data.requests.notModified)} />
+              <Tile
+                label="Erros"
+                value={fmtInt(data.requests.errors)}
+                tone={data.requests.errors > 0 ? 'bad' : undefined}
+              />
+              <Tile
+                label="Resposta média"
+                value={
+                  data.requests.avgLatencyMs != null ? `${Math.round(data.requests.avgLatencyMs)} ms` : '—'
+                }
+              />
+              <Tile
+                label="95% em até"
+                value={
+                  data.requests.p95LatencyMs != null ? `${Math.round(data.requests.p95LatencyMs)} ms` : '—'
+                }
+              />
+            </dl>
+            <Panel className="p-3 sm:p-4">
+              <Cycles cycles={data.cycles} />
+            </Panel>
+          </section>
+        </details>
       )}
 
       <section aria-labelledby="frescor">

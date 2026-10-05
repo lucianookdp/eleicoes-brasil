@@ -48,12 +48,6 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
         <FavoriteButton favorite={{ key, label: data.name, detail: uf, path: `/states/${key}` }} />
       </div>
       <FreshnessNotice ingestion={data.ingestion} progress={data.progress} roundStatus={data.round.status} />
-      <CountingHero
-        progress={data.progress}
-        votes={result.data?.votes}
-        votesFor={office?.name}
-        title={abroad ? 'Apuração no exterior' : `Apuração em ${data.name}`}
-      />
       {abroad && (
         <p className="mt-3 text-[13.5px] text-muted">
           No exterior só se vota para presidente, das 8h às 17h no horário local de cada país. Por isso os
@@ -61,7 +55,7 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
         </p>
       )}
 
-      <section aria-labelledby="cargos" className="mt-8">
+      <section aria-labelledby="cargos" className="mt-4">
         <SectionTitle id="cargos" title="Resultados por cargo" />
         {offices.length === 0 ? (
           <EmptyState title="Nenhum cargo em disputa neste estado." />
@@ -89,6 +83,16 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
             </div>
           </div>
         )}
+      </section>
+
+      {/* Results first (what readers came for); the counting details follow. */}
+      <section className="mt-10">
+        <CountingHero
+          progress={data.progress}
+          votes={result.data?.votes}
+          votesFor={office?.name}
+          title={abroad ? 'Apuração no exterior' : `Apuração em ${data.name}`}
+        />
       </section>
 
       <Cities uf={uf} total={data.cityCount} abroad={abroad} />
