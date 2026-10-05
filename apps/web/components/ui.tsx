@@ -160,7 +160,9 @@ export function FreshnessNotice({
   // Our collection is healthy but the TSE has published nothing new for a while: say so, so the
   // pause is not mistaken for a problem with this site.
   const stale = (at: string | null | undefined) => !!at && now - Date.parse(at) > 5 * 60_000;
-  if (roundStatus === 'live' && ingestion.state === 'healthy' && progress?.status !== 'finished') {
+  // At 100% there is nothing left to wait for, even before the TSE marks the count final.
+  const done = progress?.status === 'finished' || (progress?.countedPct ?? 0) >= 100;
+  if (roundStatus === 'live' && ingestion.state === 'healthy' && !done) {
     const what = stale(progress?.updatedAt)
       ? `não divulga números novos desde as ${formatClock(progress!.updatedAt).slice(0, 5)}`
       : stale(votesAt)

@@ -388,7 +388,8 @@ export function ResultPanel({
  */
 function BehindNotice({ result, areaPct }: { result: ResultDTO; areaPct?: number | null }) {
   const shown = result.progress.countedPct;
-  if (areaPct == null || shown == null || areaPct - shown < 2 || !result.provenance) return null;
+  if (areaPct == null || shown == null || shown >= 100 || areaPct - shown < 2 || !result.provenance)
+    return null;
   return (
     <p className="mb-3 rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-[13.5px] text-ink-2">
       <span className="font-medium text-warn">Atualizando:</span> votos das{' '}
