@@ -11,6 +11,7 @@ import { ActivityFeed } from './activity';
 import { BrazilMap } from './brazil-map';
 import { CountingHero } from './counting';
 import { EvolutionChart } from './evolution-chart';
+import { LeadChart } from './lead-chart';
 import { CandidateList, HeadToHead, isHeadToHead, Provenance, RaceBar } from './results';
 import { useRound } from './shell';
 import { StatesTable } from './states-table';
@@ -187,7 +188,10 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
             )}
             {activeTab === 'evolucao' &&
               (series.data ? (
-                <EvolutionChart series={series.data} majority />
+                <div className="grid gap-6">
+                  <LeadChart series={series.data} />
+                  <EvolutionChart series={series.data} majority />
+                </div>
               ) : (
                 <Skeleton className="h-72" />
               ))}

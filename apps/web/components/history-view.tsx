@@ -7,6 +7,7 @@ import { displayName, fmtPct } from '@/lib/format';
 import { useOverview, useSeries, useTimeline, useTimelineAt } from '@/lib/queries';
 import { TILES } from '@/lib/tiles';
 import { EvolutionChart } from './evolution-chart';
+import { LeadChart } from './lead-chart';
 import { CandidateList, RaceBar } from './results';
 import { useRound } from './shell';
 import { EmptyState, ErrorNotice, Panel, SectionTitle, Skeleton } from './ui';
@@ -162,7 +163,10 @@ export function HistoryView() {
               <SectionTitle id="evolucao-completa" title="Evolução completa" />
               <Panel className="p-3 sm:p-4">
                 {series.data ? (
-                  <EvolutionChart series={series.data} majority />
+                  <div className="grid gap-6">
+                    <LeadChart series={series.data} />
+                    <EvolutionChart series={series.data} majority />
+                  </div>
                 ) : (
                   <Skeleton className="h-72" />
                 )}

@@ -100,6 +100,9 @@ test('runoff: head-to-head card with the vote difference', async ({ page, reques
   await expect(page.getByText(/faltam .* das urnas|venceu por/)).toBeVisible();
   // A runoff never shows the 1st-round list of candidates.
   await expect(page.getByRole('button', { name: /Ver todos os/ })).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Evolução' }).click();
+  await expect(page.getByText('Diferença de votos')).toBeVisible();
+  await expect(page.getByText(/Maior vantagem: [\d.]+ votos/)).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
 });

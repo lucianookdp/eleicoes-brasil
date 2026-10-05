@@ -652,11 +652,12 @@ export class Queries {
         color: colors.get(c.key) ?? '#8A9A93',
       })),
       points: downsample(rows, 300).map((r) => {
-        const byKey = new Map(r.candidates.map((c) => [c[0], c[2]]));
+        const byKey = new Map(r.candidates.map((c) => [c[0], c]));
         return {
           at: toIso(r.at)!,
           countedPct: r.countedPct,
-          values: Object.fromEntries(top.map((c) => [c.key, byKey.get(c.key) ?? null])),
+          values: Object.fromEntries(top.map((c) => [c.key, byKey.get(c.key)?.[2] ?? null])),
+          votes: Object.fromEntries(top.map((c) => [c.key, byKey.get(c.key)?.[1] ?? null])),
         };
       }),
     };

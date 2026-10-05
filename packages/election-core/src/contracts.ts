@@ -244,7 +244,14 @@ export interface SeriesDTO {
   office: OfficeInfo;
   areaKey: string;
   candidates: { key: string; name: string; party: string; color: string }[];
-  points: { at: string; countedPct: number | null; values: Record<string, number | null> }[];
+  points: {
+    at: string;
+    countedPct: number | null;
+    /** Share of valid votes per candidate. */
+    values: Record<string, number | null>;
+    /** Votes per candidate at that moment (for the lead in votes). */
+    votes: Record<string, number | null>;
+  }[];
 }
 
 export interface SearchHitDTO {
