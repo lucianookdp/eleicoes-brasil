@@ -122,3 +122,17 @@ test('share: result image and WhatsApp text with the site link', async ({ page }
   expect(text).not.toContain('venceu');
   await expect(dialog.getByRole('link', { name: 'WhatsApp' })).toHaveAttribute('href', /wa\.me/);
 });
+
+test('minha cidade: pick once, see it at the top of the home page', async ({ page }) => {
+  await openDemo(page);
+  const card = page.getByRole('region', { name: 'Minha cidade' });
+  await card.getByPlaceholder('Digite o nome da cidade').fill('campinas');
+  await card.getByRole('button', { name: /Campinas/ }).click();
+  await expect(card.getByRole('link', { name: 'Campinas' })).toBeVisible();
+  await expect(card.getByText(/à frente por [\d.]+ votos/)).toBeVisible();
+  // Remembered on this device.
+  await page.reload();
+  await expect(
+    page.getByRole('region', { name: 'Minha cidade' }).getByRole('link', { name: 'Campinas' }),
+  ).toBeVisible();
+});

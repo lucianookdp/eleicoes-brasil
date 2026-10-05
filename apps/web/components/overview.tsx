@@ -12,6 +12,7 @@ import { BrazilMap } from './brazil-map';
 import { CountingHero } from './counting';
 import { EvolutionChart } from './evolution-chart';
 import { LeadChart } from './lead-chart';
+import { MyCityCard } from './my-city';
 import { CandidateList, HeadToHead, isHeadToHead, Provenance, RaceBar } from './results';
 import { ShareButton } from './share-button';
 import { useRound } from './shell';
@@ -105,6 +106,7 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
         // When the new votes reached us: the TSE's own stamp on the file can be 20 minutes older.
         votesAt={headline?.provenance?.retrievedAt ?? null}
       />
+      <MyCityCard headlineOffice={headlineOffice?.slug} />
       <Favorites data={data} />
 
       <div className="grid items-start gap-4 lg:grid-cols-12 [&>*]:min-w-0 lg:gap-6">
