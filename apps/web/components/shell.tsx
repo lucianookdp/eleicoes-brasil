@@ -173,9 +173,12 @@ function useActive() {
  * status on top, the round buttons right under it (sections live in the bottom bar).
  */
 function Header({ onSearch }: { onSearch: () => void }) {
-  const { round, href } = useRound();
+  const { round, href, elections } = useRound();
   const nav = useNav();
   const active = useActive();
+  // Only worth a control when there is a choice to make (two rounds, or another election).
+  const choice =
+    elections.length > 1 || (elections.find((e) => e.slug === round.electionSlug)?.rounds.length ?? 0) > 1;
   const link = (n: (typeof NAV)[number]) => (
     <Link
       key={n.path}
@@ -199,9 +202,11 @@ function Header({ onSearch }: { onSearch: () => void }) {
           <Logo />
           <span className="whitespace-nowrap text-[16px]">Eleições Brasil</span>
         </Link>
-        <div className="hidden xl:block">
-          <RoundSwitch />
-        </div>
+        {choice && (
+          <div className="hidden xl:block">
+            <RoundSwitch />
+          </div>
+        )}
         <nav aria-label="Seções" className="ml-1 hidden shrink-0 items-center xl:flex">
           {nav.filter((n) => n.main).map(link)}
           <MoreMenu items={nav.filter((n) => !n.main)} />
@@ -221,9 +226,11 @@ function Header({ onSearch }: { onSearch: () => void }) {
         </div>
       </div>
       {/* Phones and tablets: the round buttons get their own full-width row. */}
-      <div className="border-t border-line/60 px-4 py-2 sm:px-6 xl:hidden">
-        <RoundSwitch wide />
-      </div>
+      {choice && (
+        <div className="border-t border-line/60 px-4 py-2 sm:px-6 xl:hidden">
+          <RoundSwitch wide />
+        </div>
+      )}
     </header>
   );
 }
