@@ -24,6 +24,7 @@ import {
   compactCandidates,
   countedPct,
   type ElectionConfig,
+  isRegression,
   type Office,
   type Provenance,
   progressChanged,
@@ -79,6 +80,9 @@ export class Store {
     readonly roundSlug: string,
     /** \"TSE\", or \"DEMO\" so made-up demo municipality codes never mix with official ones. */
     readonly provider = 'TSE',
+    private readonly log: { warn: (data: object, msg: string) => void } = {
+      warn: (data, msg) => console.warn(msg, data),
+    },
   ) {}
 
   static async ensureRound(db: Database, def: RoundDefinition, mode: string, environment: string | null) {
@@ -219,7 +223,17 @@ export class Store {
   ): Promise<ProgressChange[]> {
     // Last entry per area wins: a batch must not upsert the same row twice.
     const latest = [...new Map(entries.map((e) => [e.area.key, e])).values()];
-    const changed = latest.filter((e) => progressChanged(this.progress.get(e.area.key), e.progress));
+    const changed = latest.filter((e) => {
+      const prev = this.progress.get(e.area.key);
+      if (prev && isRegression(countedPct(prev), countedPct(e.progress))) {
+        this.log.warn(
+          { area: e.area.key, from: countedPct(prev), to: countedPct(e.progress) },
+          'progress going back ignored',
+        );
+        return false;
+      }
+      return progressChanged(prev, e.progress);
+    });
     if (changed.length === 0) return [];
 
     const changes: ProgressChange[] = changed.map((e) => {
@@ -317,6 +331,7 @@ export class Store {
     const [prev] = await this.db
       .select({
         checksum: areaResults.checksum,
+        countedPct: areaResults.countedPct,
         candidates: sql<CompactCandidate[] | null>`(
         select jsonb_agg(jsonb_build_array(c->>'key', (c->>'votes')::bigint, (c->>'percent')::float8))
         from jsonb_array_elements(${areaResults.result}->'candidates') c)`,
@@ -328,6 +343,13 @@ export class Store {
     const { area, officeCode: _code, ...stored } = result;
     const compact = compactCandidates(result.candidates);
     const pct = countedPct(result.progress);
+    if (isRegression(prev?.countedPct, pct)) {
+      this.log.warn(
+        { area: area.key, office: office.slug, from: prev?.countedPct, to: pct },
+        'result going back ignored',
+      );
+      return false;
+    }
 
     await this.db.transaction(async (tx) => {
       await tx

@@ -240,14 +240,17 @@ function decision(result: ResultDTO) {
 function DecidedBanner({ result }: { result: ResultDTO }) {
   const { round } = useRound();
   const { leaders, inRunoff, elected, decided } = decision(result);
-  if (!decided || round.round !== 1 || leaders.length < 2) return null;
+  // 1st round: runoff or outright win. 2nd round: only the win, once the TSE marks it.
+  if (!decided || leaders.length < 2 || (round.round !== 1 && decided !== 'elected')) return null;
   const pair = inRunoff.length >= 2 ? inRunoff : leaders;
   const a = displayName((decided === 'elected' ? (elected ?? leaders[0]) : pair[0])!.ballotName);
   const b = displayName(pair[1]!.ballotName);
   return (
     <div role="status" className="mb-4 rounded-xl border border-live/40 bg-live-soft px-4 py-3">
       <p className="text-[17px] font-semibold text-live">
-        {decided === 'runoff' ? 'Vai ter 2º turno' : `${a} venceu no 1º turno`}
+        {decided === 'runoff'
+          ? 'Vai ter 2º turno'
+          : `${a} venceu ${round.round === 1 ? 'no 1º turno' : 'o 2º turno'}`}
       </p>
       <p className="text-[14px] text-ink-2">
         {decided === 'runoff'
@@ -307,7 +310,7 @@ function EndSummary({ data }: { data: OverviewDTO }) {
                 <p className="text-[12.5px] text-muted">{fmtInt(c.votes)} votos</p>
               </div>
             ))}
-            <span className="col-start-2 row-start-1 mt-5 text-[18px] text-muted" aria-hidden>
+            <span className="col-start-2 row-start-1 mt-4 text-[18px] text-muted" aria-hidden>
               ×
             </span>
           </div>

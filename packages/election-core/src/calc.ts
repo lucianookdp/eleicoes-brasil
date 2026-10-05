@@ -15,6 +15,15 @@ export function countedPct(
   return p.sectionsCountedPct ?? percent(p.sectionsCounted, p.sectionsTotal);
 }
 
+/**
+ * True when a newer file shows clearly fewer ballot boxes counted than we already have (more than
+ * 1 point less): a restarted, misconfigured or stale source, never real progress. Such files are
+ * ignored, so an area never jumps back. Small drops (a section re-totalled) still go through.
+ */
+export function isRegression(previousPct: number | null | undefined, nextPct: number | null | undefined) {
+  return previousPct != null && nextPct != null && nextPct < previousPct - 1;
+}
+
 /** Candidate row stored in snapshots: [candidateKey, votes, percent]. Compact on purpose. */
 export type CompactCandidate = [key: string, votes: number, percent: number | null];
 

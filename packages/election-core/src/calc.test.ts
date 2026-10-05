@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { area, parseAreaKey } from './areas';
-import { candidateDeltas, countedPct, percent, progressDelta, rankCandidates, rankForDisplay } from './calc';
+import {
+  candidateDeltas,
+  countedPct,
+  isRegression,
+  percent,
+  progressDelta,
+  rankCandidates,
+  rankForDisplay,
+} from './calc';
 import { assignColors } from './colors';
 import { emptyProgress } from './domain';
 import { checkProgress } from './quality';
@@ -125,5 +133,19 @@ describe('rankForDisplay', () => {
       { votes: 95, number: '4', voteDestination: 'Anulado' },
     ]);
     expect(r.map((c) => c.number)).toEqual(['2', '3', '1', '4']);
+  });
+});
+
+describe('isRegression', () => {
+  it('flags a file that takes an area clearly back', () => {
+    expect(isRegression(100, 0)).toBe(true);
+    expect(isRegression(87.5, 40)).toBe(true);
+  });
+  it('lets progress, equal files and small re-totalling drops through', () => {
+    expect(isRegression(40, 41)).toBe(false);
+    expect(isRegression(100, 100)).toBe(false);
+    expect(isRegression(100, 99.4)).toBe(false);
+    expect(isRegression(null, 0)).toBe(false);
+    expect(isRegression(50, null)).toBe(false);
   });
 });

@@ -265,3 +265,19 @@ test('STF: every minister with photo, who appointed them, and the open seat', as
   await expect(page.getByText('Vaga aberta', { exact: true })).toBeVisible();
   await expect(page.getByText('Lula', { exact: true }).first()).toBeVisible();
 });
+
+test('runoff over: the winner banner, only once the TSE marks "Eleito"', async ({ page, request }) => {
+  const overview = await (await request.get('http://localhost:4000/api/elections/demo-2/overview')).json();
+  const elected = overview.headline?.candidates.find((c: { status: string | null }) =>
+    /^eleit/i.test(c.status ?? ''),
+  );
+  await page.goto('/eleicao/?e=demo&t=2');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  const banner = page.getByText(/venceu o 2º turno$/);
+  if (!elected) {
+    await expect(banner).toHaveCount(0);
+    return;
+  }
+  await expect(banner).toContainText(new RegExp(elected.ballotName, 'i'));
+  await expect(page.getByText(/Aguardando o TSE/)).toHaveCount(0);
+});

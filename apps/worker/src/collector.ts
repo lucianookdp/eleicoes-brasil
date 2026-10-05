@@ -66,6 +66,8 @@ export class Collector {
   private cityUpdates = new Map<string, number>();
   private backgroundErrors = 0;
   private cycles = 0;
+  /** The count reached 100%: from then on the final marks ("Eleito") are what is left to arrive. */
+  private countFinished = false;
   private stats: CycleStats = emptyStats();
   private stopped = false;
 
@@ -148,6 +150,7 @@ export class Collector {
             if (res.data.progress.status !== 'not-started') {
               await this.store.setRoundStatus(res.data.progress.status === 'finished' ? 'final' : 'live');
             }
+            this.countFinished = res.data.progress.status === 'finished';
           }
           if (this.markSeen(code, 'br', res.data.progress)) this.queueArea(code, area.country());
           for (const s of res.data.states) {
@@ -163,8 +166,11 @@ export class Collector {
       }
 
       // Periodic reconciliation: files are generated in parallel and synced to the CDN at
-      // different moments, so an EA20 may change after its EA14 entry was already seen.
-      if (this.cycles % this.options.reconcileEvery === 1) {
+      // different moments, so an EA20 may change after its EA14 entry was already seen. Once the
+      // count is at 100%, every cycle: the TSE marks the winners ("Eleito") a little after the
+      // last ballot box, without touching the progress files, and that is the news people wait
+      // for. Conditional requests, so an unchanged file costs a 304.
+      if (this.countFinished || this.cycles % this.options.reconcileEvery === 1) {
         for (const code of codes) {
           this.queueArea(code, area.country());
           for (const uf of new Set(config.cities.map((c) => c.state))) this.queueArea(code, area.state(uf));

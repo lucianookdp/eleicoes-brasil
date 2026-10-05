@@ -227,7 +227,7 @@ export function HeadToHead({ result }: { result: ResultDTO }) {
     <div className="pt-2">
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:gap-4">
         {side(a)}
-        <span className="mt-10 text-[22px] font-light text-muted sm:mt-12" aria-hidden>
+        <span className="mt-6 text-[20px] font-light text-muted sm:mt-7" aria-hidden>
           ×
         </span>
         {side(b)}
@@ -292,7 +292,7 @@ export function FacePhoto({
   const [i, setI] = useState(0);
   return (
     <span
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold ${small ? 'size-16 text-[18px]' : 'size-24 text-[26px] sm:size-28'}`}
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold ${small ? 'size-14 text-[16px]' : 'size-[72px] text-[22px] sm:size-20'}`}
       style={{
         background: `color-mix(in srgb, ${c.color} 18%, transparent)`,
         color: c.color,

@@ -1,0 +1,77 @@
+import { createDatabase, electionRounds, runMigrations } from '@eleicoes/database';
+import { findRound } from '@eleicoes/election-core';
+import { createProvider, TseHttpClient } from '@eleicoes/tse-client';
+import { eq } from 'drizzle-orm';
+import pino from 'pino';
+import { describe, expect, it } from 'vitest';
+import { Collector } from '../src/collector';
+import { startDemoServer } from '../src/demo/server';
+import { Store } from '../src/store';
+
+/**
+ * The end of a count, end to end (fictitious TSE → real adapter → collector → Postgres): the TSE
+ * marks the winner ("Eleito") a few seconds after the last ballot box, without touching the
+ * progress files. That mark must arrive within seconds, not at the next 5-minute reconciliation.
+ * Needs TEST_DATABASE_URL (CI provides one).
+ */
+const url = process.env.TEST_DATABASE_URL;
+const suite = url ? describe : describe.skip;
+const PORT = 4912;
+
+suite('collector at the end of the count', () => {
+  it('stores the "Eleito" mark that arrives after 100%', async () => {
+    process.env.DEMO_ROUND = '2';
+    // A 6-second runoff count; the demo marks the winner 10 seconds after it ends.
+    const demo = startDemoServer({ port: PORT, durationMinutes: 0.1, waitSeconds: 0 });
+    await runMigrations(url!);
+    const { db, sql, close } = createDatabase(url!, { max: 4 });
+    const round = findRound('demo-2')!;
+    await db.delete(electionRounds).where(eq(electionRounds.slug, round.slug));
+    const roundId = await Store.ensureRound(db, round, 'DEVELOPMENT', 'demo');
+    const log = pino({ level: 'silent' });
+    const store = new Store(db, sql, roundId, round.slug, 'DEMO', log);
+    const http = new TseHttpClient({
+      requestsPerSecond: 200,
+      concurrency: 8,
+      timeoutMs: 5000,
+      maxRetries: 0,
+    });
+    const provider = createProvider(http, round, {
+      ...round.sources.DEVELOPMENT!,
+      baseUrl: `http://localhost:${PORT}`,
+    });
+    const collector = new Collector(provider, store, log, {
+      mode: 'DEVELOPMENT',
+      collectCityResults: false,
+      cityResultOffices: 'majoritarian',
+      maxResultFetchesPerCycle: 60,
+      // Far away: only the end-of-count rule can bring the mark in time.
+      reconcileEvery: 10_000,
+      cityConcurrency: 4,
+    });
+
+    const winner = async () => {
+      const [row] = await sql<{ status: string | null }[]>`
+        select c->>'status' as status from area_results r
+          join election_rounds e on e.id = r.round_id and e.slug = ${round.slug}
+          cross join jsonb_array_elements(r.result->'candidates') c
+        where r.area_key = 'br' and c->>'status' ~* '^eleit' limit 1`;
+      return row?.status ?? null;
+    };
+    try {
+      const deadline = Date.now() + 30_000;
+      let status: string | null = null;
+      while (!status && Date.now() < deadline) {
+        await collector.runCycle();
+        status = await winner();
+        if (!status) await new Promise((r) => setTimeout(r, 1000));
+      }
+      expect(status).toBe('Eleito');
+    } finally {
+      collector.stop();
+      await demo.close();
+      await close();
+      delete process.env.DEMO_ROUND;
+    }
+  }, 60_000);
+});
