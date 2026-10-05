@@ -287,6 +287,7 @@ test('runoff over: the winner banner, only once the TSE marks "Eleito"', async (
 test('governors: named for what is disputed, and listed low on the runoff home page', async ({
   page,
   isMobile,
+  request,
 }) => {
   await page.goto('/eleicao/?e=demo&t=1');
   const nav = isMobile
@@ -297,6 +298,10 @@ test('governors: named for what is disputed, and listed low on the runoff home p
   ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Governadores no 2º turno' })).toHaveCount(0);
 
+  // The runoff part needs the demo runoff (DEMO_ROUND=2, ELECTION_ROUND=demo-2); CI runs round 1 only.
+  const elections = await (await request.get('http://localhost:4000/api/elections')).json();
+  if (!elections.some((e: { rounds: { slug: string }[] }) => e.rounds.some((r) => r.slug === 'demo-2')))
+    return;
   await page.goto('/eleicao/?e=demo&t=2');
   await expect(nav.getByRole('link', { name: 'Governadores', exact: true })).toBeVisible();
   const section = page.getByRole('region', { name: 'Governadores no 2º turno' });
