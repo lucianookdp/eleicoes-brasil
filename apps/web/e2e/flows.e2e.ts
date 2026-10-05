@@ -293,9 +293,7 @@ test('governors: named for what is disputed, and listed low on the runoff home p
   const nav = isMobile
     ? page.getByRole('navigation', { name: 'Navegação principal' })
     : page.getByRole('navigation', { name: 'Seções' });
-  await expect(
-    nav.getByRole('link', { name: isMobile ? 'Gov. e Senado' : 'Governadores e senadores' }),
-  ).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Gov./Senado' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Governadores no 2º turno' })).toHaveCount(0);
 
   // The runoff part needs the demo runoff (DEMO_ROUND=2, ELECTION_ROUND=demo-2); CI runs round 1 only.

@@ -250,16 +250,21 @@ function DecidedBanner({ result }: { result: ResultDTO }) {
   const a = displayName((decided === 'elected' ? (elected ?? leaders[0]) : pair[0])!.ballotName);
   const b = displayName(pair[1]!.ballotName);
   return (
-    <div role="status" className="mb-4 rounded-xl border border-live/40 bg-live-soft px-4 py-3">
-      <p className="text-[17px] font-semibold text-live">
+    // A headline, part of the page (like a news site's lead), not a notification-style box.
+    <div role="status" className="mb-5 border-b border-line pb-4">
+      <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-live">
+        <span className="size-1.5 rounded-full bg-live" aria-hidden />
+        Resultado definido pelo TSE
+      </p>
+      <p className="mt-1 text-balance text-[22px] font-semibold leading-tight tracking-tight sm:text-[26px]">
         {decided === 'runoff'
           ? 'Vai ter 2º turno'
           : `${a} venceu ${round.round === 1 ? 'no 1º turno' : 'o 2º turno'}`}
       </p>
-      <p className="text-[14px] text-ink-2">
+      <p className="mt-1 text-[15px] text-ink-2">
         {decided === 'runoff'
           ? `${a} e ${b} disputam a ${result.office.name === 'Presidente' ? 'Presidência' : `vaga de ${result.office.name}`} no dia ${runoffDate(round.year)}.`
-          : `Resultado definido pelo TSE para ${result.office.name}.`}
+          : `Eleição para ${result.office.name}.`}
       </p>
     </div>
   );

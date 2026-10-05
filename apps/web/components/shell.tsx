@@ -4,7 +4,7 @@ import type { ApiMeta, ElectionSummary, RoundSummary } from '@eleicoes/election-
 import { formatClock } from '@eleicoes/election-core';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { countVisit } from '@/lib/api';
 import { useOverview } from '@/lib/queries';
 import { RealtimeProvider, useRealtime } from '@/lib/realtime';
@@ -150,7 +150,7 @@ function navText(n: (typeof NAV)[number], round: number) {
   if (n.path !== '/offices') return n;
   return round === 2
     ? { label: 'Governadores', short: 'Governadores' }
-    : { label: 'Governadores e senadores', short: 'Gov. e Senado' };
+    : { label: 'Governadores e senadores', short: 'Gov./Senado' };
 }
 
 /** Hides sections switched off by feature flags (ENABLE_* on the API). */
@@ -167,6 +167,11 @@ function useActive() {
   return (path: string) => SECTION_ROUTES[path]?.replace(/\/$/, '') === pathname;
 }
 
+/**
+ * One clear bar, like the big news sites' election pages. Computers: brand, the 1st/2nd round as
+ * two buttons, the main sections, "Mais" for the rest, search, status, theme. Phones: brand and
+ * status on top, the round buttons right under it (sections live in the bottom bar).
+ */
 function Header({ onSearch }: { onSearch: () => void }) {
   const { round, href } = useRound();
   const nav = useNav();
@@ -176,82 +181,187 @@ function Header({ onSearch }: { onSearch: () => void }) {
       key={n.path}
       href={href(n.path)}
       aria-current={active(n.path) ? 'page' : undefined}
-      className={`flex h-11 items-center gap-2 whitespace-nowrap border-b-2 border-transparent px-3 text-[15px] hover:text-ink aria-[current=page]:border-live aria-[current=page]:font-medium aria-[current=page]:text-ink ${n.main ? 'text-ink-2' : 'text-muted'}`}
+      className="flex h-16 items-center whitespace-nowrap border-b-2 border-transparent px-2.5 text-[15px] text-ink-2 hover:text-ink aria-[current=page]:border-live aria-[current=page]:font-medium aria-[current=page]:text-ink"
     >
-      <n.icon width={18} height={18} />
-      {navText(n, round.round).label}
+      {/* Short names until there is room for the full ones. */}
+      <span className="2xl:hidden">{navText(n, round.round).short}</span>
+      <span className="hidden 2xl:inline">{navText(n, round.round).label}</span>
     </Link>
   );
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-ground/90 backdrop-blur supports-[backdrop-filter]:bg-ground/75">
-      <div className="mx-auto flex h-14 max-w-[1320px] items-center gap-2 px-4 sm:gap-3 sm:px-6 lg:h-16">
+      <div className="mx-auto flex h-14 max-w-[1320px] items-center gap-3 px-4 sm:px-6 xl:h-16">
         <Link
           href={href()}
-          className="flex items-center gap-2 font-semibold tracking-tight"
+          className="flex shrink-0 items-center gap-2 font-semibold tracking-tight"
           aria-label="Eleições Brasil — resultados"
         >
           <Logo />
-          <span className="hidden whitespace-nowrap text-[16px] sm:inline md:hidden lg:inline">
-            Eleições Brasil
-          </span>
+          <span className="whitespace-nowrap text-[16px]">Eleições Brasil</span>
         </Link>
-        <ElectionSwitcher />
-        {/* Looks like a search field on purpose: the first thing most people want to do. */}
-        <button
-          type="button"
-          onClick={onSearch}
-          className="mx-auto hidden h-11 w-full min-w-0 max-w-md items-center gap-2.5 rounded-xl border border-line-strong bg-surface px-4 text-left text-[15px] text-muted hover:border-live hover:text-ink-2 md:flex"
-        >
-          <IconSearch className="shrink-0" />
-          <span className="truncate">Buscar cidade, estado ou candidato</span>
-        </button>
-        <div className="ml-auto flex items-center gap-2 md:ml-0">
+        <div className="hidden xl:block">
+          <RoundSwitch />
+        </div>
+        <nav aria-label="Seções" className="ml-1 hidden shrink-0 items-center xl:flex">
+          {nav.filter((n) => n.main).map(link)}
+          <MoreMenu items={nav.filter((n) => !n.main)} />
+        </nav>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={onSearch}
+            aria-label="Buscar"
+            className="hidden h-10 items-center gap-2 rounded-full border border-line px-3.5 text-[14px] text-muted hover:border-line-strong hover:text-ink md:flex"
+          >
+            <IconSearch />
+            <span className="hidden 2xl:inline">Buscar</span>
+          </button>
           <LiveStatus key={round.slug} />
           <ThemeToggle className="flex" />
         </div>
       </div>
-      <nav aria-label="Seções" className="hidden border-t border-line/60 xl:block">
-        <div className="mx-auto flex max-w-[1320px] items-center justify-between gap-2 px-3 sm:px-4">
-          <div className="flex items-center">{nav.filter((n) => n.main).map(link)}</div>
-          <div className="flex items-center">{nav.filter((n) => !n.main).map(link)}</div>
-        </div>
-      </nav>
+      {/* Phones and tablets: the round buttons get their own full-width row. */}
+      <div className="border-t border-line/60 px-4 py-2 sm:px-6 xl:hidden">
+        <RoundSwitch wide />
+      </div>
     </header>
   );
 }
 
-function ElectionSwitcher() {
+/**
+ * 1st round / 2nd round as two buttons (keeps the current section). With a single round so far, a
+ * plain label. The demo (local only) adds a small election picker.
+ */
+function RoundSwitch({ wide = false }: { wide?: boolean }) {
   const { round, elections } = useRound();
   const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const election = elections.find((e) => e.slug === round.electionSlug);
+  const rounds = election?.rounds ?? [round];
+  const go = (electionSlug: string, turno: number) => {
+    const next = new URLSearchParams(params.toString());
+    next.set('e', electionSlug);
+    next.set('t', String(turno));
+    router.push(`${pathname}?${next.toString()}`);
+  };
+  const date = (d: string) => SHORT_DATE.format(new Date(`${d}T12:00:00Z`));
+  const others = elections.filter((e) => e.slug !== round.electionSlug);
   return (
-    <label className="relative">
-      <span className="sr-only">Eleição e turno</span>
-      <select
-        value={round.slug}
-        onChange={(e) => {
-          const r = elections.flatMap((x) => x.rounds).find((x) => x.slug === e.target.value);
-          if (r) router.push(electionHref(r));
-        }}
-        className="h-9 max-w-[44vw] cursor-pointer appearance-none truncate rounded-md border border-line bg-surface py-0 pl-2.5 pr-7 text-[13px] font-medium hover:border-line-strong"
-      >
-        {elections.map((e) => (
-          <optgroup key={e.slug} label={e.name}>
-            {e.rounds.map((r) => (
-              <option key={r.slug} value={r.slug}>
-                {e.demo ? 'Demonstração' : e.slug.startsWith('replay-') ? 'Reprodução' : e.year} · {r.round}º
-                turno
+    <div className={`flex items-center gap-2 ${wide ? 'w-full' : ''}`}>
+      {others.length > 0 && (
+        <label className="relative shrink-0">
+          <span className="sr-only">Eleição</span>
+          <select
+            value={round.electionSlug}
+            onChange={(e) => go(e.target.value, 1)}
+            className="h-9 cursor-pointer appearance-none rounded-full border border-line bg-surface py-0 pl-3 pr-7 text-[13px] font-medium"
+          >
+            {elections.map((e) => (
+              <option key={e.slug} value={e.slug}>
+                {e.demo ? 'Demonstração' : e.year}
               </option>
             ))}
-          </optgroup>
-        ))}
-      </select>
-      <span
-        aria-hidden
-        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted"
+          </select>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-muted"
+          >
+            ▾
+          </span>
+        </label>
+      )}
+      <div
+        role="radiogroup"
+        aria-label="Turno"
+        className={`flex rounded-full border border-line bg-surface p-0.5 ${wide ? 'flex-1' : ''}`}
       >
-        ▾
-      </span>
-    </label>
+        {rounds.map((r) => (
+          <button
+            key={r.slug}
+            type="button"
+            role="radio"
+            aria-checked={r.slug === round.slug}
+            onClick={() => r.slug !== round.slug && go(r.electionSlug, r.round)}
+            className={`h-9 whitespace-nowrap rounded-full px-3.5 text-[14px] text-ink-2 aria-checked:bg-surface-2 aria-checked:font-semibold aria-checked:text-ink ${wide ? 'flex-1' : ''}`}
+          >
+            {r.round}º turno
+            <span
+              className={`ml-1.5 text-[12.5px] font-normal text-muted ${wide ? '' : 'hidden 2xl:inline'}`}
+            >
+              {date(r.date)}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const SHORT_DATE = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+/** "Mais ▾": the sections people use less, without a second row. */
+function MoreMenu({ items }: { items: (typeof NAV)[number][] }) {
+  const { round, href } = useRound();
+  const active = useActive();
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  // Closes on any tap or click outside, and on Esc.
+  useEffect(() => {
+    if (!open) return;
+    const outside = (e: PointerEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+  const current = items.some((n) => active(n.path));
+  return (
+    <div ref={box} className="relative">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className={`flex h-16 items-center gap-1 whitespace-nowrap border-b-2 px-2.5 text-[15px] hover:text-ink ${current ? 'border-live font-medium text-ink' : 'border-transparent text-ink-2'}`}
+      >
+        Mais{' '}
+        <span aria-hidden className="text-[11px]">
+          ▾
+        </span>
+      </button>
+      {open && (
+        <ul className="absolute left-0 top-full z-40 mt-1 min-w-56 rounded-xl border border-line-strong bg-surface p-1.5 shadow-xl">
+          {items.map((n) => (
+            <li key={n.path}>
+              <Link
+                href={href(n.path)}
+                onClick={() => setOpen(false)}
+                aria-current={active(n.path) ? 'page' : undefined}
+                className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-[14.5px] text-ink-2 hover:bg-surface-2 hover:text-ink aria-[current=page]:font-medium aria-[current=page]:text-ink"
+              >
+                <n.icon width={17} height={17} />
+                {navText(n, round.round).label}
+              </Link>
+            </li>
+          ))}
+          <li>
+            <Link
+              href={href('/benches', { casa: 'stf' })}
+              onClick={() => setOpen(false)}
+              className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-[14.5px] text-ink-2 hover:bg-surface-2 hover:text-ink"
+            >
+              <IconCourt width={17} height={17} />
+              STF
+            </Link>
+          </li>
+        </ul>
+      )}
+    </div>
   );
 }
 
