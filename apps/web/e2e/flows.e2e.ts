@@ -148,3 +148,14 @@ test('during the count: where the most votes are still to be counted', async ({ 
   await expect(list.getByRole('listitem')).toHaveCount(5);
   await expect(list.getByText(/eleitores · [\d.]+ urnas/).first()).toBeVisible();
 });
+
+test('governors and senators of every state on one screen', async ({ page }) => {
+  await page.goto('/eleicao/cargos/?e=demo&t=1');
+  await expect(page.getByRole('heading', { level: 1, name: 'Governadores e senadores' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /^Acre/ })).toBeVisible();
+  await page.getByRole('radio', { name: 'Senador' }).click();
+  await expect(page).toHaveURL(/cargo=senador/);
+  await page.getByRole('link', { name: /^São Paulo/ }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'São Paulo' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Senador' })).toHaveAttribute('aria-selected', 'true');
+});

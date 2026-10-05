@@ -193,6 +193,13 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
     });
   });
 
+  // Governor or senator in every state at once (one request for the whole overview screen).
+  app.get('/api/elections/:id/offices/:office/states', async (req, reply) => {
+    const p = roundParams.extend({ office: slug }).parse(req.params);
+    live(reply);
+    return send(reply, p.id, `office-states:${p.office}`, () => queries.officeStates(p.id, p.office));
+  });
+
   app.get('/api/elections/:id/states/:uf/cities', async (req, reply) => {
     const p = stateParams.parse(req.params);
     const q = z

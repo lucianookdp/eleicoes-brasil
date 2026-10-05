@@ -113,6 +113,12 @@ export interface ResultDTO {
   provenance: ProvenanceDTO | null;
 }
 
+/** One state-level office (governor, senator) in every state, top candidates only. */
+export interface OfficeStatesDTO {
+  office: OfficeInfo;
+  results: ResultDTO[];
+}
+
 export interface LeaderDTO {
   name: string;
   party: string;

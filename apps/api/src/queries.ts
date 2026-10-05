@@ -17,6 +17,7 @@ import {
   type IngestionStatus,
   type LeaderDTO,
   type OfficeInfo,
+  type OfficeStatesDTO,
   type OperationsDTO,
   type OverviewDTO,
   type Paginated,
@@ -318,6 +319,24 @@ export class Queries {
       select name from cities where provider = ${provider} and state_code = ${a.state} and provider_id = ${a.cityCode}`;
     const city = c ? titleCase(c.name) : a.cityCode!;
     return a.type === 'zone' ? `${city} — Zona ${a.zone}` : city;
+  }
+
+  /** A state office (governor, senator) across all states it is disputed in, top candidates. */
+  async officeStates(slug: string, officeSlug: string): Promise<OfficeStatesDTO> {
+    const round = await this.round(slug);
+    const office = round.offices.find(
+      (o) => o.slug === officeSlug && o.scope === 'state' && o.kind === 'majoritarian',
+    );
+    if (!office) throw new NotFoundError(`office "${officeSlug}" is not a state office here`);
+    const keys = DOMESTIC_STATES.filter((s) => !office.states || office.states.includes(s.code)).map((s) =>
+      s.code.toLowerCase(),
+    );
+    const rows = await this.resultRows(round.id, [office.id], keys);
+    const results = await Promise.all(
+      rows.map((row) => this.toResultDTO(round, office, row, stateName(row.areaKey.toUpperCase()), 3)),
+    );
+    results.sort((a, b) => a.areaName.localeCompare(b.areaName, 'pt-BR'));
+    return { office: publicOffice(office), results };
   }
 
   async result(

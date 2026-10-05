@@ -5,6 +5,7 @@ import type {
   CityDetailDTO,
   CityRowDTO,
   CompareDTO,
+  OfficeStatesDTO,
   OperationsDTO,
   OverviewDTO,
   Paginated,
@@ -98,6 +99,14 @@ export const useTimelineAt = (round: string, at: string | null) =>
     enabled: !!at,
     placeholderData: keepPreviousData,
     staleTime: Number.POSITIVE_INFINITY,
+  });
+
+export const useOfficeStates = (round: string, office: string | undefined) =>
+  useQuery({
+    queryKey: [round, 'office-states', office],
+    queryFn: () => api<OfficeStatesDTO>(`${base(round)}/offices/${office}/states`),
+    enabled: !!office,
+    placeholderData: keepPreviousData,
   });
 
 export const useSearch = (round: string, q: string) =>

@@ -169,6 +169,8 @@ suite('API (integration)', () => {
     expect((await built.app.inject('/api/elections/test-1/states/sp/cities/123')).statusCode).toBe(400);
     expect((await built.app.inject('/api/elections/test-1/search?q=%27;drop')).statusCode).toBe(200);
     expect((await built.app.inject('/api/elections/missing/overview')).statusCode).toBe(404);
+    // Office across states: only state-level majoritarian offices (governor, senator).
+    expect((await built.app.inject('/api/elections/test-1/offices/presidente/states')).statusCode).toBe(404);
     expect((await built.app.inject('/api/nothing')).statusCode).toBe(404);
   });
 

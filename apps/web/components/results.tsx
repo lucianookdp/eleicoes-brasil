@@ -53,7 +53,7 @@ export function RaceBar({ result, top = 6 }: { result: ResultDTO; top?: number }
   );
 }
 
-function StatusPill({ c, result, rank }: { c: CandidateDTO; result: ResultDTO; rank: number }) {
+export function StatusPill({ c, result, rank }: { c: CandidateDTO; result: ResultDTO; rank: number }) {
   let text: string | null = c.status || null;
   if (!text && c.elected && (result.final || result.mathematicallyDecided)) {
     text = result.mathematicallyDecided === 'runoff' ? '2º turno' : 'Eleito';

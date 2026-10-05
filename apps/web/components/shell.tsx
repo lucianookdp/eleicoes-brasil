@@ -16,6 +16,7 @@ import {
   IconMoon,
   IconMore,
   IconOverview,
+  IconPerson,
   IconPulse,
   IconSearch,
   IconStar,
@@ -117,6 +118,7 @@ const NAV = [
   { path: '/states', label: 'Estados', icon: IconStates },
   { path: '/operations', label: 'Bastidores', icon: IconPulse },
   { path: '/historico', label: 'Linha do tempo', icon: IconHistory },
+  { path: '/offices', label: 'Governadores', icon: IconPerson },
   { path: '/compare', label: 'Comparar', icon: IconCompare, flag: 'comparison' as const },
 ];
 
@@ -349,6 +351,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             </div>
             <ul className="grid gap-1">
               {[
+                { to: href('/offices'), label: 'Governadores e senadores', icon: IconPerson },
                 { to: href('/historico'), label: 'Linha do tempo', icon: IconHistory },
                 ...(meta?.features.comparison === false
                   ? []
