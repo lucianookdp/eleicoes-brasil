@@ -420,7 +420,7 @@ export class TSEAdapter2026 implements ElectionProvider {
               number: pad(s.ns, 4),
               mainSection: s.nsp != null ? pad(String(s.nsp), 4) : null,
               aggregated: (s.nsa ?? []).map((x) => pad(x, 4)),
-              receivedAt: brasiliaToUtc(s.da, s.ha),
+              receivedAt: tseTime(s.da, s.ha),
             })),
           ),
         })),
@@ -471,7 +471,7 @@ export class TSEAdapter2026 implements ElectionProvider {
         sourceFile: url.slice(this.source.baseUrl.length),
         sourceId: raw.idg == null ? null : String(raw.idg),
         retrievedAt: new Date().toISOString(),
-        sourceGeneratedAt: brasiliaToUtc(raw.dg, raw.hg),
+        sourceGeneratedAt: tseTime(raw.dg, raw.hg),
         etag: res.etag,
         checksum: res.checksum,
       },
@@ -492,6 +492,17 @@ export class TSEAdapter2026 implements ElectionProvider {
   }
 }
 
+/**
+ * A TSE date/time as UTC, never later than now: the TSE has stamped totals minutes into the
+ * future, which made "updated at" read ahead of the clock.
+ */
+export function tseTime(date: string | null | undefined, time: string | null | undefined): string | null {
+  const iso = brasiliaToUtc(date, time);
+  if (!iso) return null;
+  const now = new Date().toISOString();
+  return iso > now ? now : iso;
+}
+
 function toProgress(entry: Pick<ProgressEntry, 'and' | 'dt' | 'ht' | 's' | 'e'>): CountingProgress {
   const s = entry.s ?? {};
   const e = entry.e ?? {};
@@ -508,7 +519,7 @@ function toProgress(entry: Pick<ProgressEntry, 'and' | 'dt' | 'ht' | 's' | 'e'>)
     turnoutPct: toDec(e.pcn) ?? toDec(e.pc),
     abstention: toInt(e.a),
     abstentionPct: toDec(e.pan) ?? toDec(e.pa),
-    totalizedAt: brasiliaToUtc(entry.dt, entry.ht),
+    totalizedAt: tseTime(entry.dt, entry.ht),
   };
 }
 

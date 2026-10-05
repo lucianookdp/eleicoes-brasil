@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { area, ProviderNotFoundError, ProviderPayloadError } from '@eleicoes/election-core';
 import { describe, expect, it } from 'vitest';
-import { TSEAdapter2026 } from '../src/adapter-2026';
+import { TSEAdapter2026, tseTime } from '../src/adapter-2026';
 import { TseHttpClient } from '../src/http';
 import { toDec, toInt } from '../src/schemas';
 
@@ -235,5 +235,24 @@ describe('picking the runoff in the official configuration', () => {
     const attempt = official(2, '2026-10-25').getElectionConfig();
     await expect(attempt).rejects.toBeInstanceOf(ProviderNotFoundError);
     await expect(attempt).rejects.toThrow('no pleito for round 2 of 2026');
+  });
+});
+
+describe('tseTime', () => {
+  it('converts Brasília time to UTC', () => {
+    expect(tseTime('04/10/2026', '20:05:00')).toBe('2026-10-04T23:05:00.000Z');
+  });
+
+  it('never returns a time in the future', () => {
+    const before = Date.now();
+    const at = tseTime('31/12/2099', '23:59:59');
+    expect(at).not.toBeNull();
+    expect(Date.parse(at!)).toBeGreaterThanOrEqual(before);
+    expect(Date.parse(at!)).toBeLessThanOrEqual(Date.now());
+  });
+
+  it('keeps missing or malformed stamps as null', () => {
+    expect(tseTime(null, '10:00:00')).toBeNull();
+    expect(tseTime('2026-10-04', '10:00:00')).toBeNull();
   });
 });
