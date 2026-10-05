@@ -252,3 +252,16 @@ test("cities: who won each city, and a candidate's votes city by city", async ({
   const n = votes.slice(0, 5).map((v) => Number(v.replace(/\D/g, '')));
   expect(n).toEqual([...n].sort((a, b) => b - a));
 });
+
+test('STF: every minister with photo, who appointed them, and the open seat', async ({ page }) => {
+  await page.goto('/stf/');
+  await expect(page.getByRole('heading', { level: 1, name: 'Supremo Tribunal Federal' })).toBeVisible();
+  const photos = page.getByRole('img', { name: /^Foto de / });
+  await expect(photos).toHaveCount(10);
+  for (const img of await photos.all())
+    await expect
+      .poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth))
+      .toBeGreaterThan(0);
+  await expect(page.getByText('Vaga aberta', { exact: true })).toBeVisible();
+  await expect(page.getByText('Lula', { exact: true }).first()).toBeVisible();
+});

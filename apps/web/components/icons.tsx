@@ -127,3 +127,9 @@ export const IconSeats = (p: SVGProps<SVGSVGElement>) => (
     <path d="M7.5 19a4.5 4.5 0 0 1 9 0" />
   </Icon>
 );
+export const IconCourt = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M3 9h18L12 4 3 9Z" />
+    <path d="M5 9v9M9.5 9v9M14.5 9v9M19 9v9M3 20h18" />
+  </Icon>
+);

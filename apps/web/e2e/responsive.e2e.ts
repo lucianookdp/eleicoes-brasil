@@ -15,6 +15,7 @@ const PAGES = [
   '/eleicao/historico/',
   '/eleicao/bastidores/',
   '/eleicao/comparar/',
+  '/stf/',
 ];
 const WIDTHS = [320, 375, 430, 768, 1024, 1280, 1440];
 

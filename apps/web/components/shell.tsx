@@ -12,6 +12,7 @@ import { electionHref, pickRound, SECTION_ROUTES } from '@/lib/rounds';
 import {
   IconClose,
   IconCompare,
+  IconCourt,
   IconHistory,
   IconInfo,
   IconMoon,
@@ -142,6 +143,8 @@ const NAV = [
     flag: 'comparison' as const,
   },
   { path: '/operations', label: 'Bastidores', short: 'Bastidores', icon: IconPulse, main: false },
+  // Not about this election: a fixed page outside the election's routes.
+  { path: '/stf', label: 'STF', short: 'STF', icon: IconCourt, main: false, plain: true },
 ];
 
 /** Hides sections switched off by feature flags (ENABLE_* on the API). */
@@ -162,11 +165,12 @@ function Header({ onSearch }: { onSearch: () => void }) {
   const { round, href } = useRound();
   const nav = useNav();
   const active = useActive();
+  const pathname = usePathname().replace(/\/$/, '');
   const link = (n: (typeof NAV)[number]) => (
     <Link
       key={n.path}
-      href={href(n.path)}
-      aria-current={active(n.path) ? 'page' : undefined}
+      href={'plain' in n ? n.path : href(n.path)}
+      aria-current={('plain' in n ? pathname === n.path : active(n.path)) ? 'page' : undefined}
       className={`flex h-11 items-center gap-2 whitespace-nowrap border-b-2 border-transparent px-3 text-[15px] hover:text-ink aria-[current=page]:border-live aria-[current=page]:font-medium aria-[current=page]:text-ink ${n.main ? 'text-ink-2' : 'text-muted'}`}
     >
       <n.icon width={18} height={18} />
@@ -403,6 +407,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
                   ? []
                   : [{ to: href('/compare'), label: 'Comparar estados', icon: IconCompare }]),
                 { to: href('/operations'), label: 'Bastidores da coleta', icon: IconPulse },
+                { to: '/stf', label: 'STF: quem são os ministros', icon: IconCourt },
                 { to: `${href()}#favoritos`, label: 'Favoritos', icon: IconStar },
                 { to: '/como-funciona', label: 'Como funciona', icon: IconInfo },
                 { to: '/sobre', label: 'Sobre os dados', icon: IconInfo },
