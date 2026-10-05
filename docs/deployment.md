@@ -37,9 +37,24 @@ exportação estática do Next servida por nginx. O worker aplica as migrações
 4. Coloque um CDN à frente da API (Cloudflare, por exemplo). URLs com `?v=` já saem com
    `s-maxage=3600` quando seguras; as demais com 3 s. O caminho `/api/realtime/*` deve passar
    sem buffer e sem cache (`X-Accel-Buffering: no` já é enviado). Uma instância aguenta
-   ~30 mil req/s de respostas em cache e milhares de conexões ao vivo; com CDN, a origem recebe
+   ~30 mil req/s de respostas em cache (medido em 05/10: 24–38 mil/s; busca sem cache ~3 mil/s com os índices de trigramas) e milhares de conexões ao vivo; com CDN, a origem recebe
    poucas requisições por atualização.
 5. Acompanhe a página **Bastidores** (`/eleicao/bastidores/?e=2026&t=1`).
+
+## 2º turno (25/10)
+
+1. Assim que o TSE publicar o 2º turno no `ele-c.json` (um pleito de 25/10/2026 com `t: "2"`):
+   `ELECTION_ROUND=2026-2` no worker (`railway variable set … --skip-deploys` e depois
+   `railway up --service worker`). Antes disso o worker só espera ("waiting"), sem erro.
+2. O 1º turno fica guardado, encerrado; os links com `t=1` continuam funcionando, e as Bancadas
+   sempre leem o 1º turno.
+3. O site abre no 2º turno a partir da meia-noite (Brasília) do dia 25, mesmo antes da apuração.
+4. Depois de 100%, o worker reconfere Brasil e estados a cada ciclo por 30 minutos: é quando o
+   TSE marca o "Eleito" (aparece o aviso de vencedor).
+5. Arquivos que "voltam no tempo" (mais de 1 ponto a menos de urnas apuradas) são ignorados e
+   registrados no log como `going back ignored`.
+6. Ensaio completo com dados fictícios: `DEMO_EMBEDDED=true ELECTION_ROUND=demo-2 DEMO_ROUND=2
+   DEMO_DURATION_MINUTES=3` no worker local.
 
 ## Postgres local sem Docker
 
