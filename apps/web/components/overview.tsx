@@ -274,8 +274,14 @@ function EndSummary({ data }: { data: OverviewDTO }) {
       <p className="text-[13px] font-medium text-muted">Apuração concluída · {h.office.name}</p>
       {a && b && gap != null && (
         <p className="mt-1 text-[16px] font-semibold">
-          <span style={{ color: a.color }}>{displayName(a.ballotName)}</span> {fmtPct(a.percent)} ×{' '}
-          <span style={{ color: b.color }}>{displayName(b.ballotName)}</span> {fmtPct(b.percent)}
+          {/* Each name stays with its percentage; on a narrow phone the line breaks at the "×". */}
+          <span className="whitespace-nowrap">
+            <span style={{ color: a.color }}>{displayName(a.ballotName)}</span> {fmtPct(a.percent)}
+          </span>{' '}
+          ×{' '}
+          <span className="whitespace-nowrap">
+            <span style={{ color: b.color }}>{displayName(b.ballotName)}</span> {fmtPct(b.percent)}
+          </span>
           <span className="block text-[13.5px] font-normal text-ink-2">Diferença de {fmtInt(gap)} votos</span>
         </p>
       )}
