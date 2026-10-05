@@ -206,7 +206,7 @@ describe('TSEAdapter2026.getResult', () => {
 });
 
 describe('picking the runoff in the official configuration', () => {
-  const official = (round: number, date: string) => {
+  const official = (round: 1 | 2, date: string) => {
     const tse = fakeTse({
       '/oficial/comum/config/ele-c.json': fixture('ele-c-oficial-2026.json'),
       '/oficial/ele2026/6257/config/mun-e006257-cm.json': fixture('mun-cm.json'),
