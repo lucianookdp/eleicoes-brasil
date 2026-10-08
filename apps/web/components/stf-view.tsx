@@ -214,7 +214,7 @@ function MinisterRow({ m }: { m: Minister }) {
             </span>
           )}
         </p>
-        <p className="truncate text-[12.5px] text-muted">
+        <p className="text-[12.5px] leading-snug text-muted">
           Indicação de <span className="text-ink-2">{m.appointedBy}</span> · desde {sinceYear(m)}
         </p>
       </div>

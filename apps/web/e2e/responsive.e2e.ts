@@ -17,6 +17,9 @@ const PAGES = [
   '/eleicao/comparar/',
   '/eleicao/cargos/?cargo=stf',
   '/polymarket/',
+  '/como-funciona/',
+  '/sobre/',
+  '/pagina-que-nao-existe/',
 ];
 const WIDTHS = [320, 375, 430, 768, 1024, 1280, 1440];
 
