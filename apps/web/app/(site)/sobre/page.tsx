@@ -84,7 +84,7 @@ const SECTIONS: { title: string; icon: ReactNode; body: string[] }[] = [
     icon: <IconStates />,
     body: [
       'Fotos dos candidatos: divulgadas pelo TSE junto com os resultados. Baixamos cada foto uma vez e a exibimos a partir dos nossos servidores.',
-      'Desenho do mapa: “Map of Brazil”, de Victor Cazanave (svg-maps), licença CC BY 4.0. O código-fonte do site é aberto e está no GitHub.',
+      'Desenho do mapa: “Map of Brazil”, de Victor Cazanave (svg-maps), licença CC BY 4.0. O código-fonte está no GitHub apenas para consulta, com todos os direitos reservados.',
     ],
   },
 ];

@@ -7,7 +7,7 @@ celular, neutro e sem previsões.
 
 [![CI](https://github.com/lucianookdp/eleicoes-brasil/actions/workflows/ci.yml/badge.svg)](https://github.com/lucianookdp/eleicoes-brasil/actions/workflows/ci.yml)
 [![Site no ar](https://github.com/lucianookdp/eleicoes-brasil/actions/workflows/health.yml/badge.svg)](https://github.com/lucianookdp/eleicoes-brasil/actions/workflows/health.yml)
-[![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-green)](LICENSE)
+[![Todos os direitos reservados](https://img.shields.io/badge/licen%C3%A7a-todos%20os%20direitos%20reservados-lightgrey)](LICENSE)
 
 <p>
   <img src="docs/screenshots/home-desktop.png" alt="Página inicial no computador: confronto do 2º turno, comparecimento e mapa por estado" width="100%">
@@ -129,7 +129,8 @@ Mais detalhes em [docs/architecture.md](docs/architecture.md) e
 
 ## Rodar localmente
 
-Requer Node.js 22+ e pnpm.
+Instruções para o autor e para colaboradores autorizados (veja [Licença](#licença)). Requer
+Node.js 22+ e pnpm.
 
 ```bash
 pnpm install
@@ -176,4 +177,8 @@ docs/        arquitetura, integração com o TSE, deploy, nova eleição
 
 ## Licença
 
-[MIT](LICENSE) · Feito por [lucianookdp](https://lucianookdp.dev)
+Todos os direitos reservados. O código está público apenas para consulta: copiar, reutilizar ou
+publicar este projeto, no todo ou em parte, exige autorização prévia por escrito. Veja
+[LICENSE](LICENSE).
+
+Feito por [lucianookdp](https://lucianookdp.dev)
