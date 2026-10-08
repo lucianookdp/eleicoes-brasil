@@ -180,7 +180,7 @@ function useMoreGroups() {
 }
 
 /**
- * Logo and name, with the author's credit as a small second line under the name: seen on every
+ * Logo and name, with the author's credit ("by lucianookdp") as a small second line under the name: seen on every
  * page, but taking no room of its own (the header is the same height with or without it).
  */
 function Brand({ to }: { to: string }) {
@@ -203,7 +203,7 @@ function Brand({ to }: { to: string }) {
           rel="noopener"
           className="mt-[3px] flex items-center gap-1 whitespace-nowrap text-[11px] text-muted hover:text-ink"
         >
-          por <AuthorLogo className="text-[11.5px] font-medium text-ink-2" />
+          by <AuthorLogo className="text-[11.5px] font-medium text-ink-2" />
         </a>
       </div>
     </div>
