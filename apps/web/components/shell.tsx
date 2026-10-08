@@ -140,7 +140,7 @@ function useActive() {
 
 type MoreItem = { to: string; label: string; icon: typeof IconInfo; path?: string; hint?: string };
 
-/** What "Mais" holds: the other sections as tiles, then the pages about the site as a list. */
+/** What "Mais" holds, by importance: the four most used as big tiles, then a list. */
 function useMoreItems() {
   const { href, meta } = useRound();
   const tiles: MoreItem[] = [
@@ -151,6 +151,7 @@ function useMoreItems() {
       hint: 'Cadeiras de cada partido no Congresso',
       icon: IconSeats,
     },
+    { to: `${href()}#favoritos`, label: 'Favoritos', hint: 'Seus locais salvos', icon: IconStar },
     ...(meta?.features.comparison === false
       ? []
       : [
@@ -169,14 +170,13 @@ function useMoreItems() {
       hint: 'A apuração passo a passo',
       icon: IconHistory,
     },
-    { to: `${href()}#favoritos`, label: 'Favoritos', hint: 'Seus locais salvos', icon: IconStar },
   ];
+  // Most used first, behind-the-scenes last (sharing the site leads the list, see MoreContent).
   const links: MoreItem[] = [
+    { to: href('/tv'), path: '/tv', label: 'Modo telão', icon: IconTv },
     { to: '/como-funciona', label: 'Como funciona', icon: IconHelp },
     { to: '/sobre', label: 'Sobre os dados', icon: IconData },
     { to: href('/operations'), path: '/operations', label: 'Bastidores da coleta', icon: IconPulse },
-    // Last and low-key: a tool for TVs and streams, not a place to start.
-    { to: href('/tv'), path: '/tv', label: 'Modo telão', icon: IconTv },
   ];
   return { tiles, links };
 }
@@ -209,6 +209,9 @@ function MoreContent({ onPick }: { onPick: () => void }) {
         ))}
       </ul>
       <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line">
+        <li>
+          <ShareSiteItem />
+        </li>
         {links.map((l) => (
           <li key={l.label}>
             <Link
@@ -223,9 +226,6 @@ function MoreContent({ onPick }: { onPick: () => void }) {
             </Link>
           </li>
         ))}
-        <li>
-          <ShareSiteItem />
-        </li>
       </ul>
     </div>
   );
