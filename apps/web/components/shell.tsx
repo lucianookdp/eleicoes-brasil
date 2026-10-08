@@ -403,7 +403,8 @@ function LiveStatus() {
       label = isReplay ? 'Reprodução' : 'Ao vivo';
     }
   }
-  const color = { live: 'text-live', warn: 'text-warn', muted: 'text-muted', ink: 'text-ink-2' }[tone];
+  // "Ao vivo" in red, like TV and news sites; the site's green stays for highlights.
+  const color = { live: 'text-bad', warn: 'text-warn', muted: 'text-muted', ink: 'text-ink-2' }[tone];
   return (
     <div className="flex items-center gap-2 text-[13px]" role="status" aria-live="polite">
       <span className={`flex items-center gap-1.5 whitespace-nowrap font-medium ${color}`}>

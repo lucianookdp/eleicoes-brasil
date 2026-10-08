@@ -566,13 +566,17 @@ function BehindNotice({ result, areaPct }: { result: ResultDTO; areaPct?: number
 export function Provenance({ result }: { result: ResultDTO }) {
   if (!result.provenance) return null;
   const p = result.provenance;
+  const at = result.progress.totalizedAt
+    ? formatClock(shownTime(result.progress.totalizedAt, p.retrievedAt)).slice(0, 5)
+    : null;
+  // Short: source and time. The exact times and the file stay in the tooltip.
   return (
-    <p className="mt-4 text-[12px] text-muted" title={`Arquivo de origem: ${p.sourceFile.split('/').at(-1)}`}>
-      Fonte: {p.provider === 'TSE' ? 'TSE' : p.provider}
-      {result.progress.totalizedAt && (
-        <> · divulgado às {formatClock(shownTime(result.progress.totalizedAt, p.retrievedAt))}</>
-      )}{' '}
-      · recebido aqui às {formatClock(p.retrievedAt)}
+    <p
+      className="mt-3 text-[11.5px] text-muted"
+      title={`Divulgado pelo TSE às ${at ?? '—'} · recebido aqui às ${formatClock(p.retrievedAt)} · arquivo ${p.sourceFile.split('/').at(-1)}`}
+    >
+      {p.provider === 'TSE' ? 'TSE' : p.provider}
+      {at && ` · ${at}`}
     </p>
   );
 }

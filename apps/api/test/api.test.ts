@@ -357,4 +357,17 @@ suite('API (integration)', () => {
       expect.objectContaining({ abbreviation: 'PAA', seats: 1, federation: null }),
     ]);
   });
+
+  it('with CORS_ORIGINS="*", every origin gets the same cacheable answer', async () => {
+    const open = await buildApp({
+      sql,
+      env: apiEnvSchema.parse({ DATABASE_URL: url, CORS_ORIGINS: '*' }),
+      logger: false,
+    });
+    for (const origin of ['https://eleicoes.lucianookdp.dev', 'https://lucianookdp.github.io']) {
+      const res = await open.app.inject({ url: '/api/elections/test-1/overview', headers: { origin } });
+      expect(res.headers['access-control-allow-origin']).toBe('*');
+    }
+    await open.app.close();
+  });
 });

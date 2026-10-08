@@ -50,8 +50,11 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
     },
     crossOriginResourcePolicy: { policy: 'cross-origin' },
   });
+  // "*" for the public, read-only data behind a CDN: a cached answer must fit every reader, and a
+  // per-origin allow header would be stored for the first origin and served to all others.
+  // No cookies or credentials exist, so "*" exposes nothing that isn't already public.
   await app.register(cors, {
-    origin: env.CORS_ORIGINS.split(',').map((o) => o.trim()),
+    origin: env.CORS_ORIGINS.trim() === '*' ? '*' : env.CORS_ORIGINS.split(',').map((o) => o.trim()),
     methods: ['GET', 'HEAD', 'OPTIONS'],
   });
   await app.register(rateLimit, {

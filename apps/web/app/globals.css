@@ -15,8 +15,8 @@
   --ink: #eceef1;
   --ink-2: #b8bdc5;
   --muted: #8a909a;
-  --live: #2fbf71;
-  --live-soft: rgb(47 191 113 / 0.14);
+  --live: #28b870;
+  --live-soft: rgb(40 184 112 / 0.14);
   --warn: #f2b33d;
   --warn-soft: rgb(242 179 61 / 0.14);
   --bad: #ef5b52;
@@ -24,7 +24,7 @@
   --info: #6ea8ff;
   /* Sequential ramp (map, heatmap): neutral low → flag green high. */
   --seq-low: #262a30;
-  --seq-high: #2fbf71;
+  --seq-high: #28b870;
   --flash: rgb(110 168 255 / 0.16);
   color-scheme: dark;
 }
@@ -38,15 +38,15 @@
   --ink: #111317;
   --ink-2: #3c414a;
   --muted: #6a707a;
-  --live: #0e8f4f;
-  --live-soft: rgb(14 143 79 / 0.1);
+  --live: #0c8a4e;
+  --live-soft: rgb(12 138 78 / 0.1);
   --warn: #a8690f;
   --warn-soft: rgb(168 105 15 / 0.1);
   --bad: #c3342c;
   --bad-soft: rgb(195 52 44 / 0.1);
   --info: #1f5fc8;
   --seq-low: #e6e9ee;
-  --seq-high: #0e8f4f;
+  --seq-high: #0c8a4e;
   --flash: rgb(31 95 200 / 0.1);
   color-scheme: light;
 }
