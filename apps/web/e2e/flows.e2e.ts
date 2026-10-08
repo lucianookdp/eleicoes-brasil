@@ -287,7 +287,7 @@ test('runoff over: the winner banner, only once the TSE marks "Eleito"', async (
   await expect(page.getByText(/Aguardando o TSE/)).toHaveCount(0);
 });
 
-test('governors: named for what is disputed, and listed low on the runoff home page', async ({
+test('offices: one general "Cargos" entry, and governors listed low on the runoff home page', async ({
   page,
   isMobile,
   request,
@@ -296,7 +296,8 @@ test('governors: named for what is disputed, and listed low on the runoff home p
   const nav = isMobile
     ? page.getByRole('navigation', { name: 'Navegação principal' })
     : page.getByRole('navigation', { name: 'Seções' });
-  await expect(nav.getByRole('link', { name: 'Gov./Senado' })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Cargos', exact: true })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Polymarket' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Governadores no 2º turno' })).toHaveCount(0);
 
   // The runoff part needs the demo runoff (DEMO_ROUND=2, ELECTION_ROUND=demo-2); CI runs round 1 only.
@@ -304,7 +305,6 @@ test('governors: named for what is disputed, and listed low on the runoff home p
   if (!elections.some((e: { rounds: { slug: string }[] }) => e.rounds.some((r) => r.slug === 'demo-2')))
     return;
   await page.goto('/eleicao/?e=demo&t=2');
-  await expect(nav.getByRole('link', { name: 'Governadores', exact: true })).toBeVisible();
   const section = page.getByRole('region', { name: 'Governadores no 2º turno' });
   await expect(section).toBeVisible();
   await expect(section.getByRole('link').first()).toBeVisible();

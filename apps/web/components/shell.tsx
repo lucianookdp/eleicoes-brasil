@@ -24,7 +24,6 @@ import {
   IconStar,
   IconStates,
   IconSun,
-  IconTrend,
   Logo,
 } from './icons';
 import { SearchPalette } from './search';
@@ -125,16 +124,23 @@ export function ElectionShell({
 const NAV = [
   { path: '', label: 'Resultados', short: 'Resultados', icon: IconOverview },
   { path: '/states', label: 'Estados e cidades', short: 'Estados', icon: IconStates },
-  { path: '/offices', label: 'Governadores e senadores', short: 'Governadores', icon: IconPerson },
+  // Governors, senators and the STF under one general name.
+  { path: '/offices', label: 'Cargos', short: 'Cargos', icon: IconPerson },
   { path: '/benches', label: 'Bancadas', short: 'Bancadas', icon: IconSeats },
 ];
 
-/** The state-offices section says what is actually disputed: in a runoff, only governors. */
-function navText(n: (typeof NAV)[number], round: number) {
-  if (n.path !== '/offices') return n;
-  return round === 2
-    ? { label: 'Governadores', short: 'Governadores' }
-    : { label: 'Governadores e senadores', short: 'Gov./Senado' };
+/** Polymarket's own mark, greyed like the other icons until hovered or open. */
+function PolymarketIcon({ size = 20 }: { size?: number }) {
+  return (
+    // biome-ignore lint/performance/noImgElement: static export, a tiny local icon
+    <img
+      src="/brands/pm-icon.png"
+      alt=""
+      width={size}
+      height={size}
+      className="rounded-[5px] opacity-70 grayscale transition group-hover:opacity-100 group-hover:grayscale-0 group-aria-[current=page]:opacity-100 group-aria-[current=page]:grayscale-0"
+    />
+  );
 }
 
 function useActive() {
@@ -143,7 +149,7 @@ function useActive() {
 }
 
 /**
- * Everything beyond the main sections, in three labelled groups. The same list feeds the
+ * Everything beyond the main sections, in two labelled groups. The same list feeds the
  * computer's "Mais" dropdown and the phone's "Mais" sheet, so both menus read alike.
  */
 function useMoreGroups() {
@@ -157,14 +163,8 @@ function useMoreGroups() {
         ...(meta?.features.comparison === false
           ? []
           : [{ to: href('/compare'), path: '/compare', label: 'Comparar estados', icon: IconCompare }]),
-        { to: `${href()}#favoritos`, label: 'Favoritos', icon: IconStar },
-      ],
-    },
-    {
-      title: 'Acompanhe',
-      items: [
         { to: href('/historico'), path: '/historico', label: 'Linha do tempo', icon: IconHistory },
-        { to: '/polymarket', label: 'Mercado de apostas', icon: IconTrend },
+        { to: `${href()}#favoritos`, label: 'Favoritos', icon: IconStar },
       ],
     },
     {
@@ -203,7 +203,7 @@ function Brand({ to }: { to: string }) {
           rel="noopener"
           className="mt-[3px] flex items-center gap-[3px] whitespace-nowrap text-[9.5px] text-muted hover:text-ink"
         >
-          by <span className="text-[10px] font-medium text-ink-2">lucianookdp</span>
+          by <AuthorLogo className="text-[10px] font-medium text-ink-2" />
         </a>
       </div>
     </div>
@@ -216,6 +216,7 @@ function Brand({ to }: { to: string }) {
  * status on top, the round buttons right under it (sections live in the bottom bar).
  */
 function Header({ onSearch }: { onSearch: () => void }) {
+  const pathname = usePathname();
   const { round, href, elections } = useRound();
   const active = useActive();
   // Only worth a control when there is a choice to make (two rounds, or another election).
@@ -229,8 +230,8 @@ function Header({ onSearch }: { onSearch: () => void }) {
       className="flex h-16 items-center whitespace-nowrap border-b-2 border-transparent px-2.5 text-[15px] text-ink-2 hover:text-ink aria-[current=page]:border-live aria-[current=page]:font-medium aria-[current=page]:text-ink"
     >
       {/* Short names until there is room for the full ones. */}
-      <span className="2xl:hidden">{navText(n, round.round).short}</span>
-      <span className="hidden 2xl:inline">{navText(n, round.round).label}</span>
+      <span className="2xl:hidden">{n.short}</span>
+      <span className="hidden 2xl:inline">{n.label}</span>
     </Link>
   );
   return (
@@ -244,6 +245,14 @@ function Header({ onSearch }: { onSearch: () => void }) {
         )}
         <nav aria-label="Seções" className="ml-1 hidden shrink-0 items-center xl:flex">
           {NAV.map(link)}
+          <Link
+            href="/polymarket"
+            aria-current={pathname.startsWith('/polymarket') ? 'page' : undefined}
+            className="group flex h-16 items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-2.5 text-[15px] text-ink-2 hover:text-ink aria-[current=page]:border-live aria-[current=page]:font-medium aria-[current=page]:text-ink"
+          >
+            <PolymarketIcon size={18} />
+            Polymarket
+          </Link>
           <MoreMenu />
         </nav>
         <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -484,7 +493,8 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
 }
 
 function BottomNav({ onSearch }: { onSearch: () => void }) {
-  const { round, href } = useRound();
+  const { href } = useRound();
+  const pathname = usePathname();
   const active = useActive();
   const groups = useMoreGroups();
   const [more, setMore] = useState(false);
@@ -501,7 +511,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
     </li>
   );
   const item =
-    'flex min-h-16 flex-1 flex-col items-center justify-center gap-0.5 text-[12px] text-muted aria-[current=page]:font-medium aria-[current=page]:text-ink';
+    'group flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 truncate text-[10.5px] text-muted min-[360px]:text-[11.5px] aria-[current=page]:font-medium aria-[current=page]:text-ink';
   return (
     <>
       <nav
@@ -518,7 +528,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             <span className="flex size-8 items-center justify-center">
               <n.icon />
             </span>
-            {navText(n, round.round).short}
+            {n.short}
           </Link>
         ))}
         <button type="button" onClick={onSearch} className={item}>
@@ -537,9 +547,19 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             <span className="flex size-8 items-center justify-center">
               <n.icon />
             </span>
-            {navText(n, round.round).short}
+            {n.short}
           </Link>
         ))}
+        <Link
+          href="/polymarket"
+          aria-current={pathname.startsWith('/polymarket') ? 'page' : undefined}
+          className={item}
+        >
+          <span className="flex size-8 items-center justify-center">
+            <PolymarketIcon />
+          </span>
+          Polymarket
+        </Link>
         <button type="button" onClick={() => setMore(true)} className={item} aria-expanded={more}>
           <span className="flex size-8 items-center justify-center">
             <IconMore />
@@ -592,7 +612,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
                   rel="noopener"
                   className="flex min-h-10 items-center gap-1.5 px-3 text-[13.5px] text-muted hover:text-ink"
                 >
-                  by <span className="font-medium text-ink-2">lucianookdp</span> <span aria-hidden>→</span>
+                  by <AuthorLogo className="font-medium text-ink-2" /> <span aria-hidden>→</span>
                 </a>
               </li>
             </ul>
@@ -670,10 +690,37 @@ function SiteFooter({ version }: { version?: string }) {
           rel="noopener"
           className="flex shrink-0 items-center gap-1 text-[12px] text-muted hover:text-ink"
         >
-          by <span className="font-medium text-ink-2">lucianookdp</span>
+          by <AuthorLogo className="font-medium text-ink-2" />
         </a>
       </div>
     </footer>
+  );
+}
+
+/**
+ * The author's wordmark, as on lucianookdp.dev: "lucian", an infinity sign for "oo", "kdp". Toned
+ * down here: the text takes the surrounding grey and the infinity a softened site green.
+ */
+function AuthorLogo({ className }: { className: string }) {
+  return (
+    <span
+      className={`inline-flex items-center tracking-tight ${className}`}
+      role="img"
+      aria-label="lucianookdp"
+    >
+      <span aria-hidden>lucian</span>
+      <svg aria-hidden viewBox="4 4 92 42" className="mx-[-0.015em] h-[0.62em] w-auto translate-y-[0.02em]">
+        <path
+          d="M 25 10 C 10 10 10 40 25 40 C 35 40 40 30 50 25 C 60 20 65 10 75 10 C 90 10 90 40 75 40 C 65 40 60 30 50 25 C 40 20 35 10 25 10 Z"
+          fill="none"
+          stroke="var(--live)"
+          strokeOpacity={0.7}
+          strokeWidth={11}
+          strokeLinecap="round"
+        />
+      </svg>
+      <span aria-hidden>kdp</span>
+    </span>
   );
 }
 
