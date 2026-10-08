@@ -56,6 +56,27 @@ exportação estática do Next servida por nginx. O worker aplica as migrações
 6. Ensaio completo com dados fictícios: `DEMO_EMBEDDED=true ELECTION_ROUND=demo-2 DEMO_ROUND=2
    DEMO_DURATION_MINUTES=3` no worker local.
 
+## Plano B (emergências)
+
+Congelamento: de 23/10 (depois do ensaio geral) a 26/10, nada é publicado salvo emergência.
+Em qualquer problema, o site continua mostrando os últimos dados bons e avisa "Dados atrasados"
+ou "Sem conexão"; nada aqui apaga dados.
+
+| Sintoma | O que fazer |
+| --- | --- |
+| O worker grava algo errado ou entra em loop de erros | Parar a coleta: `railway down --service worker` (o site congela nos últimos números, com aviso de atraso). Corrigir, e `railway up --service worker --detach` para voltar. |
+| Um deploy novo quebrou a API ou o worker | No painel do Railway, serviço → Deployments → no deploy anterior, "Redeploy". Ou `git revert <commit>` e `railway up --service <api\|worker> --detach`. |
+| O site (GitHub Pages) quebrou depois de um push | `git revert <commit> && git push`: o Pages publica a versão anterior em ~1 min. |
+| Leitores veem números velhos depois de uma correção | Limpar o CDN da API: `railway cdn purge all --service api`. |
+| O TSE fora do ar ou lento | Nada a fazer: o worker reduz o ritmo sozinho (circuito/backoff) e volta quando o TSE voltar. Acompanhar em `/eleicao/bastidores/`. |
+| O TSE muda o formato dos arquivos | O worker rejeita o arquivo (validação Zod) e mantém o último dado bom; ver `railway logs --service worker` e ajustar o adaptador em `packages/tse-client`. |
+| Banco corrompido ou dados perdidos | Restaurar o backup mais recente de `~/eleicoes-backups` (feito em 24/10) num Postgres 18 novo do Railway: `pg_restore --no-owner --no-acl -d <novo banco> <arquivo>`, depois apontar `DATABASE_URL` da API e do worker para ele. Ferramentas do Postgres 18 em `.data/pg18/bin` (micromamba, como abaixo, com `postgresql=18`). |
+| Tráfego muito acima do esperado | O CDN segura as leituras; se a API sofrer, aumentar as réplicas da API no painel do Railway (hoje 2). |
+
+Vigilância automática: o workflow `health` confere o site e a API de hora em hora, e a cada
+5 minutos no dia 25/10 a partir das 16h (Brasília), incluindo coleta recente e o resultado do
+2º turno respondendo rápido. Uma falha manda e-mail do GitHub; não há alerta no celular.
+
 ## Postgres local sem Docker
 
 Qualquer Postgres 16 serve. Em macOS sem Docker, por exemplo:

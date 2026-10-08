@@ -1,12 +1,13 @@
 # Watchdog: fails (GitHub emails the repository owner) when the site or the API is down.
 # Every hour on normal days; every 5 minutes on the 2nd-round night, when it also checks that the
-# collector keeps bringing fresh data. Times are UTC: 20:00–02:59 = 17h–23h59 Brasília.
+# collector keeps bringing fresh data and that the runoff answers fast with valid numbers.
+# Times are UTC: 19:00–02:59 = 16h–23h59 Brasília (from an hour before the polls close).
 name: health
 
 on:
   schedule:
     - cron: '17 * * * *'
-    - cron: '*/5 20-23 25 10 *'
+    - cron: '*/5 19-23 25 10 *'
     - cron: '*/5 0-2 26 10 *'
   workflow_dispatch:
 
@@ -29,3 +30,11 @@ jobs:
           age=$(echo "$ops" | jq -r '(now - (.ingestion.lastSuccessAt | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) | floor')
           echo "last successful collection ${age}s ago"
           test "$age" -lt 180
+      - name: Runoff answers fast, with valid numbers (election night only)
+        if: github.event_name == 'schedule' && github.event.schedule != '17 * * * *'
+        run: |
+          t=$(curl -fsS --retry 3 --retry-delay 10 -o overview.json -w '%{time_total}' "$API/api/elections/2026-2/overview")
+          echo "overview in ${t}s"
+          jq -e '.round.slug == "2026-2" and (.states | length) >= 27' overview.json > /dev/null
+          if grep -qE 'NaN|Infinity' overview.json; then echo 'broken numbers in the overview'; exit 1; fi
+          awk -v t="$t" 'BEGIN { exit !(t < 3) }'
