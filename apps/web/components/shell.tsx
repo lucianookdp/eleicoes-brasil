@@ -180,6 +180,37 @@ function useMoreGroups() {
 }
 
 /**
+ * Logo and name, with the author's credit as a small second line under the name: seen on every
+ * page, but taking no room of its own (the header is the same height with or without it).
+ */
+function Brand({ to }: { to: string }) {
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <Link href={to} tabIndex={-1} aria-hidden>
+        <Logo size={24} />
+      </Link>
+      <div className="flex flex-col leading-none">
+        <Link
+          href={to}
+          aria-label="Eleições Brasil — resultados"
+          className="whitespace-nowrap text-[16px] font-semibold tracking-tight"
+        >
+          Eleições Brasil
+        </Link>
+        <a
+          href="https://lucianookdp.dev"
+          target="_blank"
+          rel="noopener"
+          className="mt-[3px] flex items-center gap-1 whitespace-nowrap text-[11px] text-muted hover:text-ink"
+        >
+          por <AuthorLogo className="text-[11.5px] font-medium text-ink-2" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/**
  * One clear bar, like the big news sites' election pages. Computers: brand, the 1st/2nd round as
  * two buttons, the main sections, "Mais" for the rest, search, status, theme. Phones: brand and
  * status on top, the round buttons right under it (sections live in the bottom bar).
@@ -205,14 +236,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-ground/90 backdrop-blur supports-[backdrop-filter]:bg-ground/75">
       <div className="mx-auto flex h-14 max-w-[1320px] items-center gap-3 px-4 sm:px-6 xl:h-16">
-        <Link
-          href={href()}
-          className="flex shrink-0 items-center gap-2 font-semibold tracking-tight"
-          aria-label="Eleições Brasil — resultados"
-        >
-          <Logo />
-          <span className="whitespace-nowrap text-[16px]">Eleições Brasil</span>
-        </Link>
+        <Brand to={href()} />
         {choice && (
           <div className="hidden xl:block">
             <RoundSwitch />
@@ -616,10 +640,7 @@ function Footer() {
   return <SiteFooter version={meta?.app.version} />;
 }
 
-/**
- * Quiet footer: the source and the two help pages on the left; on the right one discreet pill to
- * the author's site — visible to anyone who reaches the end, never competing with the results.
- */
+/** Quiet footer: the source and the two help pages; the author's credit as one small line. */
 function SiteFooter({ version }: { version?: string }) {
   return (
     <footer className="mt-6 border-t border-line pb-24 xl:pb-0">
@@ -647,22 +668,9 @@ function SiteFooter({ version }: { version?: string }) {
           href="https://lucianookdp.dev"
           target="_blank"
           rel="noopener"
-          className="group inline-flex shrink-0 items-center gap-2 self-start rounded-full border border-line px-4 py-2 text-[13px] text-muted transition-colors hover:border-live hover:text-ink md:self-auto"
+          className="flex shrink-0 items-center gap-1 text-[12px] text-muted hover:text-ink"
         >
-          Feito por <AuthorLogo />
-          <span className="text-ink-2 group-hover:text-live">· ver meus projetos</span>
-          <svg
-            viewBox="0 0 24 24"
-            width={14}
-            height={14}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden
-            className="transition-transform group-hover:translate-x-0.5"
-          >
-            <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          Feito por <AuthorLogo className="text-[12.5px] font-medium text-ink-2" />
         </a>
       </div>
     </footer>
@@ -670,10 +678,10 @@ function SiteFooter({ version }: { version?: string }) {
 }
 
 /** The author's wordmark, as on lucianookdp.dev: "lucian", an infinity sign for "oo", "kdp". */
-function AuthorLogo() {
+function AuthorLogo({ className = 'text-[15px] font-semibold text-ink' }: { className?: string }) {
   return (
     <span
-      className="inline-flex items-center text-[15px] font-semibold tracking-tight text-ink"
+      className={`inline-flex items-center tracking-tight ${className}`}
       role="img"
       aria-label="lucianookdp"
     >
@@ -707,10 +715,7 @@ export function BasicShell({ children }: { children: ReactNode }) {
     <>
       <header className="sticky top-0 z-30 border-b border-line bg-ground/90 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-[1320px] items-center gap-3 px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <Logo />
-            <span>Eleições Brasil</span>
-          </Link>
+          <Brand to="/" />
           <nav aria-label="Seções" className="ml-auto flex items-center gap-1 text-[14px]">
             <Link href="/" className="rounded-md px-2.5 py-1.5 text-ink-2 hover:bg-surface-2 hover:text-ink">
               Apuração
