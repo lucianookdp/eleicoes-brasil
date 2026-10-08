@@ -203,7 +203,7 @@ function Brand({ to }: { to: string }) {
           rel="noopener"
           className="mt-[3px] flex items-center gap-[3px] whitespace-nowrap text-[9.5px] text-muted hover:text-ink"
         >
-          by <AuthorLogo className="text-[10px] font-medium text-ink-2" />
+          by <span className="text-[10px] font-medium text-ink-2">lucianookdp</span>
         </a>
       </div>
     </div>
@@ -592,7 +592,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
                   rel="noopener"
                   className="flex min-h-10 items-center gap-1.5 px-3 text-[13.5px] text-muted hover:text-ink"
                 >
-                  Feito por <AuthorLogo /> <span aria-hidden>→</span>
+                  by <span className="font-medium text-ink-2">lucianookdp</span> <span aria-hidden>→</span>
                 </a>
               </li>
             </ul>
@@ -670,39 +670,10 @@ function SiteFooter({ version }: { version?: string }) {
           rel="noopener"
           className="flex shrink-0 items-center gap-1 text-[12px] text-muted hover:text-ink"
         >
-          Feito por <AuthorLogo className="text-[12.5px] font-medium text-ink-2" />
+          by <span className="font-medium text-ink-2">lucianookdp</span>
         </a>
       </div>
     </footer>
-  );
-}
-
-/** The author's wordmark, as on lucianookdp.dev: "lucian", an infinity sign for "oo", "kdp". */
-function AuthorLogo({ className = 'text-[15px] font-semibold text-ink' }: { className?: string }) {
-  return (
-    <span
-      className={`inline-flex items-center tracking-tight ${className}`}
-      role="img"
-      aria-label="lucianookdp"
-    >
-      <span aria-hidden>lucian</span>
-      <svg aria-hidden viewBox="4 4 92 42" className="mx-[-0.015em] h-[0.62em] w-auto translate-y-[0.02em]">
-        <defs>
-          <linearGradient id="author-infinity" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#5fe3a1" />
-            <stop offset="100%" stopColor="#22b573" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M 25 10 C 10 10 10 40 25 40 C 35 40 40 30 50 25 C 60 20 65 10 75 10 C 90 10 90 40 75 40 C 65 40 60 30 50 25 C 40 20 35 10 25 10 Z"
-          fill="none"
-          stroke="url(#author-infinity)"
-          strokeWidth={11}
-          strokeLinecap="round"
-        />
-      </svg>
-      <span aria-hidden>kdp</span>
-    </span>
   );
 }
 
