@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { shareImage, shareText } from '@/lib/share';
 import { IconClose } from './icons';
 
-const SITE = 'lucianookdp.github.io/eleicoes-brasil';
+const SITE = 'eleicoes.lucianookdp.dev';
 const coarse = () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 
 /**

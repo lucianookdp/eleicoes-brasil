@@ -2,7 +2,7 @@
 
 Acompanhe a apuração das eleições brasileiras em tempo real, direto do celular ou do computador.
 
-**Acesse:** https://lucianookdp.github.io/eleicoes-brasil/
+**Acesse:** https://eleicoes.lucianookdp.dev/
 
 ## O que dá para ver
 

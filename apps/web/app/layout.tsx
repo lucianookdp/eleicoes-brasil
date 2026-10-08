@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     'Apuração das eleições 2026 em tempo real, com os dados oficiais do Tribunal Superior Eleitoral (TSE).',
   applicationName: 'Eleições Brasil',
   // Link previews (WhatsApp, X, Telegram) need absolute URLs.
-  metadataBase: new URL('https://lucianookdp.github.io'),
+  metadataBase: new URL('https://eleicoes.lucianookdp.dev'),
   openGraph: {
     type: 'website',
     locale: 'pt_BR',

@@ -22,7 +22,7 @@ exportação estática do Next servida por nginx. O worker aplica as migrações
 ## Variáveis por serviço
 
 - **worker**: `DATABASE_URL`, `APP_MODE`, `ELECTION_ROUND`, `TSE_*`. Não expõe porta.
-- **api**: `DATABASE_URL`, `CORS_ORIGINS` (ex.: `https://lucianookdp.github.io`), `PORT`.
+- **api**: `DATABASE_URL`, `CORS_ORIGINS` (ex.: `https://eleicoes.lucianookdp.dev`), `PORT`.
 - **web**: `NEXT_PUBLIC_API_URL` e `NEXT_PUBLIC_BASE_PATH` (no build).
 
 ## Noite da eleição
