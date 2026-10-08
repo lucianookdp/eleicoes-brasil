@@ -201,9 +201,9 @@ function Brand({ to }: { to: string }) {
           href="https://lucianookdp.dev"
           target="_blank"
           rel="noopener"
-          className="mt-[3px] flex items-center gap-1 whitespace-nowrap text-[11px] text-muted hover:text-ink"
+          className="mt-[3px] flex items-center gap-[3px] whitespace-nowrap text-[9.5px] text-muted hover:text-ink"
         >
-          by <AuthorLogo className="text-[11.5px] font-medium text-ink-2" />
+          by <AuthorLogo className="text-[10px] font-medium text-ink-2" />
         </a>
       </div>
     </div>
