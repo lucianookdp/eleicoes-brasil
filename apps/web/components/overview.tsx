@@ -330,7 +330,7 @@ function EndSummary({ data, statsOnly = false }: { data: OverviewDTO; statsOnly?
               ×
             </span>
           </div>
-          <p className="mt-2 text-center text-[13.5px] text-ink-2">
+          <p className="mt-3 border-t border-line pt-3 text-[13.5px] text-ink-2">
             Vão para o 2º turno · diferença de {fmtInt(gap)} votos
           </p>
         </div>
