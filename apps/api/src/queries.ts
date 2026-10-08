@@ -533,7 +533,7 @@ export class Queries {
   async cities(
     slug: string,
     uf: string,
-    opts: { q?: string; sort: string; candidate?: string; page: number; pageSize: number },
+    opts: { q?: string; sort: string; candidate?: string; leader?: string; page: number; pageSize: number },
   ): Promise<Paginated<CityRowDTO>> {
     const round = await this.round(slug);
     const like = opts.q ? `%${searchKey(opts.q)}%` : null;
@@ -593,6 +593,7 @@ export class Queries {
       ) pick on true
       where c.provider = ${round.provider} and c.state_code = ${uf}
         ${like ? this.sql`and c.search_name like ${like}` : this.sql``}
+        ${opts.leader ? this.sql`and lead.number = ${opts.leader}` : this.sql``}
       order by ${like ? this.sql`c.search_name like ${`${searchKey(opts.q!)}%`} desc,` : this.sql``} ${order}
       limit ${opts.pageSize} offset ${(opts.page - 1) * opts.pageSize}`;
     return {

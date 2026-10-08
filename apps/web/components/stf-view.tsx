@@ -1,10 +1,22 @@
 'use client';
 
-import { byPresident, MINISTERS, PHOTOS, photoSlug, STF_CHECKED_AT, STF_SOURCE, VACANCIES } from '@/lib/stf';
+import { useState } from 'react';
+import {
+  byPresident,
+  MINISTERS,
+  type Minister,
+  PHOTOS,
+  photoSlug,
+  retirementDate,
+  STF_CHECKED_AT,
+  STF_SOURCE,
+  sinceYear,
+  VACANCIES,
+} from '@/lib/stf';
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
-
 const checked = STF_CHECKED_AT.split('-').reverse().join('/');
+const MONTH = new Intl.DateTimeFormat('pt-BR', { month: 'short', year: 'numeric', timeZone: 'UTC' });
 
 /** What the court does, in plain words, each with its article of the Constitution. */
 const POWERS = [
@@ -15,7 +27,7 @@ const POWERS = [
   },
   {
     title: 'Julga as mais altas autoridades',
-    body: 'Nos crimes comuns, julga o Presidente e o Vice-presidente da República, deputados federais, senadores, os próprios ministros do STF e o Procurador-Geral da República.',
+    body: 'Nos crimes comuns, julga o Presidente e o Vice, deputados federais, senadores, os próprios ministros e o Procurador-Geral da República.',
     source: 'CF, art. 102, I, b',
   },
   {
@@ -33,7 +45,6 @@ const POWERS = [
     body: 'Se faltarem o Presidente e o Vice, assumem, nesta ordem, os presidentes da Câmara, do Senado e do STF.',
     source: 'CF, art. 80',
   },
-
   {
     title: 'Como alguém vira ministro',
     body: 'O Presidente indica (brasileiro nato, de 35 a 70 anos), o Senado aprova por maioria absoluta (41 votos) e o ministro fica até se aposentar, no máximo aos 75 anos.',
@@ -42,116 +53,100 @@ const POWERS = [
 ];
 
 /**
- * The Supreme Court (STF): who sits there, who appointed each one and what the court does. Lives
- * in the Bancadas page (Câmara, Senado, STF); not election data, kept by hand in lib/stf.ts.
+ * The Supreme Court (STF), as a tab of the state-offices page: who sits there, who appointed them,
+ * when each one must retire, the two panels, and what the court does. Not election data: kept by
+ * hand in lib/stf.ts and dated.
  */
 export function StfView() {
+  const [by, setBy] = useState<string | null>(null);
   const presidents = byPresident();
+  const shown = by ? MINISTERS.filter((m) => m.appointedBy === by) : MINISTERS;
+  const next = [...MINISTERS].sort((a, b) => +retirementDate(a) - +retirementDate(b))[0]!;
+
   return (
     <div>
-      <div className="max-w-2xl">
-        <p className="text-[15px] leading-relaxed text-ink-2">
-          Quem são os ministros do Supremo Tribunal Federal hoje, quem indicou cada um e o que o tribunal faz.
-        </p>
-        <p className="mt-1 text-[13px] text-muted">
-          Conferido em {checked} no{' '}
-          <a
-            href={STF_SOURCE}
-            target="_blank"
-            rel="noopener"
-            className="text-info underline underline-offset-2"
-          >
-            site oficial do STF
-          </a>
-          . Não faz parte da apuração.
-        </p>
-      </div>
+      <p className="text-[13px] text-muted">
+        Não faz parte da apuração. Conferido em {checked} no{' '}
+        <a
+          href={STF_SOURCE}
+          target="_blank"
+          rel="noopener"
+          className="text-info underline underline-offset-2"
+        >
+          site oficial do STF
+        </a>
+        .
+      </p>
 
-      <section aria-labelledby="indicados" className="mt-4 rounded-xl border border-line bg-surface p-4">
-        <h2 id="indicados" className="text-[17px] font-semibold">
-          {MINISTERS.length} ministros em exercício
-          {VACANCIES.length > 0 && ` · ${VACANCIES.length} vaga aberta`}
-        </h2>
-        <p className="mt-1 text-[14px] text-muted">
-          Quantos dos ministros atuais cada Presidente da República indicou:
-        </p>
-        <ul className="mt-3 flex flex-wrap gap-2">
-          {presidents.map((p) => (
-            <li key={p.name} className="rounded-full bg-surface-2 px-3 py-1.5 text-[14.5px]">
-              {p.name} <span className="numeral font-semibold">{p.count}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {/* Same summary line as the governors' tab. */}
+      <p className="mb-3 mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[13.5px] text-ink-2">
+        <span>
+          <span className="numeral font-semibold text-ink">{MINISTERS.length}</span> ministros
+        </span>
+        {VACANCIES.length > 0 && (
+          <span>
+            <span className="numeral font-semibold text-ink">{VACANCIES.length}</span> vaga aberta
+          </span>
+        )}
+        <span>
+          Próxima aposentadoria: <span className="font-medium text-ink">{next.name}</span>,{' '}
+          {MONTH.format(retirementDate(next))}
+        </span>
+      </p>
 
-      <section aria-labelledby="ministros" className="mt-6">
-        <h2 id="ministros" className="text-[18px] font-semibold">
-          Os ministros
-        </h2>
-        <p className="mt-1 text-[14px] text-muted">Do mais antigo no tribunal para o mais recente.</p>
-        <ul className="mt-3 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-          {MINISTERS.map((m) => (
-            <li key={m.name} className="flex gap-3 rounded-xl border border-line bg-surface p-3">
-              {/* biome-ignore lint/performance/noImgElement: static export, small local thumbnail */}
-              <img
-                src={`${base}/stf/${photoSlug(m.name)}.jpg`}
-                alt={`Foto de ${m.name}`}
-                width={60}
-                height={60}
-                loading="lazy"
-                className="size-[60px] shrink-0 rounded-full bg-surface-2 object-cover object-top"
-              />
-              <div className="min-w-0">
-                <p className="text-[16px] font-semibold leading-tight">{m.name}</p>
-                {m.role && (
-                  <p className="mt-1 inline-block rounded-md bg-live-soft px-2 py-0.5 text-[12.5px] font-medium text-live">
-                    {m.role} do STF
-                  </p>
-                )}
-                <dl className="mt-1.5 grid gap-0.5 text-[14px]">
-                  <div>
-                    <dt className="inline text-muted">Indicação de: </dt>
-                    <dd className="inline font-medium">{m.appointedBy}</dd>
-                  </div>
-                  <div>
-                    <dt className="inline text-muted">No STF desde: </dt>
-                    <dd className="inline">{m.since}</dd>
-                  </div>
-                  <div>
-                    <dt className="inline text-muted">{m.panel ? 'Turma: ' : 'No plenário: '}</dt>
-                    <dd className="inline">
-                      {m.panel ?? 'preside o tribunal (não integra turma)'}
-                      {m.panelChair && ' (presidente da turma)'}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-            </li>
+      <fieldset className="mb-4">
+        <legend className="mb-1.5 text-[13px] text-muted">Indicados por</legend>
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            { name: null, label: 'Todos', count: MINISTERS.length },
+            ...presidents.map((p) => ({ ...p, label: p.name })),
+          ].map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              aria-pressed={by === p.name}
+              onClick={() => setBy(p.name)}
+              className="h-9 rounded-full border border-line px-3.5 text-[14px] text-ink-2 hover:border-line-strong aria-pressed:border-live aria-pressed:bg-live-soft aria-pressed:font-medium aria-pressed:text-ink"
+            >
+              {p.label} <span className="numeral text-muted">{p.count}</span>
+            </button>
           ))}
-          {VACANCIES.map((v) => (
+        </div>
+      </fieldset>
+
+      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {shown.map((m) => (
+          <li key={m.name}>
+            <MinisterCard m={m} />
+          </li>
+        ))}
+        {!by &&
+          VACANCIES.map((v) => (
             <li
               key={v.reason}
-              className="flex gap-3 rounded-xl border border-dashed border-line-strong p-3 text-ink-2"
+              className="flex h-full gap-3 rounded-xl border border-dashed border-line-strong p-3 text-ink-2"
             >
               <span
-                className="flex size-[60px] shrink-0 items-center justify-center rounded-full border border-dashed border-line-strong text-[20px] text-muted"
+                className="flex size-14 shrink-0 items-center justify-center rounded-full border border-dashed border-line-strong text-[20px] text-muted"
                 aria-hidden
               >
                 ?
               </span>
               <div className="min-w-0">
-                <p className="text-[16px] font-semibold leading-tight">Vaga aberta</p>
-                <p className="mt-1.5 text-[14px]">
+                <p className="font-semibold">Vaga aberta</p>
+                <p className="mt-1 text-[13.5px]">
                   Aberta com a {v.reason}. A indicação é do Presidente da República, com aprovação do Senado.
                 </p>
               </div>
             </li>
           ))}
-        </ul>
-      </section>
+      </ul>
 
-      <section aria-labelledby="o-que-faz" className="mt-6">
-        <h2 id="o-que-faz" className="text-[18px] font-semibold">
+      <Timeline highlight={by} />
+      <Panels />
+
+      <section aria-labelledby="o-que-faz" className="mt-8">
+        <h2 id="o-que-faz" className="text-[17px] font-semibold">
           O que o STF faz
         </h2>
         <ul className="mt-3 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
@@ -186,5 +181,177 @@ export function StfView() {
         </p>
       </details>
     </div>
+  );
+}
+
+function Photo({ m, size }: { m: Minister; size: number }) {
+  return (
+    // biome-ignore lint/performance/noImgElement: static export, small local thumbnail
+    <img
+      src={`${base}/stf/${photoSlug(m.name)}.jpg`}
+      alt={`Foto de ${m.name}`}
+      width={size}
+      height={size}
+      loading="lazy"
+      style={{ width: size, height: size }}
+      className="shrink-0 rounded-full bg-surface-2 object-cover object-top"
+    />
+  );
+}
+
+/** Same card language as a state in the governors' tab: who, a pill, then the facts. */
+function MinisterCard({ m }: { m: Minister }) {
+  return (
+    <div className="flex h-full gap-3 rounded-xl border border-line bg-surface p-3">
+      <Photo m={m} size={56} />
+      <div className="min-w-0 flex-1">
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="font-semibold">{m.name}</span>
+          {m.role && (
+            <span className="rounded-md bg-live-soft px-1.5 py-0.5 text-[12px] font-medium text-live">
+              {m.role}
+            </span>
+          )}
+        </p>
+        <dl className="mt-1.5 grid gap-0.5 text-[13.5px]">
+          <div>
+            <dt className="inline text-muted">Indicação de: </dt>
+            <dd className="inline font-medium">{m.appointedBy}</dd>
+          </div>
+          <div>
+            <dt className="inline text-muted">No STF desde: </dt>
+            <dd className="inline">{m.since}</dd>
+          </div>
+          <div>
+            <dt className="inline text-muted">Aposentadoria obrigatória: </dt>
+            <dd className="inline">{MONTH.format(retirementDate(m))}</dd>
+          </div>
+          <div>
+            <dt className="inline text-muted">{m.panel ? 'Turma: ' : 'No plenário: '}</dt>
+            <dd className="inline">
+              {m.panel ?? 'preside o tribunal'}
+              {m.panelChair && ' (preside a turma)'}
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Each minister's time at the court, from taking office to the compulsory retirement at 75, on one
+ * scale from 2000 to 2050, with today marked. Readers who filter by President see their picks.
+ */
+function Timeline({ highlight }: { highlight: string | null }) {
+  const from = 2000;
+  const to = 2050;
+  const x = (year: number) => `${((year - from) / (to - from)) * 100}%`;
+  const now = new Date();
+  const today = now.getUTCFullYear() + now.getUTCMonth() / 12;
+  return (
+    <section aria-labelledby="linha-do-tempo-stf" className="mt-8">
+      <h2 id="linha-do-tempo-stf" className="text-[17px] font-semibold">
+        Linha do tempo
+      </h2>
+      <p className="mt-0.5 text-[13.5px] text-muted">
+        Da posse até a aposentadoria obrigatória, aos 75 anos.
+      </p>
+      <div className="mt-3 rounded-xl border border-line bg-surface p-3 sm:p-4">
+        <div className="relative ml-0 sm:ml-44">
+          <div className="flex justify-between text-[11.5px] text-muted" aria-hidden>
+            {[2000, 2010, 2020, 2030, 2040, 2050].map((y) => (
+              <span key={y}>{y}</span>
+            ))}
+          </div>
+        </div>
+        <ul className="mt-1 grid gap-2">
+          {MINISTERS.map((m) => {
+            const start = sinceYear(m);
+            const end = retirementDate(m).getUTCFullYear() + retirementDate(m).getUTCMonth() / 12;
+            const dim = highlight && m.appointedBy !== highlight;
+            return (
+              <li
+                key={m.name}
+                className={`grid gap-1 sm:grid-cols-[10.5rem_minmax(0,1fr)] sm:items-center sm:gap-3 ${dim ? 'opacity-35' : ''}`}
+              >
+                <span className="truncate text-[13.5px]">{m.name}</span>
+                <span
+                  className="relative block h-3 rounded-full bg-surface-2"
+                  role="img"
+                  aria-label={`${m.name}: no STF desde ${start}, aposentadoria obrigatória em ${retirementDate(m).getUTCFullYear()}`}
+                >
+                  <span
+                    className="absolute inset-y-0 rounded-full bg-live/25"
+                    style={{ left: x(start), width: `calc(${x(end)} - ${x(start)})` }}
+                  />
+                  <span
+                    className="absolute inset-y-0 rounded-l-full bg-live"
+                    style={{ left: x(start), width: `calc(${x(today)} - ${x(start)})` }}
+                  />
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="relative mt-2 sm:ml-44" aria-hidden>
+          <span
+            className="absolute -top-1 text-[11.5px] text-ink-2"
+            style={{ left: `calc(${x(today)} - 1rem)` }}
+          >
+            hoje
+          </span>
+        </div>
+        <p className="mt-5 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-muted">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2 w-4 rounded-full bg-live" aria-hidden /> tempo já cumprido
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2 w-4 rounded-full bg-live/25" aria-hidden /> até os 75 anos
+          </span>
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/** The two panels side by side; the court's President sits on neither. */
+function Panels() {
+  const president = MINISTERS.find((m) => m.role === 'Presidente');
+  return (
+    <section aria-labelledby="turmas" className="mt-8">
+      <h2 id="turmas" className="text-[17px] font-semibold">
+        Turmas
+      </h2>
+      <p className="mt-0.5 text-[13.5px] text-muted">
+        A maioria dos processos é julgada em uma das duas turmas.
+        {president && ` O presidente do STF, ${president.name}, não integra nenhuma.`}
+      </p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {(['1ª Turma', '2ª Turma'] as const).map((panel) => {
+          const members = MINISTERS.filter((m) => m.panel === panel).sort(
+            (a, b) => Number(!!b.panelChair) - Number(!!a.panelChair),
+          );
+          return (
+            <div key={panel} className="rounded-xl border border-line bg-surface p-3">
+              <p className="mb-2 font-semibold">{panel}</p>
+              <ul className="grid gap-2">
+                {members.map((m) => (
+                  <li key={m.name} className="flex items-center gap-2.5 text-[14px]">
+                    <Photo m={m} size={32} />
+                    <span className="min-w-0 truncate">{m.name}</span>
+                    {m.panelChair && (
+                      <span className="ml-auto shrink-0 rounded-md bg-live-soft px-1.5 py-0.5 text-[12px] font-medium text-live">
+                        preside
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }

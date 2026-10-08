@@ -17,6 +17,8 @@ export interface Minister {
   /** The STF's President chairs the plenary and sits on neither panel. */
   panel: '1ª Turma' | '2ª Turma' | null;
   panelChair?: boolean;
+  /** Birth date (aaaa-mm-dd), from public records; sets the compulsory retirement at 75. */
+  born: string;
 }
 
 /**
@@ -90,15 +92,17 @@ export const MINISTERS: Minister[] = [
     name: 'Gilmar Mendes',
     appointedBy: 'Fernando Henrique Cardoso',
     since: '20/06/2002',
+    born: '1955-12-30',
     role: 'Decano',
     panel: '2ª Turma',
   },
-  { name: 'Cármen Lúcia', appointedBy: 'Lula', since: '21/06/2006', panel: '1ª Turma' },
-  { name: 'Dias Toffoli', appointedBy: 'Lula', since: '23/10/2009', panel: '2ª Turma' },
+  { name: 'Cármen Lúcia', appointedBy: 'Lula', since: '21/06/2006', born: '1954-04-19', panel: '1ª Turma' },
+  { name: 'Dias Toffoli', appointedBy: 'Lula', since: '23/10/2009', born: '1967-11-15', panel: '2ª Turma' },
   {
     name: 'Luiz Fux',
     appointedBy: 'Dilma Rousseff',
     since: '03/03/2011',
+    born: '1953-04-26',
     panel: '2ª Turma',
     panelChair: true,
   },
@@ -106,6 +110,7 @@ export const MINISTERS: Minister[] = [
     name: 'Edson Fachin',
     appointedBy: 'Dilma Rousseff',
     since: '16/06/2015',
+    born: '1958-02-08',
     role: 'Presidente',
     panel: null,
   },
@@ -113,13 +118,39 @@ export const MINISTERS: Minister[] = [
     name: 'Alexandre de Moraes',
     appointedBy: 'Michel Temer',
     since: '22/03/2017',
+    born: '1968-12-13',
     role: 'Vice-presidente',
     panel: '1ª Turma',
   },
-  { name: 'Nunes Marques', appointedBy: 'Jair Bolsonaro', since: '05/11/2020', panel: '2ª Turma' },
-  { name: 'André Mendonça', appointedBy: 'Jair Bolsonaro', since: '16/12/2021', panel: '2ª Turma' },
-  { name: 'Cristiano Zanin', appointedBy: 'Lula', since: '03/08/2023', panel: '1ª Turma' },
-  { name: 'Flávio Dino', appointedBy: 'Lula', since: '22/02/2024', panel: '1ª Turma', panelChair: true },
+  {
+    name: 'Nunes Marques',
+    appointedBy: 'Jair Bolsonaro',
+    since: '05/11/2020',
+    born: '1972-05-16',
+    panel: '2ª Turma',
+  },
+  {
+    name: 'André Mendonça',
+    appointedBy: 'Jair Bolsonaro',
+    since: '16/12/2021',
+    born: '1972-12-27',
+    panel: '2ª Turma',
+  },
+  {
+    name: 'Cristiano Zanin',
+    appointedBy: 'Lula',
+    since: '03/08/2023',
+    born: '1975-11-15',
+    panel: '1ª Turma',
+  },
+  {
+    name: 'Flávio Dino',
+    appointedBy: 'Lula',
+    since: '22/02/2024',
+    born: '1968-04-30',
+    panel: '1ª Turma',
+    panelChair: true,
+  },
 ];
 
 /** Open seats: the Constitution sets 11 ministers. */
@@ -131,3 +162,12 @@ export function byPresident(list = MINISTERS) {
   for (const m of list) counts.set(m.appointedBy, (counts.get(m.appointedBy) ?? 0) + 1);
   return [...counts].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
 }
+
+/** Compulsory retirement: the 75th birthday (CF, art. 40, § 1º, II). */
+export function retirementDate(m: Minister) {
+  const [y, mo, d] = m.born.split('-').map(Number) as [number, number, number];
+  return new Date(Date.UTC(y + 75, mo - 1, d));
+}
+
+/** Year a minister took office, from "dd/mm/aaaa". */
+export const sinceYear = (m: Minister) => Number(m.since.slice(-4));

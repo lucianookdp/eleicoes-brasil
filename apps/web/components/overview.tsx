@@ -314,8 +314,13 @@ function EndSummary({ data, statsOnly = false }: { data: OverviewDTO; statsOnly?
                 className={`flex min-w-0 flex-col items-center gap-1 text-center ${i ? 'col-start-3' : ''}`}
               >
                 <FacePhoto c={c} fallbackRound={round.slug} small />
-                <p className="w-full truncate text-[15px] font-semibold" style={{ color: c.color }}>
-                  {displayName(c.ballotName)}
+                <p className="flex w-full items-center justify-center gap-1.5 text-[15px] font-semibold">
+                  <span
+                    className="size-2.5 shrink-0 rounded-full"
+                    style={{ background: c.color }}
+                    aria-hidden
+                  />
+                  <span className="truncate">{displayName(c.ballotName)}</span>
                 </p>
                 <p className="numeral text-[20px] leading-none">{fmtPct(c.percent)}</p>
                 <p className="text-[12.5px] text-muted">{fmtInt(c.votes)} votos</p>
@@ -336,11 +341,11 @@ function EndSummary({ data, statsOnly = false }: { data: OverviewDTO; statsOnly?
           <p className="mt-1 text-[16px] font-semibold">
             {/* Each name stays with its percentage; on a narrow phone the line breaks at the "×". */}
             <span className="whitespace-nowrap">
-              <span style={{ color: a.color }}>{displayName(a.ballotName)}</span> {fmtPct(a.percent)}
+              {displayName(a.ballotName)} {fmtPct(a.percent)}
             </span>{' '}
             ×{' '}
             <span className="whitespace-nowrap">
-              <span style={{ color: b.color }}>{displayName(b.ballotName)}</span> {fmtPct(b.percent)}
+              {displayName(b.ballotName)} {fmtPct(b.percent)}
             </span>
             <span className="block text-[13.5px] font-normal text-ink-2">
               Diferença de {fmtInt(gap)} votos

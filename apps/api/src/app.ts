@@ -244,6 +244,11 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
           .string()
           .regex(/^\d{1,5}$/)
           .optional(),
+        // Only the cities this headline candidate won (most votes there).
+        leader: z
+          .string()
+          .regex(/^\d{1,5}$/)
+          .optional(),
         page: z.coerce.number().int().min(1).max(10_000).default(1),
         pageSize: z.coerce.number().int().min(1).max(100).default(30),
       })

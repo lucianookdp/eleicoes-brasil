@@ -42,10 +42,10 @@ export const metadata: Metadata = {
     locale: 'pt_BR',
     siteName: 'Eleições Brasil',
     title: 'Eleições 2026 · Apuração em tempo real',
-    description: 'Dados oficiais do TSE, atualizados a cada parcial.',
+    description: 'Dados oficiais do TSE, atualizados a cada parcial. 2º turno em 25 de outubro.',
     url: `${base}/`,
     images: [
-      { url: `${base}/og.png`, width: 1200, height: 630, alt: 'Eleições 2026 · Apuração em tempo real' },
+      { url: `${base}/og.png?v=2`, width: 1200, height: 630, alt: 'Eleições 2026 · Apuração em tempo real' },
     ],
   },
   twitter: { card: 'summary_large_image' },
@@ -63,8 +63,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: dark)', color: '#0f1519' },
-    { media: '(prefers-color-scheme: light)', color: '#f2f5f4' },
+    { media: '(prefers-color-scheme: dark)', color: '#0e1013' },
+    { media: '(prefers-color-scheme: light)', color: '#f4f5f7' },
   ],
 };
 
@@ -77,7 +77,8 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${api}`,
   "font-src 'self'",
-  `connect-src 'self' ${api}`,
+  // Our API, plus Polymarket's public API for the separate "Mercado de apostas" page only.
+  `connect-src 'self' ${api} https://gamma-api.polymarket.com https://clob.polymarket.com`,
   "manifest-src 'self'",
   "base-uri 'self'",
   "form-action 'self'",

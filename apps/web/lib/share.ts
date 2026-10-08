@@ -71,16 +71,16 @@ export async function shareImage(result: ResultDTO, siteLabel: string): Promise<
   // Two finalists in a runoff, the top three otherwise: room for the lead line and the footer.
   const list = shown(result, result.candidates.filter(hasValidVotes).length === 2 ? 2 : 3);
 
-  ctx.fillStyle = '#0f1519';
+  ctx.fillStyle = '#0e1013';
   ctx.fillRect(0, 0, size, size);
   const pad = 80;
-  ctx.fillStyle = '#34c38f';
+  ctx.fillStyle = '#2fbf71';
   ctx.font = `600 34px ${font}`;
   ctx.fillText('Eleições Brasil', pad, 120);
-  ctx.fillStyle = '#e6ecea';
+  ctx.fillStyle = '#eceef1';
   ctx.font = `700 64px ${font}`;
   ctx.fillText(title(result), pad, 210, size - pad * 2);
-  ctx.fillStyle = '#9aa8a4';
+  ctx.fillStyle = '#8a909a';
   ctx.font = `400 34px ${font}`;
   const at = result.provenance?.retrievedAt ?? result.updatedAt;
   ctx.fillText(`${status(result)} · ${formatClock(at).slice(0, 5)}`, pad, 265, size - pad * 2);
@@ -88,18 +88,18 @@ export async function shareImage(result: ResultDTO, siteLabel: string): Promise<
   const rowH = list.length <= 2 ? 230 : 165;
   list.forEach((c, i) => {
     const y = 360 + i * rowH;
-    ctx.fillStyle = '#e6ecea';
+    ctx.fillStyle = '#eceef1';
     ctx.font = `600 44px ${font}`;
     ctx.fillText(displayName(c.ballotName), pad, y, 640);
     ctx.textAlign = 'right';
     ctx.fillStyle = c.color;
     ctx.font = `700 56px ${font}`;
     ctx.fillText(fmtPct(c.percent), size - pad, y + 6);
-    ctx.fillStyle = '#9aa8a4';
+    ctx.fillStyle = '#8a909a';
     ctx.font = `400 32px ${font}`;
     ctx.fillText(`${fmtInt(c.votes)} votos`, size - pad, y + 50);
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#233038';
+    ctx.fillStyle = '#272b31';
     ctx.fillRect(pad, y + 30, 620, 18);
     ctx.fillStyle = c.color;
     ctx.fillRect(pad, y + 30, (620 * Math.max(0, Math.min(100, c.percent ?? 0))) / 100, 18);
@@ -110,7 +110,7 @@ export async function shareImage(result: ResultDTO, siteLabel: string): Promise<
   if (first && second && gap > 0) {
     // "Venceu" only when the TSE says so (elected); a 1st-round leader below 50% has not won.
     const won = result.mathematicallyDecided === 'elected' || /^eleit/i.test(first.status ?? '');
-    ctx.fillStyle = '#1c262c';
+    ctx.fillStyle = '#1c1f24';
     ctx.fillRect(pad, 360 + list.length * rowH - 40, size - pad * 2, 110);
     ctx.textAlign = 'center';
     ctx.fillStyle = first.color;
@@ -124,10 +124,10 @@ export async function shareImage(result: ResultDTO, siteLabel: string): Promise<
     ctx.textAlign = 'left';
   }
 
-  ctx.fillStyle = '#9aa8a4';
+  ctx.fillStyle = '#8a909a';
   ctx.font = `400 30px ${font}`;
   ctx.fillText('Dados oficiais do TSE · acompanhe ao vivo em', pad, size - 110);
-  ctx.fillStyle = '#e6ecea';
+  ctx.fillStyle = '#eceef1';
   ctx.font = `600 34px ${font}`;
   ctx.fillText(siteLabel, pad, size - 64, size - pad * 2);
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));

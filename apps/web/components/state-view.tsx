@@ -127,11 +127,14 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
   const candidates = (headline?.candidates ?? []).filter(hasValidVotes).slice(0, 6);
   const colorOf = (number: string) => candidates.find((c) => c.number === number)?.color ?? 'var(--muted)';
   const picked = sort.startsWith('candidate:') ? sort.slice('candidate:'.length) : undefined;
+  // "Only where X won": the two leading candidates nationally (in a runoff, the two finalists).
+  const [leader, setLeader] = useState<string | null>(null);
+  const leaderName = candidates.find((c) => c.number === leader)?.ballotName;
   const pickedName = candidates.find((c) => c.number === picked)?.ballotName;
   const { data, isFetching, isFetchingNextPage, hasNextPage, fetchNextPage } = useCities(
     round.slug,
     uf.toLowerCase(),
-    { q: debounced, sort: picked ? 'candidate' : sort, candidate: picked },
+    { q: debounced, sort: picked ? 'candidate' : sort, candidate: picked, leader: leader ?? undefined },
   );
   const items = data?.pages.flatMap((p) => p.items) ?? [];
   const found = data?.pages[0]?.total ?? 0;
@@ -141,6 +144,40 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
       <SectionTitle id="municipios" title={abroad ? 'Cidades no exterior' : 'Municípios'}>
         {fmtInt(total)} {abroad ? 'cidades' : 'municípios'}
       </SectionTitle>
+      {candidates.length >= 2 && (
+        <fieldset className="mb-3">
+          <legend className="mb-1.5 text-[13px] text-muted">
+            Mais votado em cada {abroad ? 'cidade' : 'município'}
+          </legend>
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { number: null, label: 'Todos', color: null },
+              ...candidates
+                .slice(0, 2)
+                .map((c) => ({ number: c.number, label: displayName(c.ballotName), color: c.color })),
+            ].map((o) => (
+              <button
+                key={o.label}
+                type="button"
+                aria-pressed={leader === o.number}
+                onClick={() => setLeader(o.number)}
+                className="flex h-9 items-center gap-1.5 rounded-full border border-line px-3.5 text-[14px] text-ink-2 hover:border-line-strong aria-pressed:border-live aria-pressed:bg-live-soft aria-pressed:font-medium aria-pressed:text-ink"
+              >
+                {o.color && (
+                  <span className="size-2.5 rounded-full" style={{ background: o.color }} aria-hidden />
+                )}
+                {o.label}
+              </button>
+            ))}
+          </div>
+          {leader && data && (
+            <p className="mt-1.5 text-[13px] text-ink-2">
+              {fmtInt(found)} {abroad ? 'cidades' : 'municípios'} onde {displayName(leaderName ?? '')} teve
+              mais votos
+            </p>
+          )}
+        </fieldset>
+      )}
       <div className="mb-3 flex flex-wrap gap-2">
         <label className="flex h-11 min-w-0 flex-1 basis-60 items-center gap-2 rounded-xl border border-line bg-surface px-3 focus-within:border-live">
           <IconSearch className="shrink-0 text-muted" />

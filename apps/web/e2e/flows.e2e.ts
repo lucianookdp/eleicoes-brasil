@@ -254,12 +254,15 @@ test("cities: who won each city, and a candidate's votes city by city", async ({
 });
 
 test('STF: every minister with photo, who appointed them, and the open seat', async ({ page }) => {
-  // Inside Bancadas, as its third tab (also reachable with ?casa=stf).
-  await page.goto('/eleicao/bancadas/?e=demo&t=1');
-  await page.getByRole('radio', { name: 'STF' }).click();
-  await expect(page.getByRole('heading', { name: 'Os ministros' })).toBeVisible();
+  // A tab of the governors and senators page (old Bancadas links with ?casa=stf land here too).
+  await page.goto('/eleicao/bancadas/?e=demo&t=1&casa=stf');
+  await expect(page).toHaveURL(/cargos\/.*cargo=stf/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Supremo Tribunal Federal' })).toBeVisible();
   const photos = page.getByRole('img', { name: /^Foto de / });
-  await expect(photos).toHaveCount(10);
+  // Ten ministers, each with a photo (the panels section shows some of them again).
+  await expect
+    .poll(async () => new Set(await photos.evaluateAll((els) => els.map((e) => e.getAttribute('alt')))).size)
+    .toBe(10);
   for (const img of await photos.all())
     await expect
       .poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth))
@@ -305,4 +308,36 @@ test('governors: named for what is disputed, and listed low on the runoff home p
   const section = page.getByRole('region', { name: 'Governadores no 2º turno' });
   await expect(section).toBeVisible();
   await expect(section.getByRole('link').first()).toBeVisible();
+});
+
+test('STF: filter by who appointed, timeline and panels', async ({ page }) => {
+  await page.goto('/eleicao/cargos/?e=demo&t=1&cargo=stf');
+  await page.getByRole('button', { name: /^Lula \d/ }).click();
+  await expect(page.getByRole('img', { name: /^Foto de / }).first()).toBeVisible();
+  const cards = page.getByText(/^Indicação de:/);
+  const lula = await page.getByRole('button', { name: /^Lula \d/ }).textContent();
+  await expect(cards).toHaveCount(Number(lula?.replace(/\D/g, '')));
+  await expect(page.getByRole('heading', { name: 'Linha do tempo' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Turmas' })).toBeVisible();
+  await expect(page.getByText(/Próxima aposentadoria:/)).toBeVisible();
+});
+
+test('states: only those where a candidate had the most votes', async ({ page }) => {
+  await page.goto('/eleicao/estados/?e=demo&t=1');
+  const chips = page.getByRole('group', { name: 'Mais votado em cada estado' }).getByRole('button');
+  test.skip((await chips.count()) < 2, 'no votes counted yet');
+  const second = chips.nth(1);
+  const n = Number((await second.textContent())?.replace(/\D/g, '').slice(-2));
+  await second.click();
+  await expect(page.locator('table tbody tr, ul.divide-y > li').first()).toBeVisible();
+  expect(n).toBeGreaterThan(0);
+});
+
+test('polymarket: its own page, with Polymarket named and linked', async ({ page }) => {
+  await page.goto('/polymarket/');
+  await expect(page.getByRole('heading', { level: 1, name: 'Polymarket' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Ver no Polymarket/ })).toHaveAttribute(
+    'href',
+    /polymarket\.com\/event\//,
+  );
 });

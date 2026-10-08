@@ -1,13 +1,12 @@
 'use client';
 
 import type { BenchDTO } from '@eleicoes/election-core';
-import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { SENATORS, seatPositions, thresholds } from '@/lib/benches';
 import { displayName, fmtInt, fmtPct } from '@/lib/format';
 import { useBenches } from '@/lib/queries';
 import { useRound } from './shell';
-import { StfView } from './stf-view';
 import { EmptyState, ErrorNotice, Panel, Segmented, Skeleton } from './ui';
 
 type Group = { key: string; label: string; detail: string; color: string; seats: number };
@@ -17,14 +16,18 @@ type Mode = 'party' | 'federation';
  * Seats won per party in the Câmara and in the Senado, from the TSE's "eleito" marks. Shown only
  * once every state is final: a partial count would be a projection, and the site never shows one.
  * Parties are ordered by size; no left/right grouping, since there is no official classification.
- * The third tab is the Supreme Court (STF): who sits there and who appointed them (`?casa=stf`).
  */
 export function BenchesView() {
-  const { round } = useRound();
+  const { round, href } = useRound();
   // Deputies and senators are elected in the 1st round; the runoff has none.
   const { data, error, refetch } = useBenches(`${round.electionSlug}-1`);
   const params = useSearchParams();
-  const [chamber, setChamber] = useState(params.get('casa') === 'stf' ? 'stf' : 'deputado-federal');
+  const router = useRouter();
+  // The STF used to be a tab here (?casa=stf); it now lives with governors and senators.
+  useEffect(() => {
+    if (params.get('casa') === 'stf') router.replace(href('/offices', { cargo: 'stf' }));
+  }, [params, router, href]);
+  const [chamber, setChamber] = useState('deputado-federal');
   const [mode, setMode] = useState<Mode | null>(null);
   const bench = data?.chambers.find((c) => c.office.slug === chamber) ?? data?.chambers[0];
   const ready = data?.chambers.length && data.chambers.every((c) => c.statesFinal === c.statesTotal);
@@ -40,52 +43,44 @@ export function BenchesView() {
       <div className="mb-4">
         <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Bancadas eleitas</h1>
         <p className="text-[13.5px] text-muted">
-          Quantos deputados federais e senadores cada partido elegeu (dados oficiais do TSE) e quem são os
-          ministros do STF.
+          Quantos deputados federais e senadores cada partido elegeu. Dados oficiais do TSE.
         </p>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Segmented
-          label="Casa"
-          value={chamber === 'stf' ? 'stf' : (bench?.office.slug ?? chamber)}
-          onChange={setChamber}
-          options={[
-            ...(data?.chambers ?? []).map((c) => ({
+      {ready && bench && (
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <Segmented
+            label="Casa"
+            value={bench.office.slug}
+            onChange={setChamber}
+            options={data.chambers.map((c) => ({
               value: c.office.slug,
               label: c.office.slug === 'senador' ? 'Senado' : 'Câmara',
-            })),
-            { value: 'stf', label: 'STF' },
-          ]}
-        />
-        {chamber !== 'stf' && ready && options.length > 1 && (
-          <Segmented label="Ver por" value={shown} onChange={setMode} options={options} />
-        )}
-      </div>
-
-      {chamber === 'stf' ? (
-        <StfView />
-      ) : (
-        <>
-          {error && <ErrorNotice error={error} retry={() => refetch()} />}
-          {!data && !error && <Skeleton className="h-80" />}
-          {data && !ready && (
-            <EmptyState title="As bancadas aparecem quando o TSE terminar a totalização em todos os estados.">
-              {data.chambers.map((c) => (
-                <span key={c.office.slug} className="block">
-                  {c.office.name}: {c.statesFinal} de {c.statesTotal} estados concluídos.
-                </span>
-              ))}
-            </EmptyState>
+            }))}
+          />
+          {options.length > 1 && (
+            <Segmented label="Ver por" value={shown} onChange={setMode} options={options} />
           )}
-
-          {ready && bench && (
-            <Bench bench={bench} groups={shown === 'federation' ? federations(bench) : parties(bench)} />
-          )}
-
-          <Thresholds deputies={data?.chambers.find((c) => c.office.slug === 'deputado-federal')?.seats} />
-        </>
+        </div>
       )}
+
+      {error && <ErrorNotice error={error} retry={() => refetch()} />}
+      {!data && !error && <Skeleton className="h-80" />}
+      {data && !ready && (
+        <EmptyState title="As bancadas aparecem quando o TSE terminar a totalização em todos os estados.">
+          {data.chambers.map((c) => (
+            <span key={c.office.slug} className="block">
+              {c.office.name}: {c.statesFinal} de {c.statesTotal} estados concluídos.
+            </span>
+          ))}
+        </EmptyState>
+      )}
+
+      {ready && bench && (
+        <Bench bench={bench} groups={shown === 'federation' ? federations(bench) : parties(bench)} />
+      )}
+
+      <Thresholds deputies={data?.chambers.find((c) => c.office.slug === 'deputado-federal')?.seats} />
     </>
   );
 }

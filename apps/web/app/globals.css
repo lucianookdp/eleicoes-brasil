@@ -1,52 +1,53 @@
 @import "tailwindcss";
 
 /*
- * Design tokens. Dark is the primary experience: a slate graphite ground (blue-green bias,
- * like a control room at night), emerald reserved for "live / healthy" status, and candidate
- * colours carrying the data. Light mode mirrors every token.
+ * Design tokens. The theme follows the reader's system (light or dark), with a toggle. Neutral
+ * graphite or paper ground; the flag's green is reserved for "live / healthy" and highlights;
+ * candidate colours carry the data. Light mode mirrors every token.
  */
 :root {
-  --ground: #0f1519;
-  --surface: #151d22;
-  --surface-2: #1b252b;
-  --line: #26323a;
-  --line-strong: #34434c;
-  --ink: #e6ecea;
-  --ink-2: #b6c2bf;
-  --muted: #84928f;
-  --live: #34c38f;
-  --live-soft: rgb(52 195 143 / 0.14);
-  --warn: #e8a33d;
-  --warn-soft: rgb(232 163 61 / 0.14);
+  /* Neutral graphite (no green or blue cast); the flag's green marks what is live, its blue the links. */
+  --ground: #0e1013;
+  --surface: #15171b;
+  --surface-2: #1c1f24;
+  --line: #272b31;
+  --line-strong: #363b43;
+  --ink: #eceef1;
+  --ink-2: #b8bdc5;
+  --muted: #8a909a;
+  --live: #2fbf71;
+  --live-soft: rgb(47 191 113 / 0.14);
+  --warn: #f2b33d;
+  --warn-soft: rgb(242 179 61 / 0.14);
   --bad: #ef5b52;
   --bad-soft: rgb(239 91 82 / 0.14);
-  --info: #58b4e0;
-  /* Sequential ramp (map, heatmap): one hue, low → high. */
-  --seq-low: #1d2b2a;
-  --seq-high: #3fd49c;
-  --flash: rgb(88 180 224 / 0.16);
+  --info: #6ea8ff;
+  /* Sequential ramp (map, heatmap): neutral low → flag green high. */
+  --seq-low: #262a30;
+  --seq-high: #2fbf71;
+  --flash: rgb(110 168 255 / 0.16);
   color-scheme: dark;
 }
 
 :root[data-theme="light"] {
-  --ground: #f2f5f4;
+  --ground: #f4f5f7;
   --surface: #ffffff;
-  --surface-2: #eef2f1;
-  --line: #dce3e1;
-  --line-strong: #c5cfcc;
-  --ink: #10181b;
-  --ink-2: #3a484c;
-  --muted: #62716f;
-  --live: #0e9467;
-  --live-soft: rgb(14 148 103 / 0.1);
+  --surface-2: #eef0f3;
+  --line: #dfe2e7;
+  --line-strong: #c8cdd5;
+  --ink: #111317;
+  --ink-2: #3c414a;
+  --muted: #6a707a;
+  --live: #0e8f4f;
+  --live-soft: rgb(14 143 79 / 0.1);
   --warn: #a8690f;
   --warn-soft: rgb(168 105 15 / 0.1);
   --bad: #c3342c;
   --bad-soft: rgb(195 52 44 / 0.1);
-  --info: #1b76a6;
-  --seq-low: #e3ece9;
-  --seq-high: #0b7a55;
-  --flash: rgb(27 118 166 / 0.1);
+  --info: #1f5fc8;
+  --seq-low: #e6e9ee;
+  --seq-high: #0e8f4f;
+  --flash: rgb(31 95 200 / 0.1);
   color-scheme: light;
 }
 

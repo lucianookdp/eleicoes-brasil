@@ -91,10 +91,11 @@ function Avatar({
   return (
     <span
       className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold ${large ? 'size-16 text-[18px]' : small ? 'size-9 text-[12px]' : 'size-12 text-[14px]'}`}
+      // Neutral, like a newspaper: the party colour is only the small dot (and the bars).
       style={{
-        background: `color-mix(in srgb, ${c.color} 18%, transparent)`,
-        color: c.color,
-        boxShadow: `inset 0 0 0 1.5px ${c.color}`,
+        background: 'var(--surface-2)',
+        color: 'var(--ink-2)',
+        boxShadow: 'inset 0 0 0 1px var(--line-strong)',
       }}
       aria-hidden
     >
@@ -110,8 +111,11 @@ function Avatar({
           className="absolute inset-0 size-full object-cover object-[center_22%]"
         />
       )}
-      {/* Party-colour ring drawn over the photo (an inset shadow on the img itself is hidden). */}
-      <span className="absolute inset-0 rounded-full" style={{ boxShadow: `inset 0 0 0 2px ${c.color}` }} />
+      {/* Thin neutral ring over the photo (an inset shadow on the img itself is hidden). */}
+      <span
+        className="absolute inset-0 rounded-full"
+        style={{ boxShadow: 'inset 0 0 0 1px var(--line-strong)' }}
+      />
     </span>
   );
 }
@@ -210,13 +214,14 @@ export function HeadToHead({ result }: { result: ResultDTO }) {
   const side = (c: CandidateDTO) => (
     <div className="flex min-w-0 flex-col items-center gap-2 text-center">
       <FacePhoto c={c} fallbackRound={firstRound} />
-      <p className="w-full truncate text-[16px] font-semibold">{displayName(c.ballotName)}</p>
+      <p className="flex w-full items-center justify-center gap-1.5 text-[16px] font-semibold">
+        <span className="size-2.5 shrink-0 rounded-full" style={{ background: c.color }} aria-hidden />
+        <span className="truncate">{displayName(c.ballotName)}</span>
+      </p>
       <p className="-mt-2 text-[12.5px] text-muted">
         {c.number} · {c.party.abbreviation}
       </p>
-      <p className="numeral text-[30px] leading-none" style={{ color: c.color }}>
-        {result.votesPublishable ? fmtPct(c.percent) : '—'}
-      </p>
+      <p className="numeral text-[30px] leading-none">{result.votesPublishable ? fmtPct(c.percent) : '—'}</p>
       <p className="text-[13px] text-ink-2">
         {result.votesPublishable ? `${fmtInt(c.votes)} votos` : 'não divulgado'}
       </p>
@@ -258,8 +263,8 @@ export function HeadToHead({ result }: { result: ResultDTO }) {
         ) : (
           <>
             <p className="text-[17px] font-semibold">
-              <span style={{ color: leader.color }}>{displayName(leader.ballotName)}</span>{' '}
-              {over ? 'venceu por' : 'está à frente por'} {fmtInt(diff)} votos
+              <span>{displayName(leader.ballotName)}</span> {over ? 'venceu por' : 'está à frente por'}{' '}
+              {fmtInt(diff)} votos
             </p>
             <p className="text-[13px] text-muted">
               {pp.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} pontos de diferença
@@ -294,9 +299,9 @@ export function FacePhoto({
     <span
       className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold ${small ? 'size-14 text-[16px]' : 'size-[72px] text-[22px] sm:size-20'}`}
       style={{
-        background: `color-mix(in srgb, ${c.color} 18%, transparent)`,
-        color: c.color,
-        boxShadow: `inset 0 0 0 3px ${c.color}`,
+        background: 'var(--surface-2)',
+        color: 'var(--ink-2)',
+        boxShadow: 'inset 0 0 0 1px var(--line-strong)',
       }}
       aria-hidden
     >
@@ -309,7 +314,7 @@ export function FacePhoto({
           alt=""
           decoding="async"
           onError={() => setI((n) => n + 1)}
-          className="absolute inset-[3px] size-[calc(100%-6px)] rounded-full object-cover object-[center_22%]"
+          className="absolute inset-0 size-full rounded-full object-cover object-[center_22%]"
         />
       )}
     </span>

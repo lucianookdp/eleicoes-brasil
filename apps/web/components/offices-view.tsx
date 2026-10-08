@@ -3,10 +3,12 @@
 import type { ResultDTO } from '@eleicoes/election-core';
 import { hasValidVotes } from '@eleicoes/election-core';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { displayName, fmtPct } from '@/lib/format';
 import { useOfficeStates, useOverview } from '@/lib/queries';
 import { StatusPill, useOfficeParam } from './results';
 import { useRound } from './shell';
+import { StfView } from './stf-view';
 import { EmptyState, ErrorNotice, Segmented, Skeleton, StateFlag } from './ui';
 
 /** Governor or senator in every state on one screen: who leads, who is elected, who goes to a runoff. */
@@ -17,45 +19,63 @@ export function OfficesView() {
     (o) => o.scope === 'state' && o.kind === 'majoritarian',
   );
   const [office, setOffice] = useOfficeParam(offices);
-  const { data, error, refetch, isFetching } = useOfficeStates(round.slug, office?.slug);
+  // The Supreme Court lives here too, as the last tab (?cargo=stf).
+  const stf = useSearchParams().get('cargo') === 'stf';
+  const { data, error, refetch, isFetching } = useOfficeStates(round.slug, stf ? undefined : office?.slug);
 
   return (
     <>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">
-            {round.round === 2 ? 'Governadores no 2º turno' : 'Governadores e senadores'}
+            {stf
+              ? 'Supremo Tribunal Federal'
+              : round.round === 2
+                ? 'Governadores no 2º turno'
+                : 'Governadores e senadores'}
           </h1>
           <p className="text-[13.5px] text-muted">
-            {round.round === 2
-              ? 'Os estados onde a disputa para governador foi ao 2º turno. Toque em um estado para ver tudo.'
-              : 'Quem lidera em cada estado. Toque em um estado para ver tudo.'}
+            {stf
+              ? 'Quem são os ministros, quem indicou cada um e até quando ficam no tribunal.'
+              : round.round === 2
+                ? 'Os estados onde a disputa para governador foi ao 2º turno. Toque em um estado para ver tudo.'
+                : 'Quem lidera em cada estado. Toque em um estado para ver tudo.'}
           </p>
         </div>
-        {offices.length > 1 && office && (
-          <Segmented
-            label="Cargo"
-            value={office.slug}
-            onChange={setOffice}
-            options={offices.map((o) => ({ value: o.slug, label: o.name }))}
-          />
-        )}
+        <Segmented
+          label="Cargo"
+          value={stf ? 'stf' : (office?.slug ?? 'stf')}
+          onChange={setOffice}
+          options={[
+            ...offices.map((o) => ({
+              value: o.slug,
+              label: o.name === 'Governador' ? 'Governadores' : o.name === 'Senador' ? 'Senadores' : o.name,
+            })),
+            { value: 'stf', label: 'STF' },
+          ]}
+        />
       </div>
-      {overview.data && offices.length === 0 && (
-        <EmptyState title="Nesta etapa não há disputa para governador ou senador." />
-      )}
-      {error && <ErrorNotice error={error} retry={() => refetch()} />}
-      {!data && !error && offices.length > 0 && <Skeleton className="h-96" />}
-      {data && (
+      {stf ? (
+        <StfView />
+      ) : (
         <>
-          <Summary results={data.results} />
-          <ul className={`grid gap-3 sm:grid-cols-2 xl:grid-cols-3 ${isFetching ? 'opacity-80' : ''}`}>
-            {data.results.map((r) => (
-              <li key={r.areaKey}>
-                <StateCard result={r} />
-              </li>
-            ))}
-          </ul>
+          {overview.data && offices.length === 0 && (
+            <EmptyState title="Nesta etapa não há disputa para governador ou senador." />
+          )}
+          {error && <ErrorNotice error={error} retry={() => refetch()} />}
+          {!data && !error && offices.length > 0 && <Skeleton className="h-96" />}
+          {data && (
+            <>
+              <Summary results={data.results} />
+              <ul className={`grid gap-3 sm:grid-cols-2 xl:grid-cols-3 ${isFetching ? 'opacity-80' : ''}`}>
+                {data.results.map((r) => (
+                  <li key={r.areaKey}>
+                    <StateCard result={r} />
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </>
       )}
     </>

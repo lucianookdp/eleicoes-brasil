@@ -94,13 +94,16 @@ export const IconClose = (p: SVGProps<SVGSVGElement>) => (
 );
 
 /** Brand mark: three rising tallies inside a ballot-box outline. */
+/**
+ * The brand mark: three rising count bars in Brazil's flag colours (green, yellow, blue). Fixed
+ * colours, the same in both themes.
+ */
 export function Logo({ size = 22 }: { size?: number }) {
   return (
     <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden="true">
-      <rect x="2" y="2" width="28" height="28" rx="7" fill="var(--surface-2)" stroke="var(--line-strong)" />
-      <rect x="8" y="17" width="4" height="8" rx="1.5" fill="var(--ink-2)" />
-      <rect x="14" y="12" width="4" height="13" rx="1.5" fill="var(--ink-2)" />
-      <rect x="20" y="7" width="4" height="18" rx="1.5" fill="var(--live)" />
+      <rect x="4" y="18" width="6" height="10" rx="3" fill="#12A15F" />
+      <rect x="13" y="11" width="6" height="17" rx="3" fill="#F6C343" />
+      <rect x="22" y="4" width="6" height="24" rx="3" fill="#2563D9" />
     </svg>
   );
 }
@@ -131,5 +134,11 @@ export const IconCourt = (p: SVGProps<SVGSVGElement>) => (
   <Icon {...p}>
     <path d="M3 9h18L12 4 3 9Z" />
     <path d="M5 9v9M9.5 9v9M14.5 9v9M19 9v9M3 20h18" />
+  </Icon>
+);
+export const IconTrend = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M3 17l6-6 4 4 8-8" />
+    <path d="M15 7h6v6" />
   </Icon>
 );

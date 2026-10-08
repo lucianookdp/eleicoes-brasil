@@ -12,7 +12,6 @@ import { electionHref, pickRound, SECTION_ROUTES } from '@/lib/rounds';
 import {
   IconClose,
   IconCompare,
-  IconCourt,
   IconHistory,
   IconInfo,
   IconMoon,
@@ -25,6 +24,7 @@ import {
   IconStar,
   IconStates,
   IconSun,
+  IconTrend,
   Logo,
 } from './icons';
 import { SearchPalette } from './search';
@@ -132,7 +132,7 @@ const NAV = [
     icon: IconPerson,
     main: true,
   },
-  { path: '/benches', label: 'Bancadas e STF', short: 'Bancadas', icon: IconSeats, main: true },
+  { path: '/benches', label: 'Bancadas', short: 'Bancadas', icon: IconSeats, main: true },
   {
     path: '/compare',
     label: 'Comparar estados',
@@ -356,14 +356,14 @@ function MoreMenu({ items }: { items: (typeof NAV)[number][] }) {
               </Link>
             </li>
           ))}
-          <li>
+          <li className="mt-1 border-t border-line pt-1">
             <Link
-              href={href('/benches', { casa: 'stf' })}
+              href="/polymarket"
               onClick={() => setOpen(false)}
               className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-[14.5px] text-ink-2 hover:bg-surface-2 hover:text-ink"
             >
-              <IconCourt width={17} height={17} />
-              STF
+              <IconTrend width={17} height={17} />
+              Mercado de apostas
             </Link>
           </li>
         </ul>
@@ -537,7 +537,6 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             <ul className="grid gap-1">
               {[
                 { to: href('/benches'), label: 'Bancadas eleitas', icon: IconSeats },
-                { to: href('/benches', { casa: 'stf' }), label: 'STF', icon: IconCourt },
                 ...(meta?.features.comparison === false
                   ? []
                   : [{ to: href('/compare'), label: 'Comparar estados', icon: IconCompare }]),
@@ -547,11 +546,22 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
               {[
                 { to: href('/historico'), label: 'Linha do tempo', icon: IconHistory },
                 { to: href('/operations'), label: 'Bastidores da coleta', icon: IconPulse },
+                { to: '/polymarket', label: 'Mercado de apostas (Polymarket)', icon: IconTrend },
                 { to: '/como-funciona', label: 'Como funciona', icon: IconInfo },
                 { to: '/sobre', label: 'Sobre os dados', icon: IconInfo },
               ].map(moreLink)}
               <li>
                 <ShareSiteItem />
+              </li>
+              <li className="mt-2 border-t border-line pt-3">
+                <a
+                  href="https://lucianookdp.dev"
+                  target="_blank"
+                  rel="noopener"
+                  className="flex min-h-10 items-center gap-1.5 px-3 text-[13.5px] text-muted hover:text-ink"
+                >
+                  Feito por <AuthorLogo /> <span aria-hidden>→</span>
+                </a>
               </li>
             </ul>
           </div>
@@ -598,35 +608,54 @@ function Footer() {
   return <SiteFooter version={meta?.app.version} />;
 }
 
+/**
+ * Quiet footer: the source and the two help pages on the left; on the right one discreet pill to
+ * the author's site — visible to anyone who reaches the end, never competing with the results.
+ */
 function SiteFooter({ version }: { version?: string }) {
   return (
-    <footer className="border-t border-line pb-24 xl:pb-0">
-      <div className="mx-auto flex max-w-[1320px] flex-col gap-2 px-4 py-6 text-[13px] text-muted sm:px-6 md:flex-row md:items-start md:justify-between">
-        <div className="max-w-2xl">
-          <p>
-            Fonte: Tribunal Superior Eleitoral (TSE). Este site não é um serviço oficial da Justiça Eleitoral.
-            Resultados parciais consideram apenas as urnas já apuradas e podem mudar até o fim da apuração.
-            Horários de Brasília. Versão 2 (beta), em melhoria contínua.{' '}
-            <Link href="/como-funciona" className="text-ink-2 underline underline-offset-2">
+    <footer className="mt-6 border-t border-line pb-24 xl:pb-0">
+      <div className="mx-auto flex max-w-[1320px] flex-col gap-4 px-4 py-6 sm:px-6 md:flex-row md:items-center md:justify-between">
+        <div className="max-w-2xl text-[13px] text-muted">
+          <p className="flex items-center gap-2 font-medium text-ink-2">
+            <Logo size={18} /> Eleições Brasil
+            <span className="font-mono text-[11.5px] font-normal text-muted">
+              {version ? `v${version}` : ''}
+            </span>
+          </p>
+          <p className="mt-1.5 leading-relaxed">
+            Dados oficiais do Tribunal Superior Eleitoral (TSE). Site independente, sem vínculo com a Justiça
+            Eleitoral. Horários de Brasília.{' '}
+            <Link href="/como-funciona" className="text-ink-2 underline underline-offset-2 hover:text-ink">
               Como funciona
             </Link>
             {' · '}
-            <Link href="/sobre" className="text-ink-2 underline underline-offset-2">
+            <Link href="/sobre" className="text-ink-2 underline underline-offset-2 hover:text-ink">
               Sobre os dados
             </Link>
           </p>
         </div>
-        <div className="flex shrink-0 flex-col gap-1 md:items-end">
-          <a
-            href="https://lucianookdp.dev"
-            target="_blank"
-            rel="noopener"
-            className="inline-flex items-center gap-1.5 text-ink-2 hover:text-ink"
+        <a
+          href="https://lucianookdp.dev"
+          target="_blank"
+          rel="noopener"
+          className="group inline-flex shrink-0 items-center gap-2 self-start rounded-full border border-line px-4 py-2 text-[13px] text-muted transition-colors hover:border-live hover:text-ink md:self-auto"
+        >
+          Feito por <AuthorLogo />
+          <span className="text-ink-2 group-hover:text-live">· ver meus projetos</span>
+          <svg
+            viewBox="0 0 24 24"
+            width={14}
+            height={14}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            aria-hidden
+            className="transition-transform group-hover:translate-x-0.5"
           >
-            Desenvolvido por <AuthorLogo />
-          </a>
-          <p className="font-mono text-[12px]">Eleições Brasil{version ? ` v${version}` : ''}</p>
-        </div>
+            <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </a>
       </div>
     </footer>
   );
