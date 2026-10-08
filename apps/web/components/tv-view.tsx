@@ -207,14 +207,14 @@ function Pair({ a, b, fallbackRound }: { a: CandidateDTO; b: CandidateDTO; fallb
 /** One of several candidates (1st round): face, name, big %, a bar. */
 function Row({ c, fallbackRound }: { c: CandidateDTO; fallbackRound: string }) {
   return (
-    <li className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-[clamp(10px,1.4vw,24px)]">
+    <li className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-[clamp(8px,2.5cqi,24px)]">
       <FacePhoto
         c={c}
         fallbackRound={fallbackRound}
-        sizeClass="size-[clamp(44px,4.5vw,84px)] text-[clamp(14px,1.3vw,24px)]"
+        sizeClass="size-[clamp(36px,9cqi,84px)] text-[clamp(13px,2.4cqi,24px)]"
       />
       <div className="min-w-0">
-        <p className="truncate text-[clamp(16px,1.7vw,32px)] font-semibold">{displayName(c.ballotName)}</p>
+        <p className="truncate text-[clamp(14px,4cqi,32px)] font-semibold">{displayName(c.ballotName)}</p>
         <div className="mt-1.5 h-[clamp(6px,0.6vw,12px)] overflow-hidden rounded-full bg-surface-2">
           <div
             className="bar h-full rounded-full"
@@ -223,8 +223,8 @@ function Row({ c, fallbackRound }: { c: CandidateDTO; fallbackRound: string }) {
         </div>
       </div>
       <div className="text-right">
-        <p className="numeral text-[clamp(26px,3.6vw,72px)] font-bold leading-none">{fmtPct(c.percent)}</p>
-        <p className="numeral mt-1 text-[clamp(12px,1.1vw,20px)] text-muted">{fmtInt(c.votes)} votos</p>
+        <p className="numeral text-[clamp(20px,7.5cqi,72px)] font-bold leading-none">{fmtPct(c.percent)}</p>
+        <p className="numeral mt-1 text-[clamp(11px,2.3cqi,20px)] text-muted">{fmtInt(c.votes)} votos</p>
       </div>
     </li>
   );
