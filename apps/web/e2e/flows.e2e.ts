@@ -354,3 +354,19 @@ test('telão: the headline race and the map, with a full-screen button', async (
   await expect(page.getByRole('region', { name: 'Resultado' }).getByText('%').first()).toBeVisible();
   await expect(page.getByRole('group', { name: 'Mapa do Brasil por estado' })).toBeVisible();
 });
+
+test('map: a tap pins a state and its link stays (the tap also focuses it)', async ({ page }) => {
+  await page.goto('/eleicao/?e=demo&t=1');
+  const sp = page.getByRole('link', { name: /^São Paulo:/ });
+  await expect(sp).toBeVisible();
+  // A phone tap: touch down, focus, touch up (Playwright's click would be a mouse).
+  await sp.evaluate((el) => {
+    el.dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true }));
+    (el as unknown as HTMLElement).focus();
+    el.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true }));
+  });
+  const open = page.getByRole('link', { name: 'Abrir São Paulo' });
+  await expect(open).toBeVisible();
+  await page.waitForTimeout(1000);
+  await expect(open).toBeVisible();
+});

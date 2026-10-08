@@ -198,7 +198,9 @@ export function BrazilMap({
             })}
           </g>
         </svg>
-        <StateCard state={shown} pinned={!!pinned && !active} />
+        {/* A tap both pins a state and focuses it (focus sets `active`): the card is still the
+            pinned one, so it keeps its link. Only hovering another state shows a card without it. */}
+        <StateCard state={shown} pinned={!!pinned && (active === null || active === pinned)} />
       </div>
     </div>
   );
