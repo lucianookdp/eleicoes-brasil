@@ -41,6 +41,44 @@ function fill(s: StateRowDTO | undefined, mode: Mode): string {
  * Touch/pen: first tap selects and shows details with a link (no hover dependency).
  * Keyboard: each state is focusable; Enter opens it.
  */
+/**
+ * Where each state's abbreviation goes (map units): the roomiest point inside it, found once with
+ * the browser's isPointInFill. States too small to hold one get it in the ocean (or beside them)
+ * with a thin line, the way printed maps do.
+ */
+const LABELS: Record<
+  string,
+  { at: [number, number]; from?: [number, number]; to?: [number, number]; sea?: boolean }
+> = {
+  ac: { at: [70, 235] },
+  ap: { at: [346, 64] },
+  am: { at: [135, 146] },
+  ba: { at: [507, 272] },
+  ce: { at: [540, 160] },
+  go: { at: [373, 345] },
+  ma: { at: [448, 161] },
+  mt: { at: [292, 294] },
+  ms: { at: [298, 401] },
+  mg: { at: [465, 373] },
+  pa: { at: [322, 168] },
+  pi: { at: [485, 208] },
+  pr: { at: [342, 475] },
+  rs: { at: [319, 561] },
+  ro: { at: [166, 247] },
+  rr: { at: [202, 58] },
+  sc: { at: [376, 522] },
+  sp: { at: [395, 430] },
+  to: { at: [398, 250] },
+  rn: { sea: true, at: [634, 168], from: [598, 168] },
+  pb: { sea: true, at: [634, 190], from: [600, 192] },
+  pe: { sea: true, at: [634, 212], from: [604, 212] },
+  al: { sea: true, at: [634, 234], from: [590, 234] },
+  se: { sea: true, at: [634, 256], from: [574, 246] },
+  es: { sea: true, at: [558, 400], from: [530, 392] },
+  rj: { sea: true, at: [516, 472], from: [494, 446] },
+  df: { at: [409, 310], from: [409, 327], to: [409, 317] },
+};
+
 export function BrazilMap({ states, allowLeader = true }: { states: StateRowDTO[]; allowLeader?: boolean }) {
   const { href } = useRound();
   const router = useRouter();
@@ -74,8 +112,9 @@ export function BrazilMap({ states, allowLeader = true }: { states: StateRowDTO[
       </div>
       <div className="relative">
         <svg
-          viewBox={MAP.viewBox}
-          className="mx-auto block h-auto w-full max-w-[560px]"
+          // A bit wider than the map itself, for the labels in the ocean.
+          viewBox="0 0 652 639"
+          className="mx-auto block h-auto w-full max-w-[600px]"
           role="group"
           aria-label="Mapa do Brasil por estado"
         >
@@ -111,6 +150,43 @@ export function BrazilMap({ states, allowLeader = true }: { states: StateRowDTO[
               />
             );
           })}
+          <g aria-hidden className="pointer-events-none select-none" fontSize={12} fontWeight={600}>
+            {Object.entries(LABELS).map(([id, { at, from, to, sea }]) => {
+              // White on a candidate's colour or the darker half of the progress scale (both
+              // themes); the theme's text colour on the light, barely-counted end.
+              const s = byUf.get(id);
+              const onColour = mode === 'leader' ? !!s?.leader : (s?.progress?.countedPct ?? 0) >= 50;
+              return (
+                <g key={id}>
+                  {from && (
+                    <line
+                      x1={from[0]}
+                      y1={from[1]}
+                      x2={to?.[0] ?? at[0] - 11}
+                      y2={to?.[1] ?? at[1]}
+                      stroke="var(--muted)"
+                      strokeWidth={0.7}
+                    />
+                  )}
+                  <text
+                    x={at[0]}
+                    y={at[1]}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill={sea ? 'var(--muted)' : onColour ? '#fff' : 'var(--ink)'}
+                    stroke={sea ? 'none' : onColour ? 'rgb(0 0 0 / .3)' : 'var(--ground)'}
+                    strokeWidth={2.5}
+                    strokeOpacity={0.55}
+                    paintOrder="stroke"
+                    opacity={0.85}
+                    letterSpacing="0.03em"
+                  >
+                    {id.toUpperCase()}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
         </svg>
         <StateCard state={shown} pinned={!!pinned && !active} />
       </div>
