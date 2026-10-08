@@ -143,15 +143,8 @@ type MoreItem = { to: string; label: string; icon: typeof IconInfo; path?: strin
 /** What "Mais" holds, by importance: the four most used as big tiles, then a list. */
 function useMoreItems() {
   const { href, meta } = useRound();
+  // The order the author chose: the four big tiles first, then the list.
   const tiles: MoreItem[] = [
-    {
-      to: href('/benches'),
-      path: '/benches',
-      label: 'Bancadas',
-      hint: 'Cadeiras de cada partido no Congresso',
-      icon: IconSeats,
-    },
-    { to: `${href()}#favoritos`, label: 'Favoritos', hint: 'Seus locais salvos', icon: IconStar },
     ...(meta?.features.comparison === false
       ? []
       : [
@@ -164,19 +157,27 @@ function useMoreItems() {
           },
         ]),
     {
+      to: href('/benches'),
+      path: '/benches',
+      label: 'Bancadas',
+      hint: 'Cadeiras de cada partido no Congresso',
+      icon: IconSeats,
+    },
+    {
       to: href('/historico'),
       path: '/historico',
       label: 'Linha do tempo',
       hint: 'A apuração passo a passo',
       icon: IconHistory,
     },
+    { to: `${href()}#favoritos`, label: 'Favoritos', hint: 'Seus locais salvos', icon: IconStar },
   ];
-  // Most used first, behind-the-scenes last (sharing the site leads the list, see MoreContent).
+  // Sharing the site comes last, after these (see MoreContent).
   const links: MoreItem[] = [
     { to: href('/tv'), path: '/tv', label: 'Modo telão', icon: IconTv },
+    { to: href('/operations'), path: '/operations', label: 'Bastidores da coleta', icon: IconPulse },
     { to: '/como-funciona', label: 'Como funciona', icon: IconHelp },
     { to: '/sobre', label: 'Sobre os dados', icon: IconData },
-    { to: href('/operations'), path: '/operations', label: 'Bastidores da coleta', icon: IconPulse },
   ];
   return { tiles, links };
 }
@@ -209,9 +210,6 @@ function MoreContent({ onPick }: { onPick: () => void }) {
         ))}
       </ul>
       <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line">
-        <li>
-          <ShareSiteItem />
-        </li>
         {links.map((l) => (
           <li key={l.label}>
             <Link
@@ -226,6 +224,9 @@ function MoreContent({ onPick }: { onPick: () => void }) {
             </Link>
           </li>
         ))}
+        <li>
+          <ShareSiteItem />
+        </li>
       </ul>
     </div>
   );
