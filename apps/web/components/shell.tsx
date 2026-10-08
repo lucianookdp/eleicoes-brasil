@@ -119,30 +119,14 @@ export function ElectionShell({
 }
 
 /**
- * Sections. `main` ones lead the menu (and the phone's bottom bar, with `short` labels); the
- * others sit to the right on computers and under "Mais" on phones.
+ * The main sections: in the computer's bar and (the first three, with `short` labels) in the phone's
+ * bottom bar. Everything else lives under "Mais" (`useMoreGroups`).
  */
 const NAV = [
-  { path: '', label: 'Resultados', short: 'Resultados', icon: IconOverview, main: true },
-  { path: '/states', label: 'Estados e cidades', short: 'Estados', icon: IconStates, main: true },
-  {
-    path: '/offices',
-    label: 'Governadores e senadores',
-    short: 'Governadores',
-    icon: IconPerson,
-    main: true,
-  },
-  { path: '/benches', label: 'Bancadas', short: 'Bancadas', icon: IconSeats, main: true },
-  {
-    path: '/compare',
-    label: 'Comparar estados',
-    short: 'Comparar',
-    icon: IconCompare,
-    main: false,
-    flag: 'comparison' as const,
-  },
-  { path: '/historico', label: 'Linha do tempo', short: 'Linha do tempo', icon: IconHistory, main: false },
-  { path: '/operations', label: 'Bastidores', short: 'Bastidores', icon: IconPulse, main: false },
+  { path: '', label: 'Resultados', short: 'Resultados', icon: IconOverview },
+  { path: '/states', label: 'Estados e cidades', short: 'Estados', icon: IconStates },
+  { path: '/offices', label: 'Governadores e senadores', short: 'Governadores', icon: IconPerson },
+  { path: '/benches', label: 'Bancadas', short: 'Bancadas', icon: IconSeats },
 ];
 
 /** The state-offices section says what is actually disputed: in a runoff, only governors. */
@@ -153,18 +137,46 @@ function navText(n: (typeof NAV)[number], round: number) {
     : { label: 'Governadores e senadores', short: 'Gov./Senado' };
 }
 
-/** Hides sections switched off by feature flags (ENABLE_* on the API). */
-function useNav() {
-  const { meta } = useRound();
-  return NAV.filter((n) => {
-    const flag = 'flag' in n ? n.flag : undefined;
-    return !flag || meta?.features[flag] !== false;
-  });
-}
-
 function useActive() {
   const pathname = usePathname().replace(/\/$/, '');
   return (path: string) => SECTION_ROUTES[path]?.replace(/\/$/, '') === pathname;
+}
+
+/**
+ * Everything beyond the main sections, in three labelled groups. The same list feeds the
+ * computer's "Mais" dropdown and the phone's "Mais" sheet, so both menus read alike.
+ */
+function useMoreGroups() {
+  const { href, meta } = useRound();
+  type Item = { to: string; label: string; icon: typeof IconInfo; path?: string };
+  const groups: { title: string; items: Item[] }[] = [
+    {
+      title: 'Apuração',
+      items: [
+        { to: href('/benches'), path: '/benches', label: 'Bancadas eleitas', icon: IconSeats },
+        ...(meta?.features.comparison === false
+          ? []
+          : [{ to: href('/compare'), path: '/compare', label: 'Comparar estados', icon: IconCompare }]),
+        { to: `${href()}#favoritos`, label: 'Favoritos', icon: IconStar },
+      ],
+    },
+    {
+      title: 'Acompanhe',
+      items: [
+        { to: href('/historico'), path: '/historico', label: 'Linha do tempo', icon: IconHistory },
+        { to: '/polymarket', label: 'Mercado de apostas', icon: IconTrend },
+      ],
+    },
+    {
+      title: 'Sobre o site',
+      items: [
+        { to: '/como-funciona', label: 'Como funciona', icon: IconInfo },
+        { to: '/sobre', label: 'Sobre os dados', icon: IconInfo },
+        { to: href('/operations'), path: '/operations', label: 'Bastidores da coleta', icon: IconPulse },
+      ],
+    },
+  ];
+  return groups;
 }
 
 /**
@@ -174,7 +186,6 @@ function useActive() {
  */
 function Header({ onSearch }: { onSearch: () => void }) {
   const { round, href, elections } = useRound();
-  const nav = useNav();
   const active = useActive();
   // Only worth a control when there is a choice to make (two rounds, or another election).
   const choice =
@@ -208,8 +219,8 @@ function Header({ onSearch }: { onSearch: () => void }) {
           </div>
         )}
         <nav aria-label="Seções" className="ml-1 hidden shrink-0 items-center xl:flex">
-          {nav.filter((n) => n.main).map(link)}
-          <MoreMenu items={nav.filter((n) => !n.main)} />
+          {NAV.map(link)}
+          <MoreMenu />
         </nav>
         <div className="ml-auto flex shrink-0 items-center gap-2">
           <button
@@ -307,10 +318,13 @@ function RoundSwitch({ wide = false }: { wide?: boolean }) {
 
 const SHORT_DATE = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
-/** "Mais ▾": the sections people use less, without a second row. */
-function MoreMenu({ items }: { items: (typeof NAV)[number][] }) {
-  const { round, href } = useRound();
+/** "Mais ▾": the sections people use less, grouped, without a second row. */
+function MoreMenu() {
   const active = useActive();
+  const groups = useMoreGroups().map((g) => ({
+    ...g,
+    items: g.items.filter((i) => i.path !== '/benches'),
+  }));
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   // Closes on any tap or click outside, and on Esc.
@@ -327,7 +341,7 @@ function MoreMenu({ items }: { items: (typeof NAV)[number][] }) {
       document.removeEventListener('keydown', esc);
     };
   }, [open]);
-  const current = items.some((n) => active(n.path));
+  const current = groups.some((g) => g.items.some((i) => i.path && active(i.path)));
   return (
     <div ref={box} className="relative">
       <button
@@ -337,36 +351,35 @@ function MoreMenu({ items }: { items: (typeof NAV)[number][] }) {
         className={`flex h-16 items-center gap-1 whitespace-nowrap border-b-2 px-2.5 text-[15px] hover:text-ink ${current ? 'border-live font-medium text-ink' : 'border-transparent text-ink-2'}`}
       >
         Mais{' '}
-        <span aria-hidden className="text-[11px]">
+        <span aria-hidden className={`text-[11px] transition-transform ${open ? 'rotate-180' : ''}`}>
           ▾
         </span>
       </button>
       {open && (
-        <ul className="absolute left-0 top-full z-40 mt-1 min-w-56 rounded-xl border border-line-strong bg-surface p-1.5 shadow-xl">
-          {items.map((n) => (
-            <li key={n.path}>
-              <Link
-                href={href(n.path)}
-                onClick={() => setOpen(false)}
-                aria-current={active(n.path) ? 'page' : undefined}
-                className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-[14.5px] text-ink-2 hover:bg-surface-2 hover:text-ink aria-[current=page]:font-medium aria-[current=page]:text-ink"
-              >
-                <n.icon width={17} height={17} />
-                {navText(n, round.round).label}
-              </Link>
-            </li>
+        <div className="absolute left-0 top-full z-40 mt-1 w-64 rounded-xl border border-line-strong bg-surface p-1.5 shadow-xl">
+          {groups.map((g, i) => (
+            <div key={g.title} className={i ? 'mt-1 border-t border-line pt-1' : ''}>
+              <p className="px-3 pb-0.5 pt-2 text-[11px] font-medium uppercase tracking-wider text-muted">
+                {g.title}
+              </p>
+              <ul>
+                {g.items.map((n) => (
+                  <li key={n.label}>
+                    <Link
+                      href={n.to}
+                      onClick={() => setOpen(false)}
+                      aria-current={n.path && active(n.path) ? 'page' : undefined}
+                      className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-[14.5px] text-ink-2 hover:bg-surface-2 hover:text-ink aria-[current=page]:font-medium aria-[current=page]:text-ink"
+                    >
+                      <n.icon width={17} height={17} />
+                      {n.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-          <li className="mt-1 border-t border-line pt-1">
-            <Link
-              href="/polymarket"
-              onClick={() => setOpen(false)}
-              className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-[14.5px] text-ink-2 hover:bg-surface-2 hover:text-ink"
-            >
-              <IconTrend width={17} height={17} />
-              Mercado de apostas
-            </Link>
-          </li>
-        </ul>
+        </div>
       )}
     </div>
   );
@@ -447,15 +460,16 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
 }
 
 function BottomNav({ onSearch }: { onSearch: () => void }) {
-  const { round, href, meta } = useRound();
+  const { round, href } = useRound();
   const active = useActive();
+  const groups = useMoreGroups();
   const [more, setMore] = useState(false);
   const moreLink = (l: { to: string; label: string; icon: typeof IconInfo }) => (
     <li key={l.label}>
       <Link
         href={l.to}
         onClick={() => setMore(false)}
-        className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-[16px] hover:bg-surface-2"
+        className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-[16px] hover:bg-surface-2"
       >
         <l.icon />
         {l.label}
@@ -534,24 +548,17 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
                 <IconClose />
               </button>
             </div>
-            {/* By what people look for most; the behind-the-scenes pages come last. */}
+            {/* Same groups as the computer's "Mais"; sharing and the author come last. */}
             <ul className="grid gap-1">
-              {[
-                { to: href('/benches'), label: 'Bancadas eleitas', icon: IconSeats },
-                ...(meta?.features.comparison === false
-                  ? []
-                  : [{ to: href('/compare'), label: 'Comparar estados', icon: IconCompare }]),
-                { to: `${href()}#favoritos`, label: 'Favoritos', icon: IconStar },
-              ].map(moreLink)}
-              <li className="my-1 border-t border-line" aria-hidden />
-              {[
-                { to: href('/historico'), label: 'Linha do tempo', icon: IconHistory },
-                { to: href('/operations'), label: 'Bastidores da coleta', icon: IconPulse },
-                { to: '/polymarket', label: 'Mercado de apostas (Polymarket)', icon: IconTrend },
-                { to: '/como-funciona', label: 'Como funciona', icon: IconInfo },
-                { to: '/sobre', label: 'Sobre os dados', icon: IconInfo },
-              ].map(moreLink)}
-              <li>
+              {groups.map((g, i) => (
+                <li key={g.title} className={i ? 'mt-1 border-t border-line pt-1' : ''}>
+                  <p className="px-3 pb-0.5 pt-2 text-[11px] font-medium uppercase tracking-wider text-muted">
+                    {g.title}
+                  </p>
+                  <ul>{g.items.map(moreLink)}</ul>
+                </li>
+              ))}
+              <li className="mt-1 border-t border-line pt-1">
                 <ShareSiteItem />
               </li>
               <li className="mt-2 border-t border-line pt-3">

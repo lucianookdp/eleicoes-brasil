@@ -74,7 +74,7 @@ export async function shareImage(result: ResultDTO, siteLabel: string): Promise<
   ctx.fillStyle = '#0e1013';
   ctx.fillRect(0, 0, size, size);
   const pad = 80;
-  ctx.fillStyle = '#2fbf71';
+  ctx.fillStyle = '#28b870';
   ctx.font = `600 34px ${font}`;
   ctx.fillText('Eleições Brasil', pad, 120);
   ctx.fillStyle = '#eceef1';
