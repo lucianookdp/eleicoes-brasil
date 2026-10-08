@@ -128,9 +128,14 @@ export function ElectionShell({
 const NAV = [
   { path: '', label: 'Resultados', short: 'Resultados', icon: IconOverview },
   { path: '/states', label: 'Estados e cidades', short: 'Estados', icon: IconStates },
-  // Governors, senators and the STF under one general name.
-  { path: '/offices', label: 'Cargos', short: 'Cargos', icon: IconPerson },
+  { path: '/offices', label: 'Governadores e senadores', short: 'Gov./Senado', icon: IconPerson },
 ];
+
+/** The state-offices section says what is actually disputed: in a runoff, only governors. */
+function navText(n: (typeof NAV)[number], round: number) {
+  if (n.path !== '/offices' || round !== 2) return n;
+  return { label: 'Governadores', short: 'Governadores' };
+}
 
 function useActive() {
   const pathname = usePathname().replace(/\/$/, '');
@@ -147,7 +152,7 @@ function useMoreItems() {
       to: href('/benches'),
       path: '/benches',
       label: 'Bancadas',
-      hint: 'Câmara e Senado eleitos',
+      hint: 'Cadeiras de cada partido no Congresso',
       icon: IconSeats,
     },
     ...(meta?.features.comparison === false
@@ -279,8 +284,8 @@ function Header({ onSearch }: { onSearch: () => void }) {
       className="flex h-16 items-center whitespace-nowrap border-b-2 border-transparent px-2.5 text-[15px] text-ink-2 hover:text-ink aria-[current=page]:border-live aria-[current=page]:font-medium aria-[current=page]:text-ink"
     >
       {/* Short names until there is room for the full ones. */}
-      <span className="2xl:hidden">{n.short}</span>
-      <span className="hidden 2xl:inline">{n.label}</span>
+      <span className="2xl:hidden">{navText(n, round.round).short}</span>
+      <span className="hidden 2xl:inline">{navText(n, round.round).label}</span>
     </Link>
   );
   return (
@@ -520,12 +525,13 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
 }
 
 function BottomNav({ onSearch }: { onSearch: () => void }) {
-  const { href } = useRound();
+  const { round, href } = useRound();
   const pathname = usePathname();
   const active = useActive();
   const [more, setMore] = useState(false);
+  // The governors slot is a little wider for its longer name; search and Mais have short ones.
   const item =
-    'group flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 truncate text-[10.5px] text-muted min-[360px]:text-[11.5px] aria-[current=page]:font-medium aria-[current=page]:text-ink';
+    'group flex min-h-16 min-w-0 flex-col items-center justify-center gap-0.5 truncate text-[10.5px] text-muted min-[360px]:text-[11.5px] aria-[current=page]:font-medium aria-[current=page]:text-ink';
   return (
     <>
       <nav
@@ -537,15 +543,15 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             key={n.path}
             href={href(n.path)}
             aria-current={active(n.path) ? 'page' : undefined}
-            className={item}
+            className={`${item} flex-1`}
           >
             <span className="flex size-8 items-center justify-center">
               <n.icon />
             </span>
-            {n.short}
+            {navText(n, round.round).short}
           </Link>
         ))}
-        <button type="button" onClick={onSearch} className={item}>
+        <button type="button" onClick={onSearch} className={`${item} flex-[0.8]`}>
           <span className="flex size-8 items-center justify-center rounded-full bg-live text-ground">
             <IconSearch />
           </span>
@@ -556,25 +562,30 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             key={n.path}
             href={href(n.path)}
             aria-current={active(n.path) ? 'page' : undefined}
-            className={item}
+            className={`${item} flex-[1.3]`}
           >
             <span className="flex size-8 items-center justify-center">
               <n.icon />
             </span>
-            {n.short}
+            {navText(n, round.round).short}
           </Link>
         ))}
         <Link
           href="/polymarket"
           aria-current={pathname.startsWith('/polymarket') ? 'page' : undefined}
-          className={item}
+          className={`${item} flex-1`}
         >
           <span className="flex size-8 items-center justify-center">
             <IconPolymarket />
           </span>
           Polymarket
         </Link>
-        <button type="button" onClick={() => setMore(true)} className={item} aria-expanded={more}>
+        <button
+          type="button"
+          onClick={() => setMore(true)}
+          className={`${item} flex-[0.8]`}
+          aria-expanded={more}
+        >
           <span className="flex size-8 items-center justify-center">
             <IconMore />
           </span>

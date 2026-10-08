@@ -287,7 +287,7 @@ test('runoff over: the winner banner, only once the TSE marks "Eleito"', async (
   await expect(page.getByText(/Aguardando o TSE/)).toHaveCount(0);
 });
 
-test('offices: one general "Cargos" entry, and governors listed low on the runoff home page', async ({
+test('governors: named for what is disputed, and listed low on the runoff home page', async ({
   page,
   isMobile,
   request,
@@ -296,7 +296,7 @@ test('offices: one general "Cargos" entry, and governors listed low on the runof
   const nav = isMobile
     ? page.getByRole('navigation', { name: 'Navegação principal' })
     : page.getByRole('navigation', { name: 'Seções' });
-  await expect(nav.getByRole('link', { name: 'Cargos', exact: true })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Gov./Senado' })).toBeVisible();
   await expect(nav.getByRole('link', { name: 'Polymarket' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Governadores no 2º turno' })).toHaveCount(0);
 
@@ -305,6 +305,7 @@ test('offices: one general "Cargos" entry, and governors listed low on the runof
   if (!elections.some((e: { rounds: { slug: string }[] }) => e.rounds.some((r) => r.slug === 'demo-2')))
     return;
   await page.goto('/eleicao/?e=demo&t=2');
+  await expect(nav.getByRole('link', { name: 'Governadores', exact: true })).toBeVisible();
   const section = page.getByRole('region', { name: 'Governadores no 2º turno' });
   await expect(section).toBeVisible();
   await expect(section.getByRole('link').first()).toBeVisible();
@@ -314,7 +315,7 @@ test('STF: filter by who appointed, timeline and panels', async ({ page }) => {
   await page.goto('/eleicao/cargos/?e=demo&t=1&cargo=stf');
   await page.getByRole('button', { name: /^Lula \d/ }).click();
   await expect(page.getByRole('img', { name: /^Foto de / }).first()).toBeVisible();
-  const cards = page.getByText(/^Indicação de:/);
+  const cards = page.getByText(/^Indicação de /);
   const lula = await page.getByRole('button', { name: /^Lula \d/ }).textContent();
   await expect(cards).toHaveCount(Number(lula?.replace(/\D/g, '')));
   await expect(page.getByRole('heading', { name: 'Linha do tempo' })).toBeVisible();
@@ -326,7 +327,9 @@ test('states: only those where a candidate had the most votes', async ({ page })
   await page.goto('/eleicao/estados/?e=demo&t=1');
   // Wait for the states to load before deciding whether there is anything to filter.
   await expect(page.locator('table tbody tr:visible, ul.divide-y > li:visible').first()).toBeVisible();
-  const chips = page.getByRole('group', { name: 'Mais votado em cada estado' }).getByRole('button');
+  const chips = page
+    .getByRole('group', { name: /^Mais votado (até agora )?em cada estado$/ })
+    .getByRole('button');
   test.skip((await chips.count()) < 2, 'no votes counted yet');
   const second = chips.nth(1);
   const n = Number((await second.textContent())?.replace(/\D/g, '').slice(-2));
