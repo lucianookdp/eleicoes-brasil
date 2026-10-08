@@ -79,6 +79,15 @@ export default function PolymarketPage() {
           <div>
             <h1 className="text-[24px] font-semibold leading-tight tracking-tight">Polymarket</h1>
             <p className="text-[14px] text-ink-2">Eleição presidencial do Brasil 2026 · 2º turno</p>
+            {data && (
+              <p className="mt-1 flex items-center gap-1.5 text-[12.5px]" role="status">
+                <span className="flex items-center gap-1.5 font-medium text-bad">
+                  <span className="pulse-dot inline-block size-2 rounded-full bg-current" aria-hidden />
+                  Ao vivo
+                </span>
+                <span className="text-muted">· atualizado às {formatClock(data.at)}</span>
+              </p>
+            )}
           </div>
         </div>
         <a
@@ -180,8 +189,8 @@ export default function PolymarketPage() {
             >
               Polymarket
             </a>
-            , atualizados às {formatClock(data.at).slice(0, 5)} (a cada 5 minutos). “Sim” e “Não” são os
-            preços, em centavos de dólar, de uma aposta que paga US$ 1 se acontecer.
+            , atualizados a cada 30 segundos. “Sim” e “Não” são os preços, em centavos de dólar, de uma aposta
+            que paga US$ 1 se acontecer.
           </p>
         </>
       )}
@@ -234,7 +243,7 @@ function Market({
               />
               <span className="truncate font-medium">{o.name}</span>
             </span>
-            <span className="numeral text-right text-[20px] font-semibold">{pct(o.price)}</span>
+            <LivePct value={o.price} />
             {/* Prices as Polymarket shows them; display only, no betting here. */}
             <span className="col-span-2 flex gap-1.5 sm:col-span-1">
               <span className="rounded-md bg-live-soft px-2.5 py-1 text-[13px] font-medium text-live">
@@ -248,6 +257,23 @@ function Market({
         ))}
       </ul>
     </section>
+  );
+}
+
+/** The % chance, with a short highlight when a refresh moves it. */
+function LivePct({ value }: { value: number }) {
+  const prev = useRef(value);
+  const moved = prev.current !== value;
+  useEffect(() => {
+    prev.current = value;
+  }, [value]);
+  return (
+    <span
+      key={value}
+      className={`numeral -mx-1 rounded px-1 text-right text-[20px] font-semibold ${moved ? 'flash' : ''}`}
+    >
+      {pct(value)}
+    </span>
   );
 }
 
@@ -271,7 +297,14 @@ function Chart({ outcomes }: { outcomes: Outcome[] }) {
   }, []);
   const h = w < 500 ? 180 : 220;
   const pad = { l: 8, r: 44, t: 10, b: 22 };
-  const series = (data ?? []).filter((s) => s.points.length > 1);
+  // Each line ends at the latest price, so the chart moves with every refresh.
+  const now = Math.floor(Date.now() / 1000);
+  const series = (data ?? [])
+    .map((s) => {
+      const o = shown.find((x) => x.token === s.token);
+      return o ? { ...s, points: [...s.points, { t: now, p: o.price }] } : s;
+    })
+    .filter((s) => s.points.length > 1);
   const ts = series.flatMap((s) => s.points.map((p) => p.t));
   const t0 = Math.min(...ts);
   const t1 = Math.max(...ts);

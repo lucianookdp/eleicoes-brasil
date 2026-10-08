@@ -10,14 +10,18 @@ import { useOverview } from '@/lib/queries';
 import { RealtimeProvider, useRealtime } from '@/lib/realtime';
 import { electionHref, pickRound, SECTION_ROUTES } from '@/lib/rounds';
 import {
+  IconChevron,
   IconClose,
   IconCompare,
+  IconData,
+  IconHelp,
   IconHistory,
-  IconInfo,
+  type IconInfo,
   IconMoon,
   IconMore,
   IconOverview,
   IconPerson,
+  IconPolymarket,
   IconPulse,
   IconSearch,
   IconSeats,
@@ -118,65 +122,110 @@ export function ElectionShell({
 }
 
 /**
- * The main sections: in the computer's bar and (the first three, with `short` labels) in the phone's
- * bottom bar. Everything else lives under "Mais" (`useMoreGroups`).
+ * The main sections, in the computer's bar and the phone's bottom bar (with Polymarket next to
+ * them). Everything else lives under "Mais" (`MoreContent`), the same on both.
  */
 const NAV = [
   { path: '', label: 'Resultados', short: 'Resultados', icon: IconOverview },
   { path: '/states', label: 'Estados e cidades', short: 'Estados', icon: IconStates },
   // Governors, senators and the STF under one general name.
   { path: '/offices', label: 'Cargos', short: 'Cargos', icon: IconPerson },
-  { path: '/benches', label: 'Bancadas', short: 'Bancadas', icon: IconSeats },
 ];
-
-/** Polymarket's own mark, greyed like the other icons until hovered or open. */
-function PolymarketIcon({ size = 20 }: { size?: number }) {
-  return (
-    // biome-ignore lint/performance/noImgElement: static export, a tiny local icon
-    <img
-      src="/brands/pm-icon.png"
-      alt=""
-      width={size}
-      height={size}
-      className="rounded-[5px] opacity-70 grayscale transition group-hover:opacity-100 group-hover:grayscale-0 group-aria-[current=page]:opacity-100 group-aria-[current=page]:grayscale-0"
-    />
-  );
-}
 
 function useActive() {
   const pathname = usePathname().replace(/\/$/, '');
   return (path: string) => SECTION_ROUTES[path]?.replace(/\/$/, '') === pathname;
 }
 
-/**
- * Everything beyond the main sections, in two labelled groups. The same list feeds the
- * computer's "Mais" dropdown and the phone's "Mais" sheet, so both menus read alike.
- */
-function useMoreGroups() {
+type MoreItem = { to: string; label: string; icon: typeof IconInfo; path?: string; hint?: string };
+
+/** What "Mais" holds: the other sections as tiles, then the pages about the site as a list. */
+function useMoreItems() {
   const { href, meta } = useRound();
-  type Item = { to: string; label: string; icon: typeof IconInfo; path?: string };
-  const groups: { title: string; items: Item[] }[] = [
+  const tiles: MoreItem[] = [
     {
-      title: 'Apuração',
-      items: [
-        { to: href('/benches'), path: '/benches', label: 'Bancadas eleitas', icon: IconSeats },
-        ...(meta?.features.comparison === false
-          ? []
-          : [{ to: href('/compare'), path: '/compare', label: 'Comparar estados', icon: IconCompare }]),
-        { to: href('/historico'), path: '/historico', label: 'Linha do tempo', icon: IconHistory },
-        { to: `${href()}#favoritos`, label: 'Favoritos', icon: IconStar },
-      ],
+      to: href('/benches'),
+      path: '/benches',
+      label: 'Bancadas',
+      hint: 'Câmara e Senado eleitos',
+      icon: IconSeats,
     },
+    ...(meta?.features.comparison === false
+      ? []
+      : [
+          {
+            to: href('/compare'),
+            path: '/compare',
+            label: 'Comparar',
+            hint: 'Estados lado a lado',
+            icon: IconCompare,
+          },
+        ]),
     {
-      title: 'Sobre o site',
-      items: [
-        { to: '/como-funciona', label: 'Como funciona', icon: IconInfo },
-        { to: '/sobre', label: 'Sobre os dados', icon: IconInfo },
-        { to: href('/operations'), path: '/operations', label: 'Bastidores da coleta', icon: IconPulse },
-      ],
+      to: href('/historico'),
+      path: '/historico',
+      label: 'Linha do tempo',
+      hint: 'A apuração passo a passo',
+      icon: IconHistory,
     },
+    { to: `${href()}#favoritos`, label: 'Favoritos', hint: 'Seus locais salvos', icon: IconStar },
   ];
-  return groups;
+  const links: MoreItem[] = [
+    { to: '/como-funciona', label: 'Como funciona', icon: IconHelp },
+    { to: '/sobre', label: 'Sobre os dados', icon: IconData },
+    { to: href('/operations'), path: '/operations', label: 'Bastidores da coleta', icon: IconPulse },
+  ];
+  return { tiles, links };
+}
+
+/** The "Mais" panel, shared by the computer's dropdown and the phone's sheet. */
+function MoreContent({ onPick }: { onPick: () => void }) {
+  const active = useActive();
+  const { tiles, links } = useMoreItems();
+  const current = (i: MoreItem) => (i.path && active(i.path) ? 'page' : undefined);
+  return (
+    <div className="grid gap-3">
+      <ul className="grid grid-cols-2 gap-2">
+        {tiles.map((t) => (
+          <li key={t.label}>
+            <Link
+              href={t.to}
+              onClick={onPick}
+              aria-current={current(t)}
+              className="flex h-full flex-col gap-2.5 rounded-xl border border-line bg-surface-2/50 p-3 transition-colors hover:border-line-strong hover:bg-surface-2 aria-[current=page]:border-live/60"
+            >
+              <span className="flex size-8 items-center justify-center rounded-lg border border-line bg-surface text-ink-2">
+                <t.icon />
+              </span>
+              <span>
+                <span className="block text-[14.5px] font-medium leading-tight text-ink">{t.label}</span>
+                <span className="mt-0.5 block text-[12px] leading-snug text-muted">{t.hint}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line">
+        {links.map((l) => (
+          <li key={l.label}>
+            <Link
+              href={l.to}
+              onClick={onPick}
+              aria-current={current(l)}
+              className="flex min-h-11 items-center gap-3 px-3 text-[14.5px] text-ink-2 hover:bg-surface-2 hover:text-ink aria-[current=page]:font-medium aria-[current=page]:text-ink"
+            >
+              <l.icon className="shrink-0 text-muted" />
+              <span className="flex-1">{l.label}</span>
+              <IconChevron width={15} height={15} className="text-muted" />
+            </Link>
+          </li>
+        ))}
+        <li>
+          <ShareSiteItem />
+        </li>
+      </ul>
+    </div>
+  );
 }
 
 /**
@@ -250,7 +299,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
             aria-current={pathname.startsWith('/polymarket') ? 'page' : undefined}
             className="group flex h-16 items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-2.5 text-[15px] text-ink-2 hover:text-ink aria-[current=page]:border-live aria-[current=page]:font-medium aria-[current=page]:text-ink"
           >
-            <PolymarketIcon size={18} />
+            <IconPolymarket width={17} height={17} />
             Polymarket
           </Link>
           <MoreMenu />
@@ -351,13 +400,10 @@ function RoundSwitch({ wide = false }: { wide?: boolean }) {
 
 const SHORT_DATE = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
-/** "Mais ▾": the sections people use less, grouped, without a second row. */
+/** "Mais ▾" on computers: the same panel as the phone's sheet, as a dropdown. */
 function MoreMenu() {
   const active = useActive();
-  const groups = useMoreGroups().map((g) => ({
-    ...g,
-    items: g.items.filter((i) => i.path !== '/benches'),
-  }));
+  const { tiles, links } = useMoreItems();
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   // Closes on any tap or click outside, and on Esc.
@@ -374,7 +420,7 @@ function MoreMenu() {
       document.removeEventListener('keydown', esc);
     };
   }, [open]);
-  const current = groups.some((g) => g.items.some((i) => i.path && active(i.path)));
+  const current = [...tiles, ...links].some((i) => i.path && active(i.path));
   return (
     <div ref={box} className="relative">
       <button
@@ -383,35 +429,16 @@ function MoreMenu() {
         onClick={() => setOpen((o) => !o)}
         className={`flex h-16 items-center gap-1 whitespace-nowrap border-b-2 px-2.5 text-[15px] hover:text-ink ${current ? 'border-live font-medium text-ink' : 'border-transparent text-ink-2'}`}
       >
-        Mais{' '}
-        <span aria-hidden className={`text-[11px] transition-transform ${open ? 'rotate-180' : ''}`}>
-          ▾
-        </span>
+        Mais
+        <IconChevron
+          width={14}
+          height={14}
+          className={`transition-transform ${open ? '-rotate-90' : 'rotate-90'}`}
+        />
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-40 mt-1 w-64 rounded-xl border border-line-strong bg-surface p-1.5 shadow-xl">
-          {groups.map((g, i) => (
-            <div key={g.title} className={i ? 'mt-1 border-t border-line pt-1' : ''}>
-              <p className="px-3 pb-0.5 pt-2 text-[11px] font-medium uppercase tracking-wider text-muted">
-                {g.title}
-              </p>
-              <ul>
-                {g.items.map((n) => (
-                  <li key={n.label}>
-                    <Link
-                      href={n.to}
-                      onClick={() => setOpen(false)}
-                      aria-current={n.path && active(n.path) ? 'page' : undefined}
-                      className="flex min-h-10 items-center gap-2.5 rounded-lg px-3 text-[14.5px] text-ink-2 hover:bg-surface-2 hover:text-ink aria-[current=page]:font-medium aria-[current=page]:text-ink"
-                    >
-                      <n.icon width={17} height={17} />
-                      {n.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+        <div className="absolute left-0 top-full z-40 mt-1 w-[340px] rounded-2xl border border-line-strong bg-surface p-3 shadow-2xl">
+          <MoreContent onPick={() => setOpen(false)} />
         </div>
       )}
     </div>
@@ -496,20 +523,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
   const { href } = useRound();
   const pathname = usePathname();
   const active = useActive();
-  const groups = useMoreGroups();
   const [more, setMore] = useState(false);
-  const moreLink = (l: { to: string; label: string; icon: typeof IconInfo }) => (
-    <li key={l.label}>
-      <Link
-        href={l.to}
-        onClick={() => setMore(false)}
-        className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-[16px] hover:bg-surface-2"
-      >
-        <l.icon />
-        {l.label}
-      </Link>
-    </li>
-  );
   const item =
     'group flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 truncate text-[10.5px] text-muted min-[360px]:text-[11.5px] aria-[current=page]:font-medium aria-[current=page]:text-ink';
   return (
@@ -556,7 +570,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
           className={item}
         >
           <span className="flex size-8 items-center justify-center">
-            <PolymarketIcon />
+            <IconPolymarket />
           </span>
           Polymarket
         </Link>
@@ -580,9 +594,10 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             aria-label="Fechar"
             onClick={() => setMore(false)}
           />
-          <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-line bg-surface p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-line-strong bg-surface px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-2 shadow-2xl">
+            <div aria-hidden className="mx-auto mb-1 h-1 w-10 rounded-full bg-line-strong" />
             <div className="mb-2 flex items-center justify-between">
-              <span className="font-semibold">Mais</span>
+              <span className="text-[17px] font-semibold">Mais</span>
               <button
                 type="button"
                 onClick={() => setMore(false)}
@@ -592,30 +607,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
                 <IconClose />
               </button>
             </div>
-            {/* Same groups as the computer's "Mais"; sharing and the author come last. */}
-            <ul className="grid gap-1">
-              {groups.map((g, i) => (
-                <li key={g.title} className={i ? 'mt-1 border-t border-line pt-1' : ''}>
-                  <p className="px-3 pb-0.5 pt-2 text-[11px] font-medium uppercase tracking-wider text-muted">
-                    {g.title}
-                  </p>
-                  <ul>{g.items.map(moreLink)}</ul>
-                </li>
-              ))}
-              <li className="mt-1 border-t border-line pt-1">
-                <ShareSiteItem />
-              </li>
-              <li className="mt-2 border-t border-line pt-3">
-                <a
-                  href="https://lucianookdp.dev"
-                  target="_blank"
-                  rel="noopener"
-                  className="flex min-h-10 items-center gap-1.5 px-3 text-[13.5px] text-muted hover:text-ink"
-                >
-                  by <AuthorLogo className="font-medium text-ink-2" /> <span aria-hidden>→</span>
-                </a>
-              </li>
-            </ul>
+            <MoreContent onPick={() => setMore(false)} />
           </div>
         </div>
       )}
@@ -633,9 +625,10 @@ function ShareSiteItem() {
         if (r === 'copied') setLabel('Link copiado');
         if (r === 'failed') setLabel('Não foi possível compartilhar');
       }}
-      className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left hover:bg-surface-2"
+      className="flex min-h-11 w-full items-center gap-3 px-3 text-left text-[14.5px] text-ink-2 hover:bg-surface-2 hover:text-ink"
     >
       <svg
+        className="shrink-0 text-muted"
         viewBox="0 0 24 24"
         width={18}
         height={18}

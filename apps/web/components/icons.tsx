@@ -57,7 +57,7 @@ export const IconHistory = (p: SVGProps<SVGSVGElement>) => (
 );
 export const IconCompare = (p: SVGProps<SVGSVGElement>) => (
   <Icon {...p}>
-    <path d="M8 3v18M16 3v18M3 8h5M16 16h5M3 16h5M16 8h5" />
+    <path d="M7 4 3 8l4 4M3 8h14M17 12l4 4-4 4M21 16H7" />
   </Icon>
 );
 export const IconStar = ({ filled, ...p }: SVGProps<SVGSVGElement> & { filled?: boolean }) => (
@@ -80,6 +80,25 @@ export const IconInfo = (p: SVGProps<SVGSVGElement>) => (
   <Icon {...p}>
     <circle cx="12" cy="12" r="9" />
     <path d="M12 11v5M12 8h.01" />
+  </Icon>
+);
+export const IconHelp = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.4M12 17h.01" />
+  </Icon>
+);
+export const IconData = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <ellipse cx="12" cy="5.5" rx="8" ry="2.5" />
+    <path d="M4 5.5v13c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5v-13M4 12c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5" />
+  </Icon>
+);
+/** Polymarket's mark (a trapezoid with a ">" inside), redrawn as a line icon like the rest. */
+export const IconPolymarket = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M6 8 18 4v16L6 16V8Z" />
+    <path d="m6 8 12 4-12 4" />
   </Icon>
 );
 export const IconChevron = (p: SVGProps<SVGSVGElement>) => (

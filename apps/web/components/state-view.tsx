@@ -147,7 +147,8 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
       {candidates.length >= 2 && (
         <fieldset className="mb-3">
           <legend className="mb-1.5 text-[13px] text-muted">
-            Mais votado em cada {abroad ? 'cidade' : 'município'}
+            Mais votado {round.status === 'final' ? '' : 'até agora '}em cada{' '}
+            {abroad ? 'cidade' : 'município'}
           </legend>
           <div className="flex flex-wrap gap-1.5">
             {[

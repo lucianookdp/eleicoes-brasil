@@ -50,7 +50,10 @@ export function StatesView() {
       </div>
       {hasHeadline && top.length > 0 && (
         <fieldset className="mb-4">
-          <legend className="mb-1.5 text-[13px] text-muted">Mais votado em cada estado</legend>
+          <legend className="mb-1.5 text-[13px] text-muted">
+            {/* While counting, "most votes so far": who leads can still change. */}
+            Mais votado {round.status === 'final' ? '' : 'até agora '}em cada estado
+          </legend>
           <div className="flex flex-wrap gap-1.5">
             {[
               { name: null, label: 'Todos', color: null, n: data.states.length },

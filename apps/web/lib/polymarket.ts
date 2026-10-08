@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 const GAMMA = 'https://gamma-api.polymarket.com';
 export const POLYMARKET_URL = 'https://polymarket.com/event/brazil-presidential-election';
 export const eventUrl = (slug: string) => `https://polymarket.com/event/${slug}`;
+export const LIVE_MS = 30_000;
 export const MARGIN_SLUG = 'brazil-presidential-election-second-round-margin-of-victory';
 
 export interface Outcome {
@@ -94,8 +95,10 @@ const STATE_SLUGS: Record<string, string> = {
 export function usePolymarket() {
   return useQuery({
     queryKey: ['polymarket', 'brazil-2026'],
-    staleTime: 5 * 60_000,
-    refetchInterval: 5 * 60_000,
+    // Live, like the count: every 30 s while the page is open (paused in a background tab). It is
+    // the reader's browser asking Polymarket, so none of it reaches our API, database or the TSE.
+    staleTime: 20_000,
+    refetchInterval: LIVE_MS,
     retry: 1,
     queryFn: async () => {
       const prefix = 'brazil-presidential-election-second-round-1st-place-';
@@ -134,7 +137,8 @@ export function usePriceHistory(tokens: string[], range: Range) {
   return useQuery({
     queryKey: ['polymarket', 'history', tokens, range],
     enabled: tokens.length > 0,
-    staleTime: 5 * 60_000,
+    staleTime: 50_000,
+    refetchInterval: 60_000,
     queryFn: () =>
       Promise.all(
         tokens.map(async (token) => {
