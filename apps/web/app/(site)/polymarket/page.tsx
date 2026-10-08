@@ -94,7 +94,7 @@ export default function PolymarketPage() {
           href={POLYMARKET_URL}
           target="_blank"
           rel="noopener nofollow"
-          className="inline-flex h-10 items-center gap-2 rounded-full bg-[#1652f0] px-4 text-[14px] font-semibold text-white hover:bg-[#1243c9]"
+          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line px-3.5 text-[13.5px] text-ink-2 hover:border-line-strong hover:text-ink"
         >
           Ver no Polymarket
           <svg
@@ -180,7 +180,17 @@ export default function PolymarketPage() {
             </section>
           )}
 
-          <p className="mt-8 text-[12.5px] text-muted">
+          {/* What it is and why it matters, short and at the end: the markets come first. */}
+          <section aria-labelledby="o-que-e" className="mt-8 max-w-2xl">
+            <h2 id="o-que-e" className="text-[15px] font-semibold">
+              O que é o Polymarket
+            </h2>
+            <p className="mt-1 text-[14px] leading-relaxed text-ink-2">
+              Um mercado de apostas em que o preço de cada opção indica a chance que os apostadores dão a ela.
+              Muda na hora, a cada notícia ou pesquisa.
+            </p>
+          </section>
+          <p className="mt-4 text-[12.5px] text-muted">
             Dados do{' '}
             <a
               href={POLYMARKET_URL}

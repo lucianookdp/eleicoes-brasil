@@ -37,40 +37,66 @@ suite('collector at the end of the count', () => {
   // Chaos: the TSE answers 30% of requests with an error. The count must still reach 100% and
   // the winner, with the circuit breaker and retries doing their job.
   it('gets there even when 30% of the TSE requests fail', () => runToTheEnd(0.3, PORT + 1), 90_000);
+
+  // Between rounds the worker may restart days after a count closed: it must see that from the
+  // TSE's own times and poll slowly, not re-check everything for 30 minutes.
+  it('a count that closed an hour before the worker started is settled at once', async () => {
+    const { collector, stop } = await setup(PORT + 2, { durationMinutes: 0.1, offsetMinutes: 60 });
+    try {
+      await collector.runCycle();
+      expect(collector.settled()).toBe(true);
+    } finally {
+      await stop();
+    }
+  }, 60_000);
 });
+
+async function setup(
+  port: number,
+  demoOptions: { durationMinutes: number; offsetMinutes?: number; errorRate?: number },
+) {
+  process.env.DEMO_ROUND = '2';
+  const demo = startDemoServer({ port, waitSeconds: 0, ...demoOptions });
+  await runMigrations(url!);
+  const { db, sql, close } = createDatabase(url!, { max: 4 });
+  const round = findRound('demo-2')!;
+  await db.delete(electionRounds).where(eq(electionRounds.slug, round.slug));
+  const roundId = await Store.ensureRound(db, round, 'DEVELOPMENT', 'demo');
+  const log = pino({ level: 'silent' });
+  const store = new Store(db, sql, roundId, round.slug, 'DEMO', log);
+  const http = new TseHttpClient({
+    requestsPerSecond: 200,
+    concurrency: 8,
+    timeoutMs: 5000,
+    maxRetries: 0,
+  });
+  const provider = createProvider(http, round, {
+    ...round.sources.DEVELOPMENT!,
+    baseUrl: `http://localhost:${port}`,
+  });
+  const collector = new Collector(provider, store, log, {
+    mode: 'DEVELOPMENT',
+    collectCityResults: false,
+    cityResultOffices: 'majoritarian',
+    maxResultFetchesPerCycle: 60,
+    // Far away: only the end-of-count rule can bring the mark in time.
+    reconcileEvery: 10_000,
+    cityConcurrency: 4,
+  });
+
+  const stop = async () => {
+    collector.stop();
+    await demo.close();
+    await close();
+    delete process.env.DEMO_ROUND;
+  };
+  return { collector, sql, round, stop };
+}
 
 async function runToTheEnd(errorRate: number, port: number) {
   {
-    process.env.DEMO_ROUND = '2';
     // A 6-second runoff count; the demo marks the winner 10 seconds after it ends.
-    const demo = startDemoServer({ port, durationMinutes: 0.1, waitSeconds: 0, errorRate });
-    await runMigrations(url!);
-    const { db, sql, close } = createDatabase(url!, { max: 4 });
-    const round = findRound('demo-2')!;
-    await db.delete(electionRounds).where(eq(electionRounds.slug, round.slug));
-    const roundId = await Store.ensureRound(db, round, 'DEVELOPMENT', 'demo');
-    const log = pino({ level: 'silent' });
-    const store = new Store(db, sql, roundId, round.slug, 'DEMO', log);
-    const http = new TseHttpClient({
-      requestsPerSecond: 200,
-      concurrency: 8,
-      timeoutMs: 5000,
-      maxRetries: 0,
-    });
-    const provider = createProvider(http, round, {
-      ...round.sources.DEVELOPMENT!,
-      baseUrl: `http://localhost:${port}`,
-    });
-    const collector = new Collector(provider, store, log, {
-      mode: 'DEVELOPMENT',
-      collectCityResults: false,
-      cityResultOffices: 'majoritarian',
-      maxResultFetchesPerCycle: 60,
-      // Far away: only the end-of-count rule can bring the mark in time.
-      reconcileEvery: 10_000,
-      cityConcurrency: 4,
-    });
-
+    const { collector, sql, round, stop } = await setup(port, { durationMinutes: 0.1, errorRate });
     const winner = async () => {
       const [row] = await sql<{ status: string | null }[]>`
         select c->>'status' as status from area_results r
@@ -93,11 +119,10 @@ async function runToTheEnd(errorRate: number, port: number) {
           join election_rounds e on e.id = p.round_id and e.slug = ${round.slug}
         where p.area_key = 'br'`;
       expect(br?.pct).toBe(100);
+      // Just finished: the 30 minutes of every-cycle checks are still on.
+      expect(collector.settled()).toBe(false);
     } finally {
-      collector.stop();
-      await demo.close();
-      await close();
-      delete process.env.DEMO_ROUND;
+      await stop();
     }
   }
 }

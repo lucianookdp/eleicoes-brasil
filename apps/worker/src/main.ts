@@ -103,6 +103,9 @@ while (!stopping) {
   try {
     // Source not published yet: check once a minute (repeated 404s can get an IP blocked).
     if ((await collector.runCycle()) === 'waiting') wait = 60_000;
+    // A closed count (e.g. the 1st round while waiting for the runoff): a look every 5 minutes is
+    // plenty, and it keeps our requests to the TSE near zero between rounds.
+    else if (collector.settled()) wait = Math.max(wait, 5 * 60_000);
   } catch (err) {
     // runCycle handles its own errors; this only catches database outages.
     log.error({ err }, 'cycle crashed; retrying after the poll interval');

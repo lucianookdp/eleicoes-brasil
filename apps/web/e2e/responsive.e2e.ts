@@ -32,6 +32,8 @@ test.describe('fits every screen width', () => {
       test(`round ${round} at ${width}px`, async ({ page }) => {
         test.setTimeout(120_000);
         await page.setViewportSize({ width, height: 800 });
+        const errors: string[] = [];
+        page.on('pageerror', (e) => errors.push(e.message));
         for (const theme of ['dark', 'light']) {
           await page.addInitScript((t) => localStorage.setItem('eleicoes:theme', t), theme);
           for (const path of PAGES) {
@@ -44,7 +46,13 @@ test.describe('fits every screen width', () => {
               () => document.documentElement.scrollWidth - window.innerWidth,
             );
             expect(overflow, `${path} (${theme}) overflows by ${overflow}px`).toBeLessThanOrEqual(0);
+            // A number or field gone wrong shows up as one of these.
+            const text = await page.locator('main').innerText();
+            expect(text, `${path} shows broken text`).not.toMatch(
+              /\bNaN\b|\bundefined\b|\bInfinity\b|\[object Object\]/,
+            );
           }
         }
+        expect(errors, 'uncaught errors in the page').toEqual([]);
       });
 });

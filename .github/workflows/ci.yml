@@ -40,7 +40,7 @@ jobs:
       - run: pnpm build
 
   e2e:
-    name: End-to-end (demo election)
+    name: End-to-end (demo election, both rounds)
     runs-on: ubuntu-24.04
     needs: checks
     services:
@@ -71,6 +71,11 @@ jobs:
         run: |
           DEMO_OFFSET_MINUTES=10 DEMO_WAIT_SECONDS=0 node apps/worker/dist/demo/server.js &
           MIGRATIONS_DIR=packages/database/drizzle APP_MODE=DEVELOPMENT ELECTION_ROUND=demo-1 TSE_POLL_INTERVAL=3 TSE_REQUESTS_PER_SECOND=50 node apps/worker/dist/main.js &
+          # The runoff too (already counted to the end), so the 2nd-round tests run here as well.
+          # Started after the 1st worker has applied the migrations.
+          sleep 10
+          DEMO_ROUND=2 DEMO_TSE_PORT=4011 DEMO_OFFSET_MINUTES=40 DEMO_WAIT_SECONDS=0 node apps/worker/dist/demo/server.js &
+          DEMO_ROUND=2 MIGRATIONS_DIR=packages/database/drizzle APP_MODE=DEVELOPMENT ELECTION_ROUND=demo-2 TSE_BASE_URL=http://localhost:4011 TSE_POLL_INTERVAL=3 TSE_REQUESTS_PER_SECOND=50 node apps/worker/dist/main.js &
           node apps/api/dist/main.js &
           npx serve@14 -l 3000 apps/web/out &
           npx wait-on -t 90000 http://localhost:3000 http://localhost:4000/api/health

@@ -99,6 +99,14 @@ export class Collector {
     this.stopped = true;
   }
 
+  /**
+   * The round finished more than 30 minutes ago (the "Eleito" marks are in): nothing will change,
+   * so the main loop polls every few minutes instead of every few seconds.
+   */
+  settled() {
+    return this.finishedAt !== null && Date.now() - this.finishedAt >= 30 * 60_000;
+  }
+
   // ------------------------------------------------------------------ headline cycle
 
   /** Returns the cycle status; "waiting" means the source has not published this round yet. */
@@ -153,8 +161,13 @@ export class Collector {
             if (res.data.progress.status !== 'not-started') {
               await this.store.setRoundStatus(res.data.progress.status === 'finished' ? 'final' : 'live');
             }
+            // From the TSE's own totalization time when it has one: a worker restarted days after
+            // the count must not treat the round as "just finished" (30 min of re-checks).
+            const tseDone = Date.parse(res.data.progress.totalizedAt ?? '');
             this.finishedAt =
-              res.data.progress.status === 'finished' ? (this.finishedAt ?? Date.now()) : null;
+              res.data.progress.status === 'finished'
+                ? (this.finishedAt ?? (Number.isFinite(tseDone) ? Math.min(Date.now(), tseDone) : Date.now()))
+                : null;
           }
           if (this.markSeen(code, 'br', res.data.progress)) this.queueArea(code, area.country());
           for (const s of res.data.states) {
