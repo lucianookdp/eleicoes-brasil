@@ -27,7 +27,7 @@ suite('API (integration)', () => {
 
   beforeAll(async () => {
     await runMigrations(url!);
-    await sql`truncate elections, cities, site_visits cascade`;
+    await sql`truncate elections, cities, site_visits, live_clients cascade`;
     const [e] = await db
       .insert(elections)
       .values({ slug: 'test', name: 'Eleição de teste', year: 2026, kind: 'general', demo: true })
@@ -146,6 +146,8 @@ suite('API (integration)', () => {
     const res = await built.app.inject('/api/health');
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ status: 'ok' });
+    // Live viewer counts are private (see /api/stats/visits).
+    expect(res.json()).not.toHaveProperty('realtimeClients');
     expect(res.headers['x-content-type-options']).toBe('nosniff');
   });
 
@@ -339,6 +341,9 @@ suite('API (integration)', () => {
     expect((await visit('visitor-bbbb-2222')).statusCode).toBe(204);
     expect((await visit('<script>')).statusCode).toBe(400);
 
+    // Two instances' heartbeats, and an old one that no longer counts.
+    await sql`insert into live_clients (instance, clients, updated_at) values
+      ('a', 3, now()), ('b', 4, now()), ('gone', 50, now() - interval '10 minutes')`;
     expect((await built.app.inject({ url: '/api/stats/visits' })).statusCode).toBe(404);
     const wrong = await built.app.inject({
       url: '/api/stats/visits',
@@ -350,7 +355,12 @@ suite('API (integration)', () => {
       headers: { authorization: `Bearer ${TOKEN}` },
     });
     expect(res.statusCode).toBe(200);
-    const body = res.json() as { totalVisitors: number; days: { day: string; visitors: number }[] };
+    const body = res.json() as {
+      watchingNow: number;
+      totalVisitors: number;
+      days: { day: string; visitors: number }[];
+    };
+    expect(body.watchingNow).toBe(7);
     expect(body.totalVisitors).toBe(2);
     expect(body.days[0]?.visitors).toBe(2);
   });

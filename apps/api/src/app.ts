@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { APP_NAME, APP_VERSION, type ApiEnv, featureFlagsFrom } from '@eleicoes/config';
 import type { Sql } from '@eleicoes/database';
 import { type ApiMeta, DEFAULT_TIMEZONE, isStateCode } from '@eleicoes/election-core';
@@ -119,7 +119,8 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
 
   app.get('/api/health', async () => {
     await sql`select 1`;
-    return { status: 'ok', version: APP_VERSION, adapters: ADAPTER_VERSIONS, realtimeClients: hub.size };
+    // How many people are watching is the owner's business: it lives in /api/stats/visits only.
+    return { status: 'ok', version: APP_VERSION, adapters: ADAPTER_VERSIONS };
   });
 
   // Private visitor counter: the page sends a random browser id once per visit (sendBeacon,
@@ -132,6 +133,19 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
     return reply.status(204).send();
   });
 
+  // Live viewers: each instance (2 on Railway) knows only its own realtime connections, so it
+  // writes its count every 30 s; the stats sum the rows that are fresh. One tiny upsert per
+  // instance every 30 s, nothing per reader.
+  const instance = process.env.RAILWAY_REPLICA_ID ?? randomUUID();
+  const beat = setInterval(() => {
+    sql`insert into live_clients (instance, clients, updated_at) values (${instance}, ${hub.size}, now())
+      on conflict (instance) do update set clients = excluded.clients, updated_at = now()`.catch((err) =>
+      app.log.warn({ err }, 'live viewers heartbeat failed'),
+    );
+  }, 30_000);
+  beat.unref();
+  app.addHook('onClose', async () => clearInterval(beat));
+
   app.get('/api/stats/visits', async (req, reply) => {
     const expected = Buffer.from(`Bearer ${env.STATS_TOKEN ?? ''}`);
     const given = Buffer.from(req.headers.authorization ?? '');
@@ -143,7 +157,10 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
       group by day order by day desc limit 60`;
     const [all] = await sql<{ visitors: number }[]>`
       select count(distinct visitor)::int as visitors from site_visits`;
-    return { totalVisitors: all?.visitors ?? 0, days };
+    await sql`delete from live_clients where updated_at < now() - interval '1 day'`;
+    const [live] = await sql<{ now: number }[]>`
+      select coalesce(sum(clients), 0)::int as now from live_clients where updated_at > now() - interval '90 seconds'`;
+    return { watchingNow: live?.now ?? 0, totalVisitors: all?.visitors ?? 0, days };
   });
 
   app.get('/api/meta', async (_req, reply) => {

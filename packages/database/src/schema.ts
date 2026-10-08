@@ -328,3 +328,11 @@ export const siteVisits = pgTable(
   },
   (t) => [primaryKey({ columns: [t.day, t.visitor] })],
 );
+
+/** People watching live right now: each API instance writes its open realtime connections here
+ * every 30 s; only the owner's stats endpoint reads the sum (never shown on the site). */
+export const liveClients = pgTable('live_clients', {
+  instance: text('instance').primaryKey(),
+  clients: integer('clients').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
