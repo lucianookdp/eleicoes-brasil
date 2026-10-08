@@ -324,13 +324,16 @@ test('STF: filter by who appointed, timeline and panels', async ({ page }) => {
 
 test('states: only those where a candidate had the most votes', async ({ page }) => {
   await page.goto('/eleicao/estados/?e=demo&t=1');
+  // Wait for the states to load before deciding whether there is anything to filter.
+  await expect(page.locator('table tbody tr:visible, ul.divide-y > li:visible').first()).toBeVisible();
   const chips = page.getByRole('group', { name: 'Mais votado em cada estado' }).getByRole('button');
   test.skip((await chips.count()) < 2, 'no votes counted yet');
   const second = chips.nth(1);
   const n = Number((await second.textContent())?.replace(/\D/g, '').slice(-2));
   await second.click();
-  await expect(page.locator('table tbody tr, ul.divide-y > li').first()).toBeVisible();
-  expect(n).toBeGreaterThan(0);
+  await expect(second).toHaveAttribute('aria-pressed', 'true');
+  // Only the states that candidate won are listed (table on computers, list on phones).
+  await expect(page.locator('table tbody tr:visible, ul.divide-y > li:visible')).toHaveCount(n);
 });
 
 test('polymarket: its own page, with Polymarket named and linked', async ({ page }) => {
