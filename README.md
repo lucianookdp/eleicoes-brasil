@@ -40,10 +40,13 @@ celular, neutro e sem previsões.
   e em **cada município**, além dos votos no exterior.
 - **Filtro por mais votado:** veja só os estados ou municípios onde cada candidato teve mais
   votos (ou está à frente, durante a apuração).
+- **Mudou desde o 1º turno:** no 2º turno, os estados e municípios onde o mais votado é outro,
+  com quem liderava no 1º turno. A comparação é feita pelo número do candidato, nunca pelo nome.
 - Ordenação por nome, mais ou menos apurados, votos apurados ou atualizados agora.
 
-### Governadores, Senado e STF
-- Quem venceu ou foi para o 2º turno em cada estado, para governador e senador.
+### Poderes: governadores, senadores e STF
+- Quem venceu ou foi para o 2º turno em cada estado, para governador e senador, com filtro por
+  situação: definidos, que vão ao 2º turno ou ainda em apuração.
 - **STF:** os ministros, quem indicou cada um, filtro por presidente, aposentadoria obrigatória,
   linha do tempo das posses, composição das duas turmas e o que o tribunal faz, com os artigos
   da Constituição.
@@ -58,11 +61,15 @@ celular, neutro e sem previsões.
 - **Favoritos:** salve estados e cidades para acompanhar.
 - **Comparar estados:** até oito estados lado a lado; a comparação fica no link para compartilhar.
 - **Linha do tempo:** como estava a apuração em qualquer horário da noite.
-- **Compartilhar:** imagem do resultado pronta para o WhatsApp e redes sociais.
+- **Compartilhar:** imagem clara e leve do resultado (Brasil, estado ou município), pronta para o
+  WhatsApp e redes sociais, e o texto com os números.
+- **Modo telão:** o resultado em letras grandes e o mapa, em tela cheia, para TV, projetor ou
+  transmissão; mostra também a cidade escolhida em "Minha cidade" e mantém a tela acesa.
 
 ### Mercado de apostas
-- Página separada com os preços do **Polymarket** para o 2º turno: chance de cada candidato,
-  gráfico histórico, margem de vitória e resultado por estado, atualizados a cada 30 segundos.
+- Página separada com os preços do **Polymarket** para o 2º turno: chance de cada candidato (com
+  a foto que o próprio Polymarket usa), gráfico histórico, margem de vitória e resultado por
+  estado, ao vivo, atualizados a cada 30 segundos.
   Fica fora da apuração e não interfere nela: é o navegador de quem lê que consulta o Polymarket.
 
 ### Transparência

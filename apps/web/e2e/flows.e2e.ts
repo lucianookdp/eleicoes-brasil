@@ -177,7 +177,7 @@ test('during the count: where the most votes are still to be counted', async ({ 
 
 test('governors and senators of every state on one screen', async ({ page }) => {
   await page.goto('/eleicao/cargos/?e=demo&t=1');
-  await expect(page.getByRole('heading', { level: 1, name: 'Governadores e senadores' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Governadores' })).toBeVisible();
   await expect(page.getByRole('link', { name: /^Acre/ })).toBeVisible();
   await page.getByRole('radio', { name: 'Senador' }).click();
   await expect(page).toHaveURL(/cargo=senador/);
@@ -287,7 +287,7 @@ test('runoff over: the winner banner, only once the TSE marks "Eleito"', async (
   await expect(page.getByText(/Aguardando o TSE/)).toHaveCount(0);
 });
 
-test('governors: named for what is disputed, and listed low on the runoff home page', async ({
+test('Poderes in the nav, and the runoff governors listed low on the home page', async ({
   page,
   isMobile,
   request,
@@ -296,7 +296,7 @@ test('governors: named for what is disputed, and listed low on the runoff home p
   const nav = isMobile
     ? page.getByRole('navigation', { name: 'Navegação principal' })
     : page.getByRole('navigation', { name: 'Seções' });
-  await expect(nav.getByRole('link', { name: 'Gov./Senado' })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Poderes', exact: true })).toBeVisible();
   await expect(nav.getByRole('link', { name: 'Polymarket' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Governadores no 2º turno' })).toHaveCount(0);
 
@@ -305,7 +305,6 @@ test('governors: named for what is disputed, and listed low on the runoff home p
   if (!elections.some((e: { rounds: { slug: string }[] }) => e.rounds.some((r) => r.slug === 'demo-2')))
     return;
   await page.goto('/eleicao/?e=demo&t=2');
-  await expect(nav.getByRole('link', { name: 'Governadores', exact: true })).toBeVisible();
   const section = page.getByRole('region', { name: 'Governadores no 2º turno' });
   await expect(section).toBeVisible();
   await expect(section.getByRole('link').first()).toBeVisible();
@@ -346,4 +345,12 @@ test('polymarket: its own page, with Polymarket named and linked', async ({ page
     'href',
     /polymarket\.com\/event\//,
   );
+});
+
+test('telão: the headline race and the map, with a full-screen button', async ({ page }) => {
+  await page.goto('/eleicao/telao/?e=demo&t=1');
+  await expect(page.getByRole('heading', { level: 1, name: 'Modo telão' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Tela cheia' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Resultado' }).getByText('%').first()).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Mapa do Brasil por estado' })).toBeVisible();
 });

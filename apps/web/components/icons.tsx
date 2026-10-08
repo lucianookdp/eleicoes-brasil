@@ -101,6 +101,12 @@ export const IconPolymarket = (p: SVGProps<SVGSVGElement>) => (
     <path d="m6 8 12 4-12 4" />
   </Icon>
 );
+export const IconTv = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <rect x="3" y="5" width="18" height="12" rx="2" />
+    <path d="M8 21h8M12 17v4" />
+  </Icon>
+);
 export const IconChevron = (p: SVGProps<SVGSVGElement>) => (
   <Icon {...p}>
     <path d="m9 6 6 6-6 6" />

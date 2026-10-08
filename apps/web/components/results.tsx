@@ -285,10 +285,13 @@ export function FacePhoto({
   c,
   fallbackRound,
   small = false,
+  sizeClass,
 }: {
   c: CandidateDTO;
   fallbackRound: string;
   small?: boolean;
+  /** Overrides the two built-in sizes (the TV mode wants a bigger face). */
+  sizeClass?: string;
 }) {
   const { round } = useRound();
   const sources = [...new Set([round.slug, fallbackRound])].map(
@@ -297,7 +300,7 @@ export function FacePhoto({
   const [i, setI] = useState(0);
   return (
     <span
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold ${small ? 'size-14 text-[16px]' : 'size-[72px] text-[22px] sm:size-20'}`}
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold ${sizeClass ?? (small ? 'size-14 text-[16px]' : 'size-[72px] text-[22px] sm:size-20')}`}
       style={{
         background: 'var(--surface-2)',
         color: 'var(--ink-2)',

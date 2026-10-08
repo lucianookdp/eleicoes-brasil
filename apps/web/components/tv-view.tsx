@@ -1,0 +1,269 @@
+'use client';
+
+import { type CandidateDTO, hasValidVotes } from '@eleicoes/election-core';
+import { useEffect, useRef, useState } from 'react';
+import { displayName, fmtInt, fmtPct } from '@/lib/format';
+import { useMyCity } from '@/lib/my-city';
+import { useCity, useOverview } from '@/lib/queries';
+import { BrazilMap } from './brazil-map';
+import { IconPin, Logo } from './icons';
+import { FacePhoto } from './results';
+import { useRound } from './shell';
+import { EmptyState, ErrorNotice, Skeleton } from './ui';
+
+const CLOCK = new Intl.DateTimeFormat('pt-BR', {
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'America/Sao_Paulo',
+});
+
+/**
+ * "Modo telão": the headline race in big type and the map, for a TV, a projector or a live stream.
+ * Same live data as the rest of the site. "Tela cheia" hides everything else and keeps the screen
+ * awake where the browser allows it.
+ */
+export function TvView() {
+  const { round } = useRound();
+  const { data, error, refetch } = useOverview(round.slug);
+  const myCity = useMyCity();
+  const box = useRef<HTMLDivElement>(null);
+  const [full, setFull] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 15_000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Keeps the screen on while in full screen (optional: some browsers refuse, that's fine).
+  useEffect(() => {
+    const onChange = () => setFull(document.fullscreenElement === box.current);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+  useEffect(() => {
+    if (!full || !('wakeLock' in navigator)) return;
+    let lock: WakeLockSentinel | null = null;
+    navigator.wakeLock
+      .request('screen')
+      .then((l) => {
+        lock = l;
+      })
+      .catch(() => {});
+    return () => {
+      lock?.release().catch(() => {});
+    };
+  }, [full]);
+
+  if (!data)
+    return error ? <ErrorNotice error={error} retry={() => refetch()} /> : <Skeleton className="h-[70vh]" />;
+
+  const headline = data.headline;
+  const shown = (headline?.candidates ?? []).filter(hasValidVotes).slice(0, 4);
+  const pair = shown.length === 2 || (round.round === 2 && shown.length >= 2);
+  const counted = data.progress?.countedPct ?? null;
+  const live = data.round.status === 'live';
+  const states = data.states.filter((s) => s.uf !== 'ZZ');
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="text-[22px] font-semibold tracking-tight">Modo telão</h1>
+          <p className="text-[13.5px] text-muted">Para TV, projetor ou transmissão. Atualiza sozinho.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => box.current?.requestFullscreen?.().catch(() => {})}
+          className="inline-flex h-9 items-center gap-2 rounded-full border border-line px-3.5 text-[13.5px] text-ink-2 hover:border-line-strong hover:text-ink"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width={16}
+            height={16}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            aria-hidden
+          >
+            <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Tela cheia
+        </button>
+      </div>
+
+      <div
+        ref={box}
+        className="flex flex-col gap-[clamp(16px,2.2vw,40px)] rounded-2xl border border-line bg-ground p-4 sm:p-6 [&:fullscreen]:h-screen [&:fullscreen]:overflow-auto [&:fullscreen]:rounded-none [&:fullscreen]:border-0 [&:fullscreen]:p-[3vw]"
+      >
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Logo size={34} />
+            <div className="leading-tight">
+              <p className="text-[clamp(16px,1.6vw,28px)] font-semibold">Eleições Brasil</p>
+              <p className="text-[clamp(13px,1.1vw,20px)] text-muted">
+                {headline ? `${headline.office.name} · ` : ''}
+                {round.round}º turno
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 text-[clamp(14px,1.3vw,24px)]">
+            {live ? (
+              <span className="flex items-center gap-2 font-semibold text-bad">
+                <span className="pulse-dot inline-block size-[0.6em] rounded-full bg-current" aria-hidden />
+                Ao vivo
+              </span>
+            ) : (
+              <span className="font-medium text-ink-2">
+                {data.round.status === 'final' ? 'Apuração encerrada' : 'Aguardando'}
+              </span>
+            )}
+            <time className="numeral text-muted">{CLOCK.format(now)}</time>
+          </div>
+        </header>
+
+        {!headline || shown.length === 0 ? (
+          <EmptyState title="Ainda não há votos apurados." />
+        ) : (
+          <div className="grid items-center gap-[clamp(16px,2.5vw,48px)] lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+            <section aria-label="Resultado" className="@container min-w-0">
+              {pair ? (
+                <Pair a={shown[0]!} b={shown[1]!} fallbackRound={round.slug} />
+              ) : (
+                <ul className="grid gap-[clamp(10px,1.4vw,24px)]">
+                  {shown.map((c) => (
+                    <Row key={c.key} c={c} fallbackRound={round.slug} />
+                  ))}
+                </ul>
+              )}
+              <div className="mt-[clamp(16px,2.4vw,44px)]">
+                <p className="flex items-baseline justify-between text-[clamp(14px,1.3vw,24px)] text-ink-2">
+                  <span>Urnas apuradas</span>
+                  <span className="numeral text-[clamp(18px,2vw,36px)] font-semibold text-ink">
+                    {fmtPct(counted, 2)}
+                  </span>
+                </p>
+                <div className="mt-2 h-[clamp(6px,0.6vw,12px)] overflow-hidden rounded-full bg-surface-2">
+                  <div className="bar h-full rounded-full bg-live" style={{ width: `${counted ?? 0}%` }} />
+                </div>
+              </div>
+              {myCity.city && <TvCity office={headline.office.slug} />}
+            </section>
+            <section
+              aria-label="Mapa por estado"
+              className="min-w-0 rounded-2xl border border-line bg-surface p-3"
+            >
+              <BrazilMap key={round.slug} states={states} />
+            </section>
+          </div>
+        )}
+
+        <footer className="flex flex-wrap justify-between gap-2 text-[clamp(12px,1vw,18px)] text-muted">
+          <span>Dados oficiais do TSE</span>
+          <span className="font-medium text-ink-2">eleicoes.lucianookdp.dev</span>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+/** Two finalists side by side, with one split bar. */
+function Pair({ a, b, fallbackRound }: { a: CandidateDTO; b: CandidateDTO; fallbackRound: string }) {
+  const total = (a.votes ?? 0) + (b.votes ?? 0);
+  const left = total ? ((a.votes ?? 0) / total) * 100 : 50;
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-[clamp(12px,2vw,40px)]">
+        {[a, b].map((c, i) => (
+          <div key={c.key} className={`flex min-w-0 flex-col gap-2 ${i ? 'items-end text-right' : ''}`}>
+            <FacePhoto
+              c={c}
+              fallbackRound={fallbackRound}
+              sizeClass="size-[clamp(64px,16cqi,150px)] text-[clamp(18px,4cqi,40px)]"
+            />
+            <p className="flex max-w-full items-center gap-2 text-[clamp(16px,4.2cqi,38px)] font-semibold">
+              <span
+                className="size-[0.45em] shrink-0 rounded-full"
+                style={{ background: c.color }}
+                aria-hidden
+              />
+              <span className="truncate">{displayName(c.ballotName)}</span>
+            </p>
+            <p className="numeral text-[clamp(36px,12.5cqi,150px)] font-bold leading-none tracking-tight">
+              {fmtPct(c.percent)}
+            </p>
+            <p className="numeral text-[clamp(13px,2.6cqi,24px)] text-muted">{fmtInt(c.votes)} votos</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-[clamp(14px,2vw,36px)] flex h-[clamp(10px,1.1vw,22px)] overflow-hidden rounded-full">
+        <div className="bar h-full" style={{ width: `${left}%`, background: a.color }} />
+        <div className="h-full flex-1" style={{ background: b.color }} />
+      </div>
+    </div>
+  );
+}
+
+/** One of several candidates (1st round): face, name, big %, a bar. */
+function Row({ c, fallbackRound }: { c: CandidateDTO; fallbackRound: string }) {
+  return (
+    <li className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-[clamp(10px,1.4vw,24px)]">
+      <FacePhoto
+        c={c}
+        fallbackRound={fallbackRound}
+        sizeClass="size-[clamp(44px,4.5vw,84px)] text-[clamp(14px,1.3vw,24px)]"
+      />
+      <div className="min-w-0">
+        <p className="truncate text-[clamp(16px,1.7vw,32px)] font-semibold">{displayName(c.ballotName)}</p>
+        <div className="mt-1.5 h-[clamp(6px,0.6vw,12px)] overflow-hidden rounded-full bg-surface-2">
+          <div
+            className="bar h-full rounded-full"
+            style={{ width: `${Math.min(100, c.percent ?? 0)}%`, background: c.color }}
+          />
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="numeral text-[clamp(26px,3.6vw,72px)] font-bold leading-none">{fmtPct(c.percent)}</p>
+        <p className="numeral mt-1 text-[clamp(12px,1.1vw,20px)] text-muted">{fmtInt(c.votes)} votos</p>
+      </div>
+    </li>
+  );
+}
+
+/** "Minha cidade" on the big screen: the same race in the city the reader picked on the home page. */
+function TvCity({ office }: { office: string }) {
+  const { round } = useRound();
+  const { city } = useMyCity();
+  const { data } = useCity(round.slug, city!.uf, city!.code);
+  const result = data?.results.find((r) => r.office.slug === office);
+  const top = result?.candidates.filter(hasValidVotes).slice(0, 2) ?? [];
+  if (!city) return null;
+  return (
+    <div className="mt-[clamp(14px,2vw,32px)] rounded-xl border border-line bg-surface px-[clamp(12px,1.4vw,24px)] py-[clamp(10px,1.1vw,20px)]">
+      <p className="flex items-center gap-1.5 text-[clamp(12px,1vw,18px)] text-muted">
+        <IconPin width="1em" height="1em" className="text-live" /> Minha cidade
+        {result && ` · ${fmtPct(result.progress.countedPct, 1)} das urnas`}
+      </p>
+      <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+        <p className="truncate text-[clamp(16px,1.6vw,30px)] font-semibold">
+          {city.name} <span className="font-normal text-muted">({city.uf.toUpperCase()})</span>
+        </p>
+        {top.length > 0 ? (
+          <p className="flex flex-wrap gap-x-5 text-[clamp(14px,1.4vw,26px)]">
+            {top.map((c) => (
+              <span key={c.key} className="flex items-center gap-1.5">
+                <span className="size-[0.5em] rounded-full" style={{ background: c.color }} aria-hidden />
+                {displayName(c.ballotName)}
+                <span className="numeral font-semibold">{fmtPct(c.percent)}</span>
+              </span>
+            ))}
+          </p>
+        ) : (
+          <p className="text-[clamp(13px,1.2vw,22px)] text-muted">
+            {data ? 'Ainda sem votos apurados' : 'Carregando…'}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}

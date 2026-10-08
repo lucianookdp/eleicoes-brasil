@@ -22,6 +22,8 @@ export interface Outcome {
   /** Polymarket's id of the "Yes" token (for the price history). */
   token: string;
   volume: number;
+  /** Polymarket's picture for this outcome (the candidate's photo), when it has one. */
+  image: string | null;
 }
 
 interface GammaMarket {
@@ -31,6 +33,7 @@ interface GammaMarket {
   clobTokenIds?: string;
   volume?: number | string;
   closed?: boolean;
+  icon?: string;
 }
 interface GammaEvent {
   slug: string;
@@ -50,6 +53,7 @@ const outcomes = (e: GammaEvent | undefined): Outcome[] =>
         no: Number(prices[1] ?? 0),
         token: (JSON.parse(m.clobTokenIds ?? '[]') as string[])[0] ?? '',
         volume: Number(m.volume ?? 0),
+        image: m.icon?.startsWith('https://polymarket-upload.s3.us-east-2.amazonaws.com/') ? m.icon : null,
       };
     })
     .filter((o) => o.name && o.price > 0)

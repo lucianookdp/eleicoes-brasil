@@ -53,6 +53,7 @@ const SECTIONS: Record<string, string> = {
   '/compare': '/eleicao/comparar/',
   '/offices': '/eleicao/cargos/',
   '/benches': '/eleicao/bancadas/',
+  '/tv': '/eleicao/telao/',
 };
 
 /** "/states/sp/cities/71072" (+ round) → "/eleicao/municipio/?e=2026&t=1&uf=sp&c=71072". */

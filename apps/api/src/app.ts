@@ -252,6 +252,11 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
           .string()
           .regex(/^\d{1,5}$/)
           .optional(),
+        // Runoff only: cities whose most voted changed since the 1st round.
+        changed: z
+          .literal('1')
+          .optional()
+          .transform((v) => v === '1'),
         page: z.coerce.number().int().min(1).max(10_000).default(1),
         pageSize: z.coerce.number().int().min(1).max(100).default(30),
       })

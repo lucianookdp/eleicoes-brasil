@@ -142,6 +142,8 @@ export interface BenchesDTO {
 }
 
 export interface LeaderDTO {
+  /** Ballot number: the same person across both rounds (never matched by name). */
+  number: string;
   name: string;
   party: string;
   color: string;
@@ -187,6 +189,8 @@ export interface CityRowDTO {
   leader: { number: string; ballotName: string; party: string; votes: number; percent: number | null } | null;
   /** The candidate asked for with `?candidate=<number>`: their votes in this city. */
   pick?: { votes: number; percent: number | null } | null;
+  /** With `?changed=1` in a runoff: who had the most votes here in the 1st round. */
+  before?: { number: string; ballotName: string } | null;
 }
 
 export interface Paginated<T> {

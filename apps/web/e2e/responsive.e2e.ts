@@ -17,6 +17,7 @@ const PAGES = [
   '/eleicao/comparar/',
   '/eleicao/cargos/?cargo=stf',
   '/polymarket/',
+  '/eleicao/telao/',
   '/como-funciona/',
   '/sobre/',
   '/pagina-que-nao-existe/',

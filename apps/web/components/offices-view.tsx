@@ -4,6 +4,7 @@ import type { ResultDTO } from '@eleicoes/election-core';
 import { hasValidVotes } from '@eleicoes/election-core';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import { displayName, fmtPct } from '@/lib/format';
 import { useOfficeStates, useOverview } from '@/lib/queries';
 import { StatusPill, useOfficeParam } from './results';
@@ -22,6 +23,15 @@ export function OfficesView() {
   // The Supreme Court lives here too, as the last tab (?cargo=stf).
   const stf = useSearchParams().get('cargo') === 'stf';
   const { data, error, refetch, isFetching } = useOfficeStates(round.slug, stf ? undefined : office?.slug);
+  // Filter by the TSE's status of each race (elected, runoff, counting); reset with the office.
+  const [status, setStatus] = useState<Status | null>(null);
+  const [statusFor, setStatusFor] = useState(office?.slug);
+  if (statusFor !== office?.slug) {
+    setStatusFor(office?.slug);
+    setStatus(null);
+  }
+  const shown = data?.results.filter((r) => !status || statusOf(r) === status) ?? [];
+  const officeTitle = office?.name === 'Senador' ? 'Senadores' : 'Governadores';
 
   return (
     <>
@@ -31,8 +41,8 @@ export function OfficesView() {
             {stf
               ? 'Supremo Tribunal Federal'
               : round.round === 2
-                ? 'Governadores no 2º turno'
-                : 'Governadores e senadores'}
+                ? `${officeTitle} no 2º turno`
+                : officeTitle}
           </h1>
           <p className="text-[13.5px] text-muted">
             {stf
@@ -66,9 +76,9 @@ export function OfficesView() {
           {!data && !error && offices.length > 0 && <Skeleton className="h-96" />}
           {data && (
             <>
-              <Summary results={data.results} />
+              <StatusFilter results={data.results} value={status} onChange={setStatus} />
               <ul className={`grid gap-3 sm:grid-cols-2 xl:grid-cols-3 ${isFetching ? 'opacity-80' : ''}`}>
-                {data.results.map((r) => (
+                {shown.map((r) => (
                   <li key={r.areaKey}>
                     <StateCard result={r} />
                   </li>
@@ -82,30 +92,58 @@ export function OfficesView() {
   );
 }
 
-/** Counts by the TSE's own status: elected in the 1st round, going to a runoff, still counting. */
-function Summary({ results }: { results: ResultDTO[] }) {
-  const leaders = (r: ResultDTO) => r.candidates.filter(hasValidVotes);
-  const elected = results.filter(
-    (r) => r.mathematicallyDecided === 'elected' || leaders(r).some((c) => /^eleit/i.test(c.status ?? '')),
-  ).length;
-  const runoff = results.filter(
-    (r) => r.mathematicallyDecided === 'runoff' || leaders(r).some((c) => /2º turno/i.test(c.status ?? '')),
-  ).length;
-  const open = results.length - elected - runoff;
-  const items = [
-    { n: elected, label: elected === 1 ? 'definido' : 'definidos' },
-    { n: runoff, label: 'vão ao 2º turno' },
-    { n: open, label: 'em apuração' },
-  ].filter((i) => i.n > 0);
-  if (items.length === 0) return null;
+type Status = 'elected' | 'runoff' | 'open';
+
+/** Each race by the TSE's own status: decided, going to a runoff, or still counting. */
+function statusOf(r: ResultDTO): Status {
+  const leaders = r.candidates.filter(hasValidVotes);
+  if (r.mathematicallyDecided === 'elected' || leaders.some((c) => /^eleit/i.test(c.status ?? '')))
+    return 'elected';
+  if (r.mathematicallyDecided === 'runoff' || leaders.some((c) => /2º turno/i.test(c.status ?? '')))
+    return 'runoff';
+  return 'open';
+}
+
+/** The counts by status, as chips that filter the states below ("vão ao 2º turno"…). */
+function StatusFilter({
+  results,
+  value,
+  onChange,
+}: {
+  results: ResultDTO[];
+  value: Status | null;
+  onChange: (s: Status | null) => void;
+}) {
+  const count = (s: Status) => results.filter((r) => statusOf(r) === s).length;
+  const options = [
+    { value: null, label: 'Todos', n: results.length },
+    {
+      value: 'elected' as const,
+      label: count('elected') === 1 ? 'Definido' : 'Definidos',
+      n: count('elected'),
+    },
+    { value: 'runoff' as const, label: 'Vão ao 2º turno', n: count('runoff') },
+    { value: 'open' as const, label: 'Em apuração', n: count('open') },
+  ].filter((o) => o.value === null || o.n > 0);
+  // Only worth chips when there is more than one kind of state.
+  if (options.length <= 2) return null;
   return (
-    <p className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-[13.5px] text-ink-2">
-      {items.map((i) => (
-        <span key={i.label}>
-          <span className="numeral font-semibold text-ink">{i.n}</span> {i.label}
-        </span>
-      ))}
-    </p>
+    <fieldset className="mb-3 min-w-0">
+      <legend className="sr-only">Filtrar estados</legend>
+      <div className="scroll-x -mx-4 flex gap-1.5 px-4 sm:mx-0 sm:flex-wrap sm:px-0">
+        {options.map((o) => (
+          <button
+            key={o.label}
+            type="button"
+            aria-pressed={value === o.value}
+            onClick={() => onChange(o.value)}
+            className="h-9 shrink-0 whitespace-nowrap rounded-full border border-line px-3.5 text-[14px] text-ink-2 hover:border-line-strong aria-pressed:border-live aria-pressed:bg-live-soft aria-pressed:font-medium aria-pressed:text-ink"
+          >
+            {o.label} <span className="numeral text-muted">{o.n}</span>
+          </button>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 

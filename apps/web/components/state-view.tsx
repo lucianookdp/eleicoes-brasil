@@ -128,13 +128,21 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
   const colorOf = (number: string) => candidates.find((c) => c.number === number)?.color ?? 'var(--muted)';
   const picked = sort.startsWith('candidate:') ? sort.slice('candidate:'.length) : undefined;
   // "Only where X won": the two leading candidates nationally (in a runoff, the two finalists).
+  // A ballot number, or "changed" (runoff: most voted differs from the 1st round).
   const [leader, setLeader] = useState<string | null>(null);
+  const changed = leader === 'changed';
   const leaderName = candidates.find((c) => c.number === leader)?.ballotName;
   const pickedName = candidates.find((c) => c.number === picked)?.ballotName;
   const { data, isFetching, isFetchingNextPage, hasNextPage, fetchNextPage } = useCities(
     round.slug,
     uf.toLowerCase(),
-    { q: debounced, sort: picked ? 'candidate' : sort, candidate: picked, leader: leader ?? undefined },
+    {
+      q: debounced,
+      sort: picked ? 'candidate' : sort,
+      candidate: picked,
+      leader: leader && !changed ? leader : undefined,
+      changed,
+    },
   );
   const items = data?.pages.flatMap((p) => p.items) ?? [];
   const found = data?.pages[0]?.total ?? 0;
@@ -156,6 +164,9 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
               ...candidates
                 .slice(0, 2)
                 .map((c) => ({ number: c.number, label: displayName(c.ballotName), color: c.color })),
+              ...(round.round === 2
+                ? [{ number: 'changed', label: 'Mudou desde o 1º turno', color: null }]
+                : []),
             ].map((o) => (
               <button
                 key={o.label}
@@ -173,8 +184,11 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
           </div>
           {leader && data && (
             <p className="mt-1.5 text-[13px] text-ink-2">
-              {fmtInt(found)} {abroad ? 'cidades' : 'municípios'} onde {displayName(leaderName ?? '')} teve
-              mais votos
+              {fmtInt(found)}{' '}
+              {abroad ? (found === 1 ? 'cidade' : 'cidades') : found === 1 ? 'município' : 'municípios'}{' '}
+              {changed
+                ? 'onde o mais votado é outro, diferente do 1º turno'
+                : `onde ${displayName(leaderName ?? '')} teve mais votos`}
             </p>
           )}
         </fieldset>
@@ -219,7 +233,13 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
         </label>
       </div>
       {data && items.length === 0 && (
-        <EmptyState title={`Nenhum município encontrado para “${debounced}”.`} />
+        <EmptyState
+          title={
+            changed && !debounced
+              ? 'Em todos os municípios, o mais votado é o mesmo do 1º turno.'
+              : `Nenhum município encontrado para “${debounced}”.`
+          }
+        />
       )}
       <ul
         className={`grid gap-x-6 sm:grid-cols-2 xl:grid-cols-3 ${isFetching && !isFetchingNextPage ? 'opacity-70' : ''}`}
@@ -282,6 +302,11 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
                       <span className="shrink-0 text-muted">{fmtPct(c.leader.percent)}</span>
                     </span>
                   )
+                )}
+                {c.before && (
+                  <span className="mt-0.5 block truncate text-[12.5px] text-muted">
+                    No 1º turno: {displayName(c.before.ballotName)}
+                  </span>
                 )}
                 {p?.totalizedAt && (
                   <span className="sr-only">Atualizado às {formatClock(p.totalizedAt)}</span>

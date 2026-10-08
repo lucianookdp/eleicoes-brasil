@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     description: 'Dados oficiais do TSE, atualizados a cada parcial. 2º turno em 25 de outubro.',
     url: `${base}/`,
     images: [
-      { url: `${base}/og.png?v=3`, width: 1200, height: 630, alt: 'Eleições 2026 · Apuração em tempo real' },
+      { url: `${base}/og.png?v=4`, width: 1200, height: 630, alt: 'Eleições 2026 · Apuração em tempo real' },
     ],
   },
   twitter: { card: 'summary_large_image' },
@@ -75,7 +75,8 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: ${api}`,
+  // Candidate photos on the Polymarket page come from Polymarket's own image host.
+  `img-src 'self' data: blob: ${api} https://polymarket-upload.s3.us-east-2.amazonaws.com`,
   "font-src 'self'",
   // Our API, plus Polymarket's public API for the separate "Mercado de apostas" page only.
   `connect-src 'self' ${api} https://gamma-api.polymarket.com https://clob.polymarket.com`,

@@ -79,7 +79,16 @@ const LABELS: Record<
   df: { at: [409, 310], from: [409, 327], to: [409, 317] },
 };
 
-export function BrazilMap({ states, allowLeader = true }: { states: StateRowDTO[]; allowLeader?: boolean }) {
+export function BrazilMap({
+  states,
+  allowLeader = true,
+  highlight,
+}: {
+  states: StateRowDTO[];
+  allowLeader?: boolean;
+  /** When a list filter is on: only these states (lowercase UF) keep full colour. */
+  highlight?: Set<string>;
+}) {
   const { href } = useRound();
   const router = useRouter();
   // Who leads each state is what readers look for first; counting progress is one tap away.
@@ -129,6 +138,7 @@ export function BrazilMap({ states, allowLeader = true }: { states: StateRowDTO[
                 tabIndex={0}
                 aria-label={`${loc.name}: ${pct == null ? 'sem dados' : `${fmtPct(pct)} apurado`}${s?.leader && mode === 'leader' ? `, mais votado ${displayName(s.leader.name)}` : ''}`}
                 fill={fill(s, mode)}
+                fillOpacity={highlight && !highlight.has(loc.id) ? 0.22 : 1}
                 stroke={active === loc.id || pinned === loc.id ? 'var(--ink)' : 'var(--ground)'}
                 strokeWidth={active === loc.id || pinned === loc.id ? 1.6 : 0.8}
                 className="cursor-pointer outline-none transition-[fill] duration-700 focus-visible:stroke-[var(--info)] focus-visible:[stroke-width:2.5]"

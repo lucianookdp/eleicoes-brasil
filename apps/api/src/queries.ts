@@ -147,6 +147,14 @@ export class Queries {
     return value;
   }
 
+  /** The 1st round of the same election, for runoff comparisons. */
+  private async firstRound(electionSlug: string) {
+    const [r] = await this.sql<{ slug: string }[]>`
+      select r.slug from election_rounds r join elections e on e.id = r.election_id
+      where e.slug = ${electionSlug} and r.round = 1`;
+    return r ? this.round(r.slug) : null;
+  }
+
   /** The worker announced a change: the round may have new offices or a new status. */
   forgetRound(slug?: string) {
     if (slug) this.rounds.delete(slug);
@@ -471,6 +479,7 @@ export class Queries {
           areaKey: string;
           top: {
             key: string;
+            number: string;
             ballotName: string;
             party: { abbreviation: string };
             percent: number | null;
@@ -486,6 +495,7 @@ export class Queries {
       for (const r of rows) {
         if (!r.top || r.top.votes === 0) continue;
         leaders.set(r.areaKey.toUpperCase(), {
+          number: r.top.number,
           name: r.top.ballotName,
           party: r.top.party.abbreviation,
           color: colors.get(r.top.key) ?? '#8A9A93',
@@ -533,9 +543,22 @@ export class Queries {
   async cities(
     slug: string,
     uf: string,
-    opts: { q?: string; sort: string; candidate?: string; leader?: string; page: number; pageSize: number },
+    opts: {
+      q?: string;
+      sort: string;
+      candidate?: string;
+      leader?: string;
+      changed?: boolean;
+      page: number;
+      pageSize: number;
+    },
   ): Promise<Paginated<CityRowDTO>> {
     const round = await this.round(slug);
+    // In a runoff, "changed": cities whose most voted (by ballot number) differs from the 1st round.
+    // Only joined when asked for, so the usual list costs nothing more.
+    const first = opts.changed && round.round === 2 ? await this.firstRound(round.electionSlug) : null;
+    const firstHeadline = first?.offices.find((o) => o.scope === 'country') ?? null;
+    const changed = !!(first && firstHeadline);
     const like = opts.q ? `%${searchKey(opts.q)}%` : null;
     // Headline office (president): who got the most votes in each city, and the picked candidate.
     const headline = round.offices.find((o) => o.scope === 'country') ?? null;
@@ -568,6 +591,8 @@ export class Queries {
         leadPercent: number | null;
         pickVotes: number | null;
         pickPercent: number | null;
+        beforeNumber?: string | null;
+        beforeName?: string | null;
       }[]
     >`
       select c.provider_id as code, c.name, c.is_capital as "isCapital", p.area_key as "areaKey", p.progress,
@@ -575,6 +600,7 @@ export class Queries {
              lead.number as "leadNumber", lead.name as "leadName", lead.party as "leadParty",
              lead.votes as "leadVotes", lead.percent as "leadPercent",
              pick.votes as "pickVotes", pick.percent as "pickPercent"
+             ${changed ? this.sql`, lead1.number as "beforeNumber", lead1.name as "beforeName"` : this.sql``}
       from cities c
       left join area_progress p on p.round_id = ${round.id} and p.area_key = lower(c.state_code) || '-' || c.provider_id
       left join area_results r on r.round_id = ${round.id} and r.office_id = ${headline?.id ?? null}
@@ -591,7 +617,21 @@ export class Queries {
         from jsonb_array_elements(r.result->'candidates') x
         where x->>'number' = ${pick} limit 1
       ) pick on true
+      ${
+        changed
+          ? this.sql`
+      left join area_results r1 on r1.round_id = ${first!.id} and r1.office_id = ${firstHeadline!.id}
+        and r1.area_key = lower(c.state_code) || '-' || c.provider_id
+      left join lateral (
+        select x->>'number' as number, x->>'ballotName' as name
+        from jsonb_array_elements(r1.result->'candidates') x
+        where (x->>'voteDestination') is null or x->>'voteDestination' ~* '^v[aá]lido'
+        order by (x->>'votes')::bigint desc nulls last limit 1
+      ) lead1 on true`
+          : this.sql``
+      }
       where c.provider = ${round.provider} and c.state_code = ${uf}
+        ${changed ? this.sql`and lead.number is not null and lead1.number is not null and lead.number <> lead1.number` : this.sql``}
         ${like ? this.sql`and c.search_name like ${like}` : this.sql``}
         ${opts.leader ? this.sql`and lead.number = ${opts.leader}` : this.sql``}
       order by ${like ? this.sql`c.search_name like ${`${searchKey(opts.q!)}%`} desc,` : this.sql``} ${order}
@@ -622,6 +662,12 @@ export class Queries {
             : null,
         ...(pick
           ? { pick: r.pickVotes == null ? null : { votes: Number(r.pickVotes), percent: r.pickPercent } }
+          : {}),
+        ...(changed
+          ? {
+              before:
+                r.beforeNumber && r.beforeName ? { number: r.beforeNumber, ballotName: r.beforeName } : null,
+            }
           : {}),
       })),
       total: rows[0]?.total ?? 0,
@@ -716,6 +762,7 @@ export class Queries {
         const cand = top && names.get(top[0]);
         if (s.areaKey !== 'br' && cand && top[1] > 0) {
           leaders.set(s.areaKey.toUpperCase(), {
+            number: cand.number,
             name: cand.ballotName,
             party: cand.party.abbreviation,
             color: colors.get(cand.key) ?? '#8A9A93',

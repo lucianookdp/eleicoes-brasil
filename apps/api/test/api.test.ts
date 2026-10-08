@@ -2,6 +2,7 @@ import { apiEnvSchema } from '@eleicoes/config';
 import {
   areaProgress,
   areaResults,
+  cities as citiesTable,
   createDatabase,
   electionRounds,
   elections,
@@ -163,6 +164,114 @@ suite('API (integration)', () => {
     // No progress row for a state: null, never zeros.
     expect(body.states[0].progress).toBeNull();
     expect(body.ingestion.state).toBe('idle');
+  });
+
+  it('runoff: lists only the cities whose most voted changed since the 1st round', async () => {
+    const [e] = await sql<{ id: string }[]>`select id from elections where slug = 'test'`;
+    const [r1] = await sql<{ id: string }[]>`select id from election_rounds where slug = 'test-1'`;
+    const [r2] = await db
+      .insert(electionRounds)
+      .values({ electionId: e!.id, slug: 'test-2', round: 2, date: '2026-10-25', status: 'live' })
+      .returning();
+    const [p1] = await sql<{ id: string }[]>`select id from offices where round_id = ${r1!.id}`;
+    const [p2] = await db
+      .insert(offices)
+      .values({
+        roundId: r2!.id,
+        providerId: '1',
+        providerElectionCode: '1',
+        slug: 'presidente',
+        name: 'Presidente',
+        kind: 'majoritarian',
+        scope: 'country',
+      })
+      .returning();
+    await db.insert(citiesTable).values([
+      { stateCode: 'SP', providerId: '00001', name: 'VIROU', searchName: 'virou' },
+      { stateCode: 'SP', providerId: '00002', name: 'IGUAL', searchName: 'igual' },
+    ]);
+    // Ballot numbers and votes, most voted first or not: the API orders them itself.
+    const result = (votes: [string, string, number][]) => ({
+      progress: emptyProgress(),
+      votes: {
+        total: 0,
+        valid: 0,
+        nominal: 0,
+        legend: null,
+        blank: 0,
+        null: 0,
+        annulled: 0,
+        annulledSubJudice: 0,
+      },
+      candidates: votes.map(([number, ballotName, v]) => ({
+        key: number,
+        number,
+        name: ballotName,
+        ballotName,
+        party: { number, abbreviation: 'P', name: 'P' },
+        coalition: null,
+        runningMates: [],
+        votes: v,
+        percent: null,
+        elected: null,
+        status: null,
+        voteDestination: 'Válido',
+      })),
+      parties: [],
+      seats: 1,
+      final: false,
+      mathematicallyDecided: null,
+      votesPublishable: true,
+      noElectedReasons: [],
+    });
+    const row = (roundId: string, officeId: string, city: string, votes: [string, string, number][]) => ({
+      roundId,
+      officeId,
+      areaKey: `sp-${city}`,
+      areaType: 'city' as const,
+      countedPct: 100,
+      result: result(votes),
+      provenance: {
+        provider: 'TSE',
+        adapter: 'tse-2026@2026-v1',
+        sourceFile: '/x.json',
+        sourceId: '1',
+        retrievedAt: new Date().toISOString(),
+        sourceGeneratedAt: null,
+        etag: null,
+        checksum: 'x',
+      },
+      checksum: 'x',
+      updatedAt: new Date().toISOString(),
+    });
+    await db.insert(areaResults).values([
+      // 1st round: a third candidate led in VIROU; ANA led in IGUAL.
+      row(r1!.id, p1!.id, '00001', [
+        ['91', 'ANA EXEMPLO', 10],
+        ['93', 'CARLA TESTE', 30],
+      ]),
+      row(r1!.id, p1!.id, '00002', [
+        ['91', 'ANA EXEMPLO', 50],
+        ['92', 'BRUNO MODELO', 20],
+      ]),
+      row(r2!.id, p2!.id, '00001', [
+        ['91', 'ANA EXEMPLO', 60],
+        ['92', 'BRUNO MODELO', 40],
+      ]),
+      row(r2!.id, p2!.id, '00002', [
+        ['91', 'ANA EXEMPLO', 70],
+        ['92', 'BRUNO MODELO', 30],
+      ]),
+    ]);
+    const res = await built.app.inject('/api/elections/test-2/states/sp/cities?changed=1');
+    expect(res.statusCode).toBe(200);
+    expect(res.json().items).toMatchObject([
+      { name: 'Virou', leader: { number: '91' }, before: { number: '93', ballotName: 'CARLA TESTE' } },
+    ]);
+    // Without the filter, both cities and no "before".
+    const all = (await built.app.inject('/api/elections/test-2/states/sp/cities')).json();
+    expect(all.items).toHaveLength(2);
+    expect(all.items[0].before).toBeUndefined();
   });
 
   it('validates parameters (400) and unknown rounds (404)', async () => {

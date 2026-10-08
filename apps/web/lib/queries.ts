@@ -53,13 +53,13 @@ export const useResult = (round: string, area: string, office: string | undefine
 export const useCities = (
   round: string,
   uf: string,
-  params: { q: string; sort: string; candidate?: string; leader?: string },
+  params: { q: string; sort: string; candidate?: string; leader?: string; changed?: boolean },
 ) =>
   useInfiniteQuery({
     queryKey: [round, 'cities', uf, params],
     queryFn: ({ pageParam }) =>
       api<Paginated<CityRowDTO>>(
-        `${base(round)}/states/${uf}/cities?page=${pageParam}&sort=${params.sort}${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}${params.candidate ? `&candidate=${params.candidate}` : ''}${params.leader ? `&leader=${params.leader}` : ''}`,
+        `${base(round)}/states/${uf}/cities?page=${pageParam}&sort=${params.sort}${params.q ? `&q=${encodeURIComponent(params.q)}` : ''}${params.candidate ? `&candidate=${params.candidate}` : ''}${params.leader ? `&leader=${params.leader}` : ''}${params.changed ? '&changed=1' : ''}`,
       ),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page * last.pageSize < last.total ? last.page + 1 : undefined),

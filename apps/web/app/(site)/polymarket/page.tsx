@@ -126,6 +126,7 @@ export default function PolymarketPage() {
             outcomes={data.winner.slice(0, 4)}
             href={POLYMARKET_URL}
             chart
+            photos
           />
           {data.margin.length > 0 && (
             <Market
@@ -205,6 +206,7 @@ function Market({
   outcomes,
   href,
   chart = false,
+  photos = false,
 }: {
   kicker: string;
   title: string;
@@ -212,6 +214,8 @@ function Market({
   outcomes: Outcome[];
   href: string;
   chart?: boolean;
+  /** Candidate photos next to the names (the winner market; the margin one has none). */
+  photos?: boolean;
 }) {
   return (
     <section className="mt-6 rounded-2xl border border-line bg-surface p-4 sm:p-5">
@@ -236,11 +240,24 @@ function Market({
             className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 py-3 sm:grid-cols-[minmax(0,1fr)_5rem_auto]"
           >
             <span className="flex min-w-0 items-center gap-2">
-              <span
-                className="size-2.5 shrink-0 rounded-full"
-                style={{ background: colorOf(o.name, i) }}
-                aria-hidden
-              />
+              {photos && o.image ? (
+                // biome-ignore lint/performance/noImgElement: Polymarket's own small thumbnail
+                <img
+                  src={o.image}
+                  alt=""
+                  width={32}
+                  height={32}
+                  loading="lazy"
+                  className="size-8 shrink-0 rounded-full bg-surface-2 object-cover"
+                  style={{ boxShadow: `0 0 0 2px var(--surface), 0 0 0 3.5px ${colorOf(o.name, i)}` }}
+                />
+              ) : (
+                <span
+                  className="size-2.5 shrink-0 rounded-full"
+                  style={{ background: colorOf(o.name, i) }}
+                  aria-hidden
+                />
+              )}
               <span className="truncate font-medium">{o.name}</span>
             </span>
             <LivePct value={o.price} />

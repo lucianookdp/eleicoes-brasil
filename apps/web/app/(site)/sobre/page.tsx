@@ -31,12 +31,6 @@ const IconLock = () => (
   </svg>
 );
 
-const FACTS = [
-  { value: 'Oficial', label: 'números do TSE, sem alteração' },
-  { value: 'Autônomo', label: 'sem vínculo com a Justiça Eleitoral' },
-  { value: 'Privado', label: 'sem contas, anúncios ou rastreamento' },
-];
-
 const SECTIONS: { title: string; icon: ReactNode; body: string[] }[] = [
   {
     title: 'De onde vêm os dados',
@@ -102,16 +96,6 @@ export default function AboutPage() {
       <h1 className="mt-1 text-balance text-[28px] font-semibold leading-tight tracking-tight sm:text-[36px]">
         O que você vê aqui, de onde vem e como ler
       </h1>
-
-      <dl className="mt-6 grid grid-cols-3 gap-2">
-        {FACTS.map((f) => (
-          <div key={f.label} className="rounded-xl border border-line bg-surface px-3 py-2.5">
-            <dt className="sr-only">{f.label}</dt>
-            <dd className="truncate text-[15px] font-semibold sm:text-[18px]">{f.value}</dd>
-            <dd className="mt-0.5 text-[12px] leading-snug text-muted">{f.label}</dd>
-          </div>
-        ))}
-      </dl>
 
       <div className="mt-8 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
         {SECTIONS.map((s) => (

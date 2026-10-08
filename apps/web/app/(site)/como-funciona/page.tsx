@@ -84,12 +84,6 @@ const OURS: Step[] = [
   },
 ];
 
-const FACTS = [
-  { value: 'TSE', label: 'única fonte dos números' },
-  { value: 'segundos', label: 'entre o TSE e a sua tela' },
-  { value: 'zero', label: 'previsões ou opiniões' },
-];
-
 const QUESTIONS = [
   {
     q: 'Por que não mostrar direto do site do TSE?',
@@ -135,16 +129,6 @@ export default function HowItWorksPage() {
       <p className="mt-2 max-w-2xl text-[16px] text-ink-2">
         Todos os dados vêm do Tribunal Superior Eleitoral. Nós só buscamos, conferimos, guardamos e mostramos.
       </p>
-
-      <dl className="mt-6 grid grid-cols-3 gap-2 sm:max-w-2xl">
-        {FACTS.map((f) => (
-          <div key={f.label} className="rounded-xl border border-line bg-surface px-3 py-2.5">
-            <dt className="sr-only">{f.label}</dt>
-            <dd className="text-[18px] font-semibold leading-tight sm:text-[22px]">{f.value}</dd>
-            <dd className="mt-0.5 text-[12px] leading-snug text-muted">{f.label}</dd>
-          </div>
-        ))}
-      </dl>
 
       {/* Two stages: the Electoral Justice's part, then ours, in the site's green. */}
       <div className="mt-10 grid items-stretch gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,2fr)]">
