@@ -83,16 +83,19 @@ export function BrazilMap({
   states,
   allowLeader = true,
   highlight,
+  only,
 }: {
   states: StateRowDTO[];
   allowLeader?: boolean;
+  /** One way of colouring only, without the switch (the TV mode shows the most voted). */
+  only?: Mode;
   /** When a list filter is on: only these states (lowercase UF) keep full colour. */
   highlight?: Set<string>;
 }) {
   const { href } = useRound();
   const router = useRouter();
   // Who leads each state is what readers look for first; counting progress is one tap away.
-  const [mode, setMode] = useState<Mode>(allowLeader ? 'leader' : 'progress');
+  const [mode, setMode] = useState<Mode>(only ?? (allowLeader ? 'leader' : 'progress'));
   const [active, setActive] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string | null>(null);
   const byUf = new Map(states.map((s) => [s.uf.toLowerCase(), s]));
@@ -104,7 +107,7 @@ export function BrazilMap({
   return (
     <div>
       <div className="mb-2 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-        {allowLeader ? (
+        {allowLeader && !only ? (
           <Segmented
             label="Colorir mapa por"
             value={mode}

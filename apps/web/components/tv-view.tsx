@@ -8,7 +8,7 @@ import { useCity, useOverview } from '@/lib/queries';
 import { IconPin, Logo } from './icons';
 import { FacePhoto } from './results';
 import { useRound } from './shell';
-import { CATALOG, SCENE_SECONDS, TvScenes, useSceneChoice } from './tv-scenes';
+import { catalogFor, SCENE_SECONDS, TvScenes, useSceneChoice } from './tv-scenes';
 import { EmptyState, ErrorNotice, Skeleton } from './ui';
 
 const CLOCK = new Intl.DateTimeFormat('pt-BR', {
@@ -26,7 +26,7 @@ export function TvView() {
   const { round } = useRound();
   const { data, error, refetch } = useOverview(round.slug);
   const myCity = useMyCity();
-  const choice = useSceneChoice();
+  const choice = useSceneChoice(round.round);
   const box = useRef<HTMLDivElement>(null);
   const [full, setFull] = useState(false);
   const [started, setStarted] = useState(false);
@@ -105,7 +105,7 @@ export function TvView() {
           por {SCENE_SECONDS} segundos, um depois do outro.
         </p>
         <ul className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1 min-[420px]:grid-cols-2 lg:grid-cols-4">
-          {CATALOG.map((c) => (
+          {catalogFor(round.round).map((c) => (
             <li key={c.id}>
               <label className="flex min-h-10 cursor-pointer items-center gap-2.5 text-[14.5px]">
                 <input
