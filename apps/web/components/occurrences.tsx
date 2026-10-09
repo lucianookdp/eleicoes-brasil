@@ -1,6 +1,7 @@
 'use client';
 
 import type { OccurrencesDTO } from '@eleicoes/election-core';
+import Link from 'next/link';
 import { fmtInt } from '@/lib/format';
 import { useOccurrences } from '@/lib/queries';
 import { useRound } from './shell';
@@ -214,5 +215,40 @@ function Empty({ children }: { children: string }) {
       </span>
       {children}
     </p>
+  );
+}
+
+/**
+ * Home page, once the count is over: what the round recorded, in one line, for readers who want
+ * to check (with the way to the full list). Facts only; the numbers are the same as on the page.
+ */
+export function OccurrencesSummary() {
+  const { round, href } = useRound();
+  const { data } = useOccurrences(round.slug);
+  if (!data) return null;
+  const count = (pred: (i: OccurrencesDTO['issues'][number]) => boolean) =>
+    data.issues.filter(pred).reduce((n, i) => n + i.count, 0);
+  const incoherent = count((i) => i.severity === 'error' && i.type === 'quality.issue');
+  const back = count((i) => i.code === 'regression');
+  const outages = data.outages.length + data.gaps.length + count((i) => i.type === 'source.unavailable');
+  const plural = (n: number, one: string, many: string) => `${fmtInt(n)} ${n === 1 ? one : many}`;
+  return (
+    <Link
+      href={href('/operations')}
+      className="flex items-start gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-[13.5px] hover:border-line-strong"
+    >
+      <span aria-hidden className={`mt-0.5 ${incoherent + back === 0 ? 'text-live' : 'text-warn'}`}>
+        {incoherent + back === 0 ? '✓' : '!'}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-medium">Transparência desta apuração</span>
+        <span className="block text-ink-2">
+          {plural(incoherent, 'número incoerente', 'números incoerentes')} nos arquivos do TSE,{' '}
+          {plural(back, 'arquivo que voltou', 'arquivos que voltaram')} no tempo e{' '}
+          {plural(outages, 'queda ou instabilidade', 'quedas ou instabilidades')} registradas.
+        </span>
+      </span>
+      <span className="shrink-0 text-info">Ver</span>
+    </Link>
   );
 }
