@@ -227,7 +227,9 @@ export class Collector {
       }
     } catch (err) {
       if (!waiting) {
-        fatal = err instanceof Error ? err.message : String(err);
+        // Shown on the public operations page: the source's own errors as they are, anything
+        // else (usually our database) without its details, which stay in the logs.
+        fatal = isProviderError(err) ? err.message : INTERNAL_ERROR;
         await fail(err, 'cycle');
       }
     }
@@ -427,7 +429,13 @@ export class Collector {
       // (a final result never changes again).
       this.provider.resetConditionalCache();
       log.error({ err }, `unexpected error: ${what}`);
-      await this.store.recordIssue('collector.error', String(err), { what }, now, target);
+      await this.store.recordIssue(
+        'collector.error',
+        INTERNAL_ERROR,
+        { what, error: String(err).slice(0, 500) },
+        now,
+        target,
+      );
     }
   }
 
@@ -499,6 +507,14 @@ function appliesTo(office: StoredOffice, target: AreaRef): boolean {
 }
 
 const jobKey = (j: { office: StoredOffice; area: AreaRef }) => `${j.office.id}|${j.area.key}`;
+
+/** Public text for our own failures (the details, e.g. a failed SQL query, go to the logs only). */
+const INTERNAL_ERROR = 'Falha interna da coleta; nova tentativa automática.';
+
+const isProviderError = (err: unknown): err is Error =>
+  err instanceof ProviderPayloadError ||
+  err instanceof ProviderUnavailableError ||
+  err instanceof ProviderNotFoundError;
 
 function emptyStats(): CycleStats {
   return { requests: 0, ok: 0, notModified: 0, notFound: 0, errors: 0, latencies: [] };
