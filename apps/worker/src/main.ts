@@ -4,6 +4,7 @@ import { findRound } from '@eleicoes/election-core';
 import { createProvider, TseHttpClient } from '@eleicoes/tse-client';
 import { eq } from 'drizzle-orm';
 import { Collector } from './collector';
+import { holdCollectorLock } from './lock';
 import { createLogger } from './logger';
 import { runReplay } from './replay';
 import { Store } from './store';
@@ -45,6 +46,18 @@ if (!registered) {
 }
 const source = { ...registered, baseUrl: env.TSE_BASE_URL ?? registered.baseUrl };
 
+let stopping = false;
+// One collector per round, even while a deploy runs the old and the new container side by side.
+const lock = await holdCollectorLock(env.DATABASE_URL, round.slug, {
+  onWaiting: () => log.warn({ round: round.slug }, 'another collector is running this round; waiting'),
+  onLost: () => {
+    if (stopping) return;
+    // Another collector may take over now: stop, and let the platform restart us to wait again.
+    log.fatal({ round: round.slug }, 'lost the collector lock connection; exiting');
+    process.exit(1);
+  },
+});
+
 const { db, sql, close } = createDatabase(env.DATABASE_URL, { max: env.TSE_CONCURRENCY + 5 });
 if (round.demo && env.DEMO_EMBEDDED) {
   // Each run of the embedded demo is a fresh fictitious election: never mix two runs' history.
@@ -83,12 +96,13 @@ log.info(
   'collector starting',
 );
 
-let stopping = false;
 const shutdown = async () => {
   stopping = true;
   collector.stop();
   log.info('shutting down');
   await close();
+  // Last: the collector waiting in the next deploy starts as soon as this is released.
+  await lock.release();
   process.exit(0);
 };
 process.on('SIGINT', shutdown);
