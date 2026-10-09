@@ -376,3 +376,44 @@ test('map: a tap pins a state and its link stays (the tap also focuses it)', asy
   await page.waitForTimeout(1000);
   await expect(open).toBeVisible();
 });
+
+test('computer bar: "Mais" items that fit are shown by themselves, not repeated in "Mais"', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'the bar is for computers');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/eleicao/?e=demo&t=1');
+  const bar = page.getByRole('navigation', { name: 'Seções' });
+  await expect(bar.getByRole('link', { name: 'Comparar', exact: true })).toBeVisible();
+  await bar.getByRole('button', { name: 'Mais' }).click();
+  await expect(bar.getByRole('link', { name: /Linha do tempo/ })).toBeVisible();
+  await expect(bar.getByRole('link', { name: /^Comparar/ })).toHaveCount(1);
+  await expect(page.getByRole('link', { name: /Favoritos/ })).toHaveCount(0);
+});
+
+test('telão: the right half goes through scenes, and a title jumps to one', async ({ page }) => {
+  await page.goto('/eleicao/telao/?e=demo&t=1');
+  const panel = page.getByRole('region', { name: 'Painel que muda sozinho' });
+  const scenes = panel.getByRole('group', { name: 'Cenas' }).getByRole('button');
+  await expect.poll(() => scenes.count()).toBeGreaterThan(1);
+  await scenes.filter({ hasText: 'Estados' }).click();
+  await expect(panel.getByText('Mais votado em cada estado')).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'Pausar a troca automática' })).toBeVisible();
+  // The reader picks what goes round; the choice stays in this browser.
+  await panel.getByRole('button', { name: 'Escolher' }).click();
+  await panel.getByRole('checkbox', { name: /^Mapa/ }).uncheck();
+  const tabs = panel.getByRole('group', { name: 'Cenas' });
+  await expect(tabs.getByRole('button', { name: 'Mapa', exact: true })).toHaveCount(0);
+  await page.reload();
+  await expect(tabs.getByRole('button').first()).toBeVisible();
+  await expect(tabs.getByRole('button', { name: 'Mapa', exact: true })).toHaveCount(0);
+});
+
+test('Poderes: big buttons switch between governors and senators', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'phones keep the compact switch');
+  await page.goto('/eleicao/cargos/?e=demo&t=1');
+  await page.getByRole('radio', { name: /Senadores/ }).click();
+  await expect(page).toHaveURL(/cargo=senador/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Senadores' })).toBeVisible();
+});
