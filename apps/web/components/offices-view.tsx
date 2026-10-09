@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { displayName, fmtPct } from '@/lib/format';
 import { useOfficeStates, useOverview } from '@/lib/queries';
+import { IconCourt, IconFlag, IconSeats } from './icons';
 import { FacePhoto, StatusPill, useOfficeParam } from './results';
 import { useRound } from './shell';
 import { StfView } from './stf-view';
@@ -32,6 +33,17 @@ export function OfficesView() {
   }
   const shown = data?.results.filter((r) => !status || statusOf(r) === status) ?? [];
   const officeTitle = office?.name === 'Senador' ? 'Senadores' : 'Governadores';
+  const current = stf ? 'stf' : (office?.slug ?? 'stf');
+  const choices: PowerChoice[] = [
+    ...offices.map((o) =>
+      o.name === 'Senador'
+        ? { value: o.slug, label: 'Senadores', hint: 'Vagas no Senado em cada estado', icon: IconSeats }
+        : o.name === 'Governador'
+          ? { value: o.slug, label: 'Governadores', hint: 'Quem governa cada estado', icon: IconFlag }
+          : { value: o.slug, label: o.name, hint: 'Em cada estado', icon: IconFlag },
+    ),
+    { value: 'stf', label: 'STF', hint: 'Os ministros do Supremo', icon: IconCourt },
+  ];
 
   return (
     <>
@@ -52,19 +64,12 @@ export function OfficesView() {
                 : 'Quem lidera em cada estado. Toque em um estado para ver tudo.'}
           </p>
         </div>
-        <Segmented
-          label="Cargo"
-          value={stf ? 'stf' : (office?.slug ?? 'stf')}
-          onChange={setOffice}
-          options={[
-            ...offices.map((o) => ({
-              value: o.slug,
-              label: o.name === 'Governador' ? 'Governadores' : o.name === 'Senador' ? 'Senadores' : o.name,
-            })),
-            { value: 'stf', label: 'STF' },
-          ]}
-        />
+        {/* Phones: the compact switch; computers get the big one below. */}
+        <div className="sm:hidden">
+          <Segmented label="Cargo" value={current} onChange={setOffice} options={choices} />
+        </div>
       </div>
+      <PowersSwitch value={current} onChange={setOffice} options={choices} />
       {stf ? (
         <StfView />
       ) : (
@@ -89,6 +94,49 @@ export function OfficesView() {
         </>
       )}
     </>
+  );
+}
+
+type PowerChoice = { value: string; label: string; hint: string; icon: typeof IconCourt };
+
+/** Computers and tablets: the three powers as big buttons across the page, easy to see and switch. */
+function PowersSwitch({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: PowerChoice[];
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Cargo"
+      className="mb-5 hidden gap-3 sm:grid"
+      style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+    >
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          role="radio"
+          aria-checked={value === o.value}
+          onClick={() => onChange(o.value)}
+          className="group flex min-h-16 items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-left transition-colors hover:border-line-strong aria-checked:border-live aria-checked:bg-live-soft"
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-line bg-surface-2 text-ink-2 group-aria-checked:border-live/50 group-aria-checked:text-live">
+            <o.icon />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-[16px] font-semibold text-ink-2 group-aria-checked:text-ink">
+              {o.label}
+            </span>
+            <span className="block truncate text-[12.5px] text-muted">{o.hint}</span>
+          </span>
+        </button>
+      ))}
+    </div>
   );
 }
 
