@@ -722,13 +722,19 @@ export class Queries {
   async timelineAt(slug: string, at: string): Promise<TimelineAtDTO> {
     const round = await this.round(slug);
     const headlineOffice = round.offices.find((o) => o.scope === 'country') ?? null;
+    // The last snapshot of each area at that moment: one index probe per area (Brazil and the
+    // states), instead of reading every snapshot taken before it.
+    const areaKeys = ['br', ...STATES.map((s) => s.code.toLowerCase())];
     const progressAt = await this.sql<
       { areaKey: string; progress: CountingProgress; countedPct: number | null; capturedAt: Date }[]
     >`
-      select distinct on (area_key) area_key as "areaKey", progress, counted_pct as "countedPct", captured_at as "capturedAt"
-      from progress_snapshots
-      where round_id = ${round.id} and area_type in ('country', 'state') and captured_at <= ${at}
-      order by area_key, captured_at desc`;
+      select s.* from unnest(${areaKeys}::text[]) k(area_key)
+      cross join lateral (
+        select area_key as "areaKey", progress, counted_pct as "countedPct", captured_at as "capturedAt"
+        from progress_snapshots
+        where round_id = ${round.id} and area_key = k.area_key and captured_at <= ${at}
+        order by captured_at desc limit 1
+      ) s`;
     const br = progressAt.find((p) => p.areaKey === 'br');
 
     let headline: ResultDTO | null = null;
@@ -743,11 +749,14 @@ export class Queries {
           countedPct: number | null;
         }[]
       >`
-        select distinct on (area_key) area_key as "areaKey", votes, candidates, captured_at as "capturedAt", counted_pct as "countedPct"
-        from result_snapshots
-        where round_id = ${round.id} and office_id = ${headlineOffice.id} and area_type in ('country', 'state')
-          and captured_at <= ${at}
-        order by area_key, captured_at desc`;
+        select s.* from unnest(${areaKeys}::text[]) k(area_key)
+        cross join lateral (
+          select area_key as "areaKey", votes, candidates, captured_at as "capturedAt", counted_pct as "countedPct"
+          from result_snapshots
+          where round_id = ${round.id} and office_id = ${headlineOffice.id} and area_key = k.area_key
+            and captured_at <= ${at}
+          order by captured_at desc limit 1
+        ) s`;
       const [current] = await this.resultRows(round.id, [headlineOffice.id], ['br']);
       const colors = await this.colorsFor(round, headlineOffice, null);
       const names = new Map((current?.result.candidates ?? []).map((c) => [c.key, c]));

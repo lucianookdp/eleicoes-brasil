@@ -245,7 +245,13 @@ export const resultSnapshots = pgTable(
     candidates: jsonb('candidates').$type<CompactCandidate[]>(),
     provenance: jsonb('provenance').$type<Provenance>().notNull(),
   },
-  (t) => [index('result_snapshots_area_time').on(t.roundId, t.officeId, t.areaKey, t.capturedAt)],
+  (t) => [
+    index('result_snapshots_area_time').on(t.roundId, t.officeId, t.areaKey, t.capturedAt),
+    // Recent Brazil/state files (collection delay on /operations), without reading the city rows.
+    index('result_snapshots_headline_time')
+      .on(t.roundId, t.capturedAt)
+      .where(sql`${t.areaType} in ('country', 'state')`),
+  ],
 );
 
 /** Activity feed + ingestion log (what changed, what failed). Also the source of SSE events. */
@@ -269,6 +275,11 @@ export const ingestionEvents = pgTable(
   (t) => [
     index('ingestion_events_time').on(t.roundId, t.occurredAt),
     index('ingestion_events_type_time').on(t.roundId, t.type, t.occurredAt),
+    // The latest source/collector problem, read by every overview: thousands of city events per
+    // minute on election night would otherwise be scanned to find none.
+    index('ingestion_events_issues_time')
+      .on(t.roundId, t.occurredAt)
+      .where(sql`${t.type} like 'source.%' or ${t.type} = 'collector.error'`),
   ],
 );
 
