@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { displayName, fmtPct } from '@/lib/format';
 import { useOfficeStates, useOverview } from '@/lib/queries';
-import { StatusPill, useOfficeParam } from './results';
+import { FacePhoto, StatusPill, useOfficeParam } from './results';
 import { useRound } from './shell';
 import { StfView } from './stf-view';
 import { EmptyState, ErrorNotice, Segmented, Skeleton, StateFlag } from './ui';
@@ -148,7 +148,9 @@ function StatusFilter({
 }
 
 export function StateCard({ result }: { result: ResultDTO }) {
-  const { href } = useRound();
+  const { href, round } = useRound();
+  // In a runoff a new photo may still be on its way: the 1st round's one stands in.
+  const firstRound = `${round.electionSlug}-1`;
   const top = result.candidates.filter(hasValidVotes).slice(0, (result.seats ?? 1) + 1);
   return (
     <Link
@@ -168,6 +170,7 @@ export function StateCard({ result }: { result: ResultDTO }) {
         {top.map((c, i) => (
           <span key={c.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2">
             <span className="flex min-w-0 items-center gap-2">
+              <FacePhoto c={c} fallbackRound={firstRound} sizeClass="size-8 text-[11px]" />
               <span className="size-2.5 shrink-0 rounded-full" style={{ background: c.color }} aria-hidden />
               <span className="truncate text-[14px]">{displayName(c.ballotName)}</span>
               <span className="shrink-0 text-[12px] text-muted">{c.party.abbreviation}</span>
