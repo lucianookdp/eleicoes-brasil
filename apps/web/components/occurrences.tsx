@@ -39,9 +39,6 @@ function duration(seconds: number) {
   return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min`;
 }
 
-const secs = (v: number | null) =>
-  v == null ? '—' : `${v.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} s`;
-
 /**
  * "Ocorrências": everything abnormal recorded for the round, for readers who want to check, during
  * or after the count. Says plainly what it covers (the publication and our collection) and what it
@@ -59,7 +56,7 @@ export function Occurrences() {
         <p>
           <strong className="font-semibold text-ink">O que esta lista mostra:</strong> problemas na divulgação
           dos resultados pelo TSE (arquivos com números incoerentes, fora do formato ou que voltaram no tempo,
-          atrasos e indisponibilidade) e na nossa coleta.
+          e o TSE fora do ar) e na nossa coleta.
         </p>
         <p className="mt-1">
           <strong className="font-semibold text-ink">O que ela não mostra:</strong> não avalia as urnas nem a
@@ -94,54 +91,10 @@ function OccurrencesBody({ data }: { data: OccurrencesDTO }) {
         <Count label="Quedas, instabilidade ou pausas" value={unavailable} />
       </dl>
 
-      <div className="grid items-start gap-6 lg:grid-cols-2 [&>*]:min-w-0">
-        <section aria-labelledby="atrasos">
-          <h3 id="atrasos" className="text-[15px] font-semibold">
-            Atrasos
-          </h3>
-          <p className="mb-2 text-[13px] text-muted">
-            Do TSE gerar o arquivo de Brasil e estados até ele chegar aqui, durante a apuração.
-          </p>
-          {data.delay.samples === 0 ? (
-            <Empty>Sem apuração registrada nesta etapa ainda.</Empty>
-          ) : (
-            <div className="rounded-xl border border-line bg-surface p-4">
-              <dl className="grid grid-cols-3 gap-3">
-                <Stat label="Em média" value={secs(data.delay.avgSeconds)} />
-                <Stat label="95% em até" value={secs(data.delay.p95Seconds)} />
-                <Stat
-                  label="O maior"
-                  value={data.delay.maxSeconds == null ? '—' : duration(data.delay.maxSeconds)}
-                />
-              </dl>
-              <p className="mt-2 text-[13px] text-muted">
-                {fmtInt(data.delay.samples)} arquivos;{' '}
-                {data.delay.overMinute === 0
-                  ? 'nenhum demorou mais de 1 minuto.'
-                  : `${fmtInt(data.delay.overMinute)} demoraram mais de 1 minuto.`}
-              </p>
-              {data.delay.slowest.length > 0 && data.delay.slowest[0]!.seconds > 60 && (
-                <ul className="mt-3 divide-y divide-line border-t border-line text-[13.5px]">
-                  {data.delay.slowest
-                    .filter((s) => s.seconds > 60)
-                    .slice(0, 5)
-                    .map((s) => (
-                      <li
-                        key={`${s.areaKey}-${s.office}-${s.at}`}
-                        className="flex justify-between gap-3 py-1.5"
-                      >
-                        <span className="min-w-0 truncate">
-                          {s.areaName} · {s.office} <span className="text-muted">· {when(s.at)}</span>
-                        </span>
-                        <span className="numeral shrink-0 font-medium">{duration(s.seconds)}</span>
-                      </li>
-                    ))}
-                </ul>
-              )}
-            </div>
-          )}
-        </section>
-
+      {/* No "delays" here yet: the time the TSE writes in a file does not always change when it
+          updates it (the "Eleito" marks come later under the same time), so it would show updates
+          as delays. It comes back with a measure that holds. */}
+      <div className="grid items-start gap-6 [&>*]:min-w-0">
         <section aria-labelledby="quedas">
           <h3 id="quedas" className="text-[15px] font-semibold">
             Quedas e pausas
@@ -249,15 +202,6 @@ function Count({ label, value }: { label: string; value: number }) {
       <dd className={`numeral text-[26px] font-semibold leading-tight ${value > 0 ? '' : 'text-live'}`}>
         {fmtInt(value)}
       </dd>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-[12.5px] text-muted">{label}</dt>
-      <dd className="numeral text-[22px] font-semibold leading-tight">{value}</dd>
     </div>
   );
 }

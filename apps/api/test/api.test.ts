@@ -660,10 +660,14 @@ suite('API (integration)', () => {
     await sql`insert into progress_snapshots (round_id, area_key, area_type, captured_at, counted_pct, progress)
       values (${id}, 'br', 'country', '2026-10-04T20:30:00Z', 5, '{}'),
              (${id}, 'br', 'country', '2026-10-04T23:00:00Z', 100, '{}')`;
-    // A Brazil file generated at 21:40:00 and stored at 21:42:30: 150 s.
+    // A Brazil file generated at 21:40:00 and stored at 21:42:30: 150 s. One generated before the count
+    // began (read when it started) is no delay and stays out.
     await sql`insert into result_snapshots (round_id, office_id, area_key, area_type, captured_at, votes, provenance)
       values (${id}, ${office!.id}, 'br', 'country', '2026-10-04T21:42:30Z', '{}',
         ${JSON.stringify({ retrievedAt: '2026-10-04T21:42:30Z', sourceGeneratedAt: '2026-10-04T21:40:00Z' })}::jsonb)`;
+    await sql`insert into result_snapshots (round_id, office_id, area_key, area_type, captured_at, votes, provenance)
+      values (${id}, ${office!.id}, 'sp', 'state', '2026-10-04T20:31:00Z', '{}',
+        ${JSON.stringify({ retrievedAt: '2026-10-04T20:31:00Z', sourceGeneratedAt: '2026-10-02T20:00:00Z' })}::jsonb)`;
     const issue = {
       office: 'presidente',
       issues: [
