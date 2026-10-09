@@ -264,20 +264,10 @@ export interface OperationsDTO {
 
 /**
  * Everything abnormal recorded for a round: in the files the TSE publishes (inconsistent numbers,
- * files out of format or going back in time), in their delivery (delays, the TSE unavailable) and in
+ * files out of format or going back in time), in their delivery (the TSE unavailable) and in
  * our own collection (pauses). Facts recorded as they happened; repeats are grouped.
  */
 export interface OccurrencesDTO {
-  /** Brazil/state result files: TSE generation time → stored here, over the whole round. */
-  delay: {
-    avgSeconds: number | null;
-    p95Seconds: number | null;
-    maxSeconds: number | null;
-    /** Files that took more than a minute. */
-    overMinute: number;
-    samples: number;
-    slowest: { areaKey: string; areaName: string; office: string; seconds: number; at: string }[];
-  };
   /** Collection cycles that failed or were unstable, merged into periods. */
   outages: {
     from: string;

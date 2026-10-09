@@ -691,9 +691,6 @@ suite('API (integration)', () => {
     expect(res.statusCode).toBe(200);
     const o = res.json();
     expect(o.counting).toEqual({ start: '2026-10-04T20:30:00.000Z', end: '2026-10-04T23:00:00.000Z' });
-    expect(o.delay.samples).toBe(1);
-    expect(o.delay.maxSeconds).toBe(150);
-    expect(o.delay.overMinute).toBe(1);
     expect(o.outages).toEqual([
       expect.objectContaining({ status: 'degraded', cycles: 2, reason: 'blocked by source (HTTP 403)' }),
       expect.objectContaining({
@@ -718,6 +715,7 @@ suite('API (integration)', () => {
       severity: 'warning',
       detail: 'Falha interna da coleta; nova tentativa automática.',
     });
+    expect(o).not.toHaveProperty('delay');
     expect(res.body).not.toContain('Failed query');
   });
 });
