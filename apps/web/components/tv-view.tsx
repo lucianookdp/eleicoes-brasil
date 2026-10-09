@@ -5,10 +5,10 @@ import { useEffect, useRef, useState } from 'react';
 import { displayName, fmtInt, fmtPct } from '@/lib/format';
 import { useMyCity } from '@/lib/my-city';
 import { useCity, useOverview } from '@/lib/queries';
-import { BrazilMap } from './brazil-map';
 import { IconPin, Logo } from './icons';
 import { FacePhoto } from './results';
 import { useRound } from './shell';
+import { TvScenes } from './tv-scenes';
 import { EmptyState, ErrorNotice, Skeleton } from './ui';
 
 const CLOCK = new Intl.DateTimeFormat('pt-BR', {
@@ -149,12 +149,7 @@ export function TvView() {
               </div>
               {myCity.city && <TvCity office={headline.office.slug} />}
             </section>
-            <section
-              aria-label="Mapa por estado"
-              className="min-w-0 rounded-2xl border border-line bg-surface p-3"
-            >
-              <BrazilMap key={round.slug} states={states} />
-            </section>
+            <TvScenes data={data} states={states} />
           </div>
         )}
 
@@ -189,7 +184,7 @@ function Pair({ a, b, fallbackRound }: { a: CandidateDTO; b: CandidateDTO; fallb
               />
               <span className="truncate">{displayName(c.ballotName)}</span>
             </p>
-            <p className="numeral text-[clamp(36px,12.5cqi,150px)] font-bold leading-none tracking-tight">
+            <p className="numeral text-[clamp(34px,11cqi,136px)] font-bold leading-none tracking-tight">
               {fmtPct(c.percent)}
             </p>
             <p className="numeral text-[clamp(13px,2.6cqi,24px)] text-muted">{fmtInt(c.votes)} votos</p>

@@ -153,6 +153,16 @@ h3 {
   animation: enter-row 0.35s ease-out;
 }
 
+/* TV mode: how long until the next scene (restarted per scene, paused with it). */
+@keyframes tv-progress {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
