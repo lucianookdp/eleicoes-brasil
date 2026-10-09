@@ -43,6 +43,21 @@ test('connection drops mid-count: the numbers stay and the header says so', asyn
   });
 });
 
+test('live stream refused once (API restarting): the page opens it again by itself', async ({ page }) => {
+  // A browser's EventSource gives up for good after an error response (unlike a network error).
+  let calls = 0;
+  await page.route(`${API}/api/realtime/**`, (route) => {
+    calls++;
+    return calls === 1 ? route.fulfill({ status: 503, body: 'restarting' }) : route.continue();
+  });
+  await page.goto('/eleicao/?e=demo&t=1');
+  await expect(page.getByRole('heading', { name: 'Presidente' }).first()).toBeVisible();
+  await expect.poll(() => calls, { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
+  await expect(page.getByRole('status').filter({ hasText: 'Reconectando' })).toHaveCount(0, {
+    timeout: 15_000,
+  });
+});
+
 test('runoff in its first minutes (0 votes): no broken numbers', async ({ page, request }) => {
   const elections = await (await request.get(`${API}/api/elections`)).json();
   test.skip(

@@ -33,7 +33,7 @@ exportação estática do Next servida por nginx. O worker aplica as migrações
    respostas 304 também contam; o IP de saída pode ser compartilhado com outros clientes do
    provedor, por isso a margem). Nunca rode dois coletores com o mesmo IP. Dois coletores da
    mesma rodada não rodam juntos: num deploy, o novo espera o antigo sair (log `another collector
-   is running this round; waiting`).
+   is running this round, or the database is down; waiting`).
 3. Se a coleta municipal atrasar demais, `CITY_RESULT_OFFICES=majoritarian` reduz o volume à
    metade sem afetar Brasil e UFs.
 4. Coloque um CDN à frente da API (Cloudflare, por exemplo). URLs com `?v=` já saem com

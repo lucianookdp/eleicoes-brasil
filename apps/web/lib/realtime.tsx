@@ -29,7 +29,11 @@ export function RealtimeProvider({ roundSlug, children }: { roundSlug: string; c
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const source = new EventSource(`${API_URL}/api/realtime/elections/${roundSlug}`);
+    let source: EventSource | null = null;
+    let reopen: ReturnType<typeof setTimeout> | null = null;
+    let failures = 0;
+    let opened = false;
+    let disposed = false;
     const pending = new Set<string>();
     let version = 0;
     const flush = () => {
@@ -44,36 +48,77 @@ export function RealtimeProvider({ roundSlug, children }: { roundSlug: string; c
         return next;
       });
     };
-    source.addEventListener('ready', ((e: MessageEvent<string>) => {
-      try {
-        version = (JSON.parse(e.data) as { version?: number }).version ?? 0;
-        setDataVersion(roundSlug, version);
-      } catch {}
-    }) as EventListener);
-    // One frame per update, with every area that changed. The refetch is spread over ~1 s so
-    // thousands of readers do not hit the API in the same millisecond.
-    source.addEventListener('batch', ((e: MessageEvent<string>) => {
-      setLastEventAt(Date.now());
-      try {
-        const batch = JSON.parse(e.data) as { version: number; events: RealtimeEvent[] };
-        version = Math.max(version, batch.version);
-        for (const event of batch.events) {
-          if (event.areaKey) pending.add(event.areaKey);
-          if (event.state) pending.add(event.state.toLowerCase());
-        }
-      } catch {
-        return;
-      }
+    // The refetch is spread over ~1 s so thousands of readers do not hit the API in the same
+    // millisecond.
+    const scheduleFlush = () => {
       if (!timer.current) timer.current = setTimeout(flush, 250 + Math.random() * 1000);
-    }) as EventListener);
-    source.onopen = () => setConnection(navigator.onLine ? 'live' : 'offline');
-    source.onerror = () => setConnection(navigator.onLine ? 'reconnecting' : 'offline');
+    };
+
+    const connect = () => {
+      reopen = null;
+      const es = new EventSource(`${API_URL}/api/realtime/elections/${roundSlug}`);
+      source = es;
+      es.addEventListener('ready', ((e: MessageEvent<string>) => {
+        try {
+          const ready = (JSON.parse(e.data) as { version?: number }).version ?? 0;
+          // Back after a gap: what is on screen may be behind, so refresh it now instead of
+          // waiting for the next update.
+          const behind = opened && ready > version;
+          version = Math.max(version, ready);
+          setDataVersion(roundSlug, version);
+          if (behind) scheduleFlush();
+        } catch {}
+        opened = true;
+      }) as EventListener);
+      // One frame per update, with every area that changed.
+      es.addEventListener('batch', ((e: MessageEvent<string>) => {
+        setLastEventAt(Date.now());
+        try {
+          const batch = JSON.parse(e.data) as { version: number; events: RealtimeEvent[] };
+          version = Math.max(version, batch.version);
+          for (const event of batch.events) {
+            if (event.areaKey) pending.add(event.areaKey);
+            if (event.state) pending.add(event.state.toLowerCase());
+          }
+        } catch {
+          return;
+        }
+        scheduleFlush();
+      }) as EventListener);
+      es.onopen = () => {
+        failures = 0;
+        setConnection(navigator.onLine ? 'live' : 'offline');
+      };
+      es.onerror = () => {
+        setConnection(navigator.onLine ? 'reconnecting' : 'offline');
+        // The browser retries by itself after a network error, but gives up for good after an
+        // HTTP error, e.g. a 502 while the API restarts. Reopen it ourselves: 1–3 s at first,
+        // then longer, at random, so every reader does not come back in the same second.
+        if (es.readyState === EventSource.CLOSED && !disposed && !reopen) {
+          es.close();
+          const delay = Math.min(30_000, 2000 * 2 ** failures) * (0.5 + Math.random());
+          failures = Math.min(failures + 1, 6);
+          reopen = setTimeout(connect, delay);
+        }
+      };
+    };
+    connect();
+
     const offline = () => setConnection('offline');
-    const online = () => setConnection('reconnecting');
+    const online = () => {
+      setConnection('reconnecting');
+      // Back online: reopen a stream the browser gave up on right away.
+      if (reopen) {
+        clearTimeout(reopen);
+        connect();
+      }
+    };
     window.addEventListener('offline', offline);
     window.addEventListener('online', online);
     return () => {
-      source.close();
+      disposed = true;
+      source?.close();
+      if (reopen) clearTimeout(reopen);
       if (timer.current) clearTimeout(timer.current);
       window.removeEventListener('offline', offline);
       window.removeEventListener('online', online);

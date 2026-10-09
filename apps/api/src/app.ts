@@ -79,7 +79,11 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
     if (status && status < 500)
       return reply.status(status).send({ error: { code: 'request_error', message: (err as Error).message } });
     req.log.error({ err }, 'unhandled error');
-    return reply.status(500).send({ error: { code: 'internal', message: 'Internal error' } });
+    // The route may already have set a long cache (versioned URL): an error must never be kept.
+    return reply
+      .status(500)
+      .header('cache-control', 'no-store')
+      .send({ error: { code: 'internal', message: 'Internal error' } });
   });
   app.setNotFoundHandler(async (_req, reply) =>
     reply.status(404).send({ error: { code: 'not_found', message: 'Route not found' } }),
@@ -385,7 +389,14 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
   // Server-Sent Events. One long-lived response per browser tab.
   app.get('/api/realtime/elections/:id', async (req, reply) => {
     const { id } = roundParams.parse(req.params);
-    await queries.round(id);
+    try {
+      await queries.round(id);
+    } catch (err) {
+      // An unknown round is an error; the database being down is not: the stream needs nothing
+      // from it, and a browser's EventSource gives up for good on an error response.
+      if (err instanceof NotFoundError) throw err;
+      req.log.warn({ err }, 'realtime: round check failed; opening the stream anyway');
+    }
     const res = reply.raw;
     reply.hijack();
     res.writeHead(200, {

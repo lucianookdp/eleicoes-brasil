@@ -111,7 +111,8 @@ Uma estrutura serve a todas as eleições ([schema.ts](../packages/database/src/
 | TSE fora do ar | nada é apagado; o site mostra “dados atrasados” com o horário do último sucesso |
 | Números incoerentes (seções > total…) | gravados como publicados, com evento `quality.issue` |
 | Banco fora do ar | o ciclo falha e o próximo baixa tudo de novo; a API serve a última resposta boa, com cache curto (`x-data-stale: 1`), para o CDN não guardá-la |
-| Dois coletores da mesma rodada (deploy sobreposto) | o segundo espera o primeiro sair (advisory lock no Postgres) |
+| Dois coletores da mesma rodada (deploy sobreposto) | o segundo espera o primeiro sair (advisory lock no Postgres); se a conexão do lock cair (banco reiniciando), a coleta pausa e volta sozinha |
+| API reiniciando (conexão ao vivo recusada) | o site reabre a conexão sozinho, em 1–3 s e depois em intervalos maiores e aleatórios, e atualiza a tela na volta; a conexão ao vivo abre mesmo com o banco fora do ar |
 
 ## Modo de desenvolvimento
 
