@@ -69,7 +69,7 @@ test('transparency: the state now, and every occurrence of the round', async ({ 
   await expect(page.getByRole('heading', { name: 'Ocorrências da apuração' })).toBeVisible();
   // It says what it covers and what it does not.
   await expect(page.getByText(/não avalia as urnas nem a votação/)).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Atrasos' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Quedas e pausas' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Problemas nos arquivos publicados' })).toBeVisible();
   await expect(page.locator('main')).not.toContainText(/NaN|undefined|Infinity/);
 });

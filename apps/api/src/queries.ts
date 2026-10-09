@@ -1016,6 +1016,9 @@ export class Queries {
               from result_snapshots
               where round_id = ${round.id} and area_type in ('country', 'state')
                 and captured_at between ${start} and ${until} and provenance->>'sourceGeneratedAt' is not null
+                -- Only files generated during the count: one generated days before (still with no votes)
+                -- and read when the count began measures our schedule, not a delay.
+                and (provenance->>'sourceGeneratedAt')::timestamptz >= ${start}
             )
             select avg(s)::float8 as avg, percentile_cont(0.95) within group (order by s) as p95,
                    max(s)::float8 as max, count(*) filter (where s > 60)::int as over, count(*)::int as samples
@@ -1029,6 +1032,7 @@ export class Queries {
             from result_snapshots s join offices o on o.id = s.office_id
             where s.round_id = ${round.id} and s.area_type in ('country', 'state')
               and s.captured_at between ${start} and ${until} and s.provenance->>'sourceGeneratedAt' is not null
+              and (s.provenance->>'sourceGeneratedAt')::timestamptz >= ${start}
             order by seconds desc limit 10`
         : Promise.resolve([]),
       this.sql<{ startedAt: Date; finishedAt: Date; status: 'degraded' | 'failed'; error: string | null }[]>`
