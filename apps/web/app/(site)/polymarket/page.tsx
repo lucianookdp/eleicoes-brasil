@@ -64,7 +64,7 @@ function colorOf(name: string, i: number) {
 export default function PolymarketPage() {
   const { data, error, refetch } = usePolymarket();
   return (
-    <div className="max-w-4xl pb-8 pt-3">
+    <div className="max-w-4xl pb-8 pt-3 lg:max-w-none">
       {/* Polymarket's own mark and links: the data is theirs, the page points readers to them. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -119,24 +119,29 @@ export default function PolymarketPage() {
       {!data && !error && <Skeleton className="mt-6 h-96" />}
       {data && (
         <>
-          <Market
-            kicker="Eleição presidencial do Brasil"
-            title="Quem vence a eleição presidencial?"
-            volume={data.volume}
-            outcomes={data.winner.slice(0, 4)}
-            href={POLYMARKET_URL}
-            chart
-            photos
-          />
-          {data.margin.length > 0 && (
+          {/* Computers: the two markets side by side, using the width; phones: one under the other. */}
+          <div
+            className={`lg:grid lg:items-start lg:gap-6 ${data.margin.length > 0 ? 'lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]' : ''}`}
+          >
             <Market
-              kicker="2º turno"
-              title="Por quantos pontos o vencedor ganha?"
-              volume={data.margin.reduce((a, o) => a + o.volume, 0)}
-              outcomes={data.margin.filter((o) => !/^other$/i.test(o.name)).slice(0, 6)}
-              href={eventUrl(MARGIN_SLUG)}
+              kicker="Eleição presidencial do Brasil"
+              title="Quem vence a eleição presidencial?"
+              volume={data.volume}
+              outcomes={data.winner.slice(0, 4)}
+              href={POLYMARKET_URL}
+              chart
+              photos
             />
-          )}
+            {data.margin.length > 0 && (
+              <Market
+                kicker="2º turno"
+                title="Por quantos pontos o vencedor ganha?"
+                volume={data.margin.reduce((a, o) => a + o.volume, 0)}
+                outcomes={data.margin.filter((o) => !/^other$/i.test(o.name)).slice(0, 6)}
+                href={eventUrl(MARGIN_SLUG)}
+              />
+            )}
+          </div>
           {data.states.length > 0 && (
             <section
               aria-labelledby="estados"
@@ -146,7 +151,7 @@ export default function PolymarketPage() {
               <h2 id="estados" className="mt-0.5 text-[19px] font-semibold">
                 Quem fica em 1º em cada estado?
               </h2>
-              <ul className="mt-3 grid gap-x-6 sm:grid-cols-2">
+              <ul className="mt-3 grid gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
                 {[...data.states]
                   .sort((a, b) =>
                     (STATE_NAMES[a.uf] ?? a.uf).localeCompare(STATE_NAMES[b.uf] ?? b.uf, 'pt-BR'),
