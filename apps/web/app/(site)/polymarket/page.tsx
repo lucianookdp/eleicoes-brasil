@@ -342,12 +342,23 @@ function Chart({ outcomes }: { outcomes: Outcome[] }) {
   const t1 = Math.max(...ts);
   const x = (t: number) => pad.l + ((t - t0) / Math.max(1, t1 - t0)) * (w - pad.l - pad.r);
   const y = (p: number) => pad.t + (1 - p) * (h - pad.t - pad.b);
+  // The axis says hours for the short periods, the date for the long ones (and the year past a few months).
+  const span = t1 - t0;
   const day = (t: number) =>
-    new Date(t * 1000).toLocaleDateString('pt-BR', {
-      day: 'numeric',
-      month: 'short',
-      timeZone: 'America/Sao_Paulo',
-    });
+    span < 2 * 86_400
+      ? new Date(t * 1000).toLocaleString('pt-BR', {
+          // A day crosses midnight: with the date, "16:45 → 16:32" reads the right way round.
+          ...(span > 12 * 3600 ? { day: '2-digit', month: '2-digit' } : {}),
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: 'America/Sao_Paulo',
+        })
+      : new Date(t * 1000).toLocaleDateString('pt-BR', {
+          day: 'numeric',
+          month: 'short',
+          ...(span > 150 * 86_400 ? { year: 'numeric' } : {}),
+          timeZone: 'America/Sao_Paulo',
+        });
   return (
     <div className="mt-3" ref={box}>
       <div className="mb-2 flex justify-end">
@@ -356,8 +367,11 @@ function Chart({ outcomes }: { outcomes: Outcome[] }) {
           value={range}
           onChange={setRange}
           options={[
-            { value: '1w', label: '1 semana' },
-            { value: '1m', label: '1 mês' },
+            { value: '1h', label: '1H' },
+            { value: '6h', label: '6H' },
+            { value: '1d', label: '1D' },
+            { value: '1w', label: '1S' },
+            { value: '1m', label: '1M' },
             { value: 'max', label: 'Tudo' },
           ]}
         />
