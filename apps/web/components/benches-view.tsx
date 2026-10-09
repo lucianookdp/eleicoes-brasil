@@ -70,7 +70,10 @@ export function BenchesView() {
         <EmptyState title="As bancadas aparecem quando o TSE terminar a totalização em todos os estados.">
           {data.chambers.map((c) => (
             <span key={c.office.slug} className="block">
-              {c.office.name}: {c.statesFinal} de {c.statesTotal} estados concluídos.
+              {c.office.name}: {c.statesFinal} de {c.statesTotal} estados concluídos
+              {c.statesPending?.length > 0 && c.statesPending.length <= 5
+                ? `. Falta: ${c.statesPending.join(', ')}.`
+                : '.'}
             </span>
           ))}
         </EmptyState>
