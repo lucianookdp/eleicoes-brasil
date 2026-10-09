@@ -4,7 +4,7 @@ import { hasValidVotes, type OverviewDTO, type ResultDTO, type StateRowDTO } fro
 import { type ReactNode, useEffect, useState } from 'react';
 import { displayName, fmtCompact, fmtPct } from '@/lib/format';
 import { usePolymarket } from '@/lib/polymarket';
-import { useEvents, useOfficeStates } from '@/lib/queries';
+import { useEvents, useOfficeStates, useOverview } from '@/lib/queries';
 import { ActivityFeed } from './activity';
 import { BrazilMap } from './brazil-map';
 import { StatusPill } from './results';
@@ -23,41 +23,53 @@ const PER_PAGE = { 1: 14, 2: 10 } as const;
 const pagesOf = <T,>(list: T[], size: number) =>
   Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, (i + 1) * size));
 
-/** Every scene the reader can pick, in this order. Polymarket is not the count: off unless picked. */
+/**
+ * Every scene the reader can pick, in this order, and the rounds it belongs to: the 1st round has
+ * senators; the runoff shows where the most voted changed since the 1st round. Polymarket is not
+ * the count: off unless picked.
+ */
 export const CATALOG = [
-  { id: 'mapa', title: 'Mapa' },
-  { id: 'placar', title: 'Estados' },
-  { id: 'falta', title: 'Falta apurar' },
-  { id: 'governadores', title: 'Governadores' },
-  { id: 'senadores', title: 'Senadores' },
-  { id: 'comparecimento', title: 'Comparecimento' },
-  { id: 'atualizacoes', title: 'Últimas atualizações' },
-  { id: 'polymarket', title: 'Polymarket', hint: 'apostas, não é resultado oficial' },
+  { id: 'mapa', title: 'Mapa', rounds: [1, 2] },
+  { id: 'placar', title: 'Estados', rounds: [1, 2] },
+  { id: 'virada', title: 'Mudou desde o 1º turno', rounds: [2] },
+  { id: 'apuracao', title: 'Apuração por estado', rounds: [1, 2] },
+  { id: 'falta', title: 'Falta apurar', rounds: [1, 2] },
+  { id: 'governadores', title: 'Governadores', rounds: [1, 2] },
+  { id: 'senadores', title: 'Senadores', rounds: [1] },
+  { id: 'comparecimento', title: 'Comparecimento', rounds: [1, 2] },
+  { id: 'atualizacoes', title: 'Últimas atualizações', rounds: [1, 2] },
+  { id: 'polymarket', title: 'Polymarket', rounds: [1, 2], hint: 'apostas, não é resultado oficial' },
 ] as const;
 export type SceneId = (typeof CATALOG)[number]['id'];
-const ALL = CATALOG.map((c) => c.id) as SceneId[];
-const DEFAULT = ALL.filter((id) => id !== 'polymarket');
 const PICK_KEY = 'eleicoes:telao-cenas';
 
-/** The reader's pick, kept in this browser only (a TV set up once stays as it was). */
-export function useSceneChoice() {
-  const [chosen, setChosen] = useState<SceneId[]>(DEFAULT);
+/** The scenes of this round. */
+export const catalogFor = (round: number) =>
+  CATALOG.filter((c) => (c.rounds as readonly number[]).includes(round));
+
+/** The reader's pick for each round, kept in this browser only (a TV set up once stays as it was). */
+export function useSceneChoice(round: number) {
+  const all = catalogFor(round).map((c) => c.id as SceneId);
+  const defaults = all.filter((id) => id !== 'polymarket');
+  const key = `${PICK_KEY}:${round}`;
+  const [chosen, setChosen] = useState<SceneId[]>(defaults);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: read once per round
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(PICK_KEY) ?? 'null') as string[] | null;
-      const valid = saved?.filter((id): id is SceneId => (ALL as string[]).includes(id));
-      if (valid && valid.length > 0) setChosen(valid);
+      const saved = JSON.parse(localStorage.getItem(key) ?? 'null') as string[] | null;
+      const valid = saved?.filter((id): id is SceneId => (all as string[]).includes(id));
+      setChosen(valid && valid.length > 0 ? valid : defaults);
     } catch {}
-  }, []);
+  }, [key]);
   const toggle = (id: SceneId) =>
     setChosen((prev) => {
       const next = prev.includes(id)
         ? prev.filter((x) => x !== id)
-        : ALL.filter((x) => x === id || prev.includes(x));
+        : all.filter((x) => x === id || prev.includes(x));
       // Never none: the last one stays.
       if (next.length === 0) return prev;
       try {
-        localStorage.setItem(PICK_KEY, JSON.stringify(next));
+        localStorage.setItem(key, JSON.stringify(next));
       } catch {}
       return next;
     });
@@ -85,6 +97,10 @@ export function TvScenes({
   const governors = useOfficeStates(round.slug, governor?.slug).data;
   const senators = useOfficeStates(round.slug, senator?.slug).data;
   const events = useEvents(round.slug, 12).data;
+  // Runoff: the 1st round's most voted in each state, to show where it changed.
+  // (In the 1st round this is the same query as the page's own: nothing more is asked.)
+  const first = useOverview(round.round === 2 ? `${round.electionSlug}-1` : round.slug).data;
+  const firstStates = first?.states;
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -105,7 +121,13 @@ export function TvScenes({
   };
   // The pages of each scene; none: nothing to show right now (no one left to count, no senate race).
   const bodies: Record<SceneId, ReactNode[]> = {
-    mapa: [<BrazilMap key={round.slug} states={states} />],
+    // The most voted only: how far the count went in each state has its own scene.
+    mapa: [<BrazilMap key={round.slug} states={states} only="leader" />],
+    apuracao: states.some((s) => s.progress) ? [<CountByState key="apuracao" states={states} />] : [],
+    virada:
+      round.round === 2 && states.some((s) => s.leader) && firstStates
+        ? [<Changed key="virada" states={states} before={firstStates} />]
+        : [],
     placar: states.some((s) => s.leader) ? [<Scoreboard key="placar" states={states} />] : [],
     falta: left.length > 0 ? [<Remaining key="falta" rows={left} />] : [],
     governadores: office(round.round === 2 ? 'Governadores no 2º turno' : 'Governadores', governors?.results),
@@ -125,7 +147,7 @@ export function TvScenes({
   };
   // Only asked from Polymarket when picked (it is the reader's browser that asks, never our API).
   bodies.polymarket = chosen.includes('polymarket') ? [<PolymarketScene key="polymarket" />] : [];
-  const picked = CATALOG.filter((c) => chosen.includes(c.id) && bodies[c.id].length > 0);
+  const picked = catalogFor(round.round).filter((c) => chosen.includes(c.id) && bodies[c.id].length > 0);
   // Whatever was picked, the map is always there to fall back on.
   const scenes: Scene[] = (picked.length > 0 ? picked : [CATALOG[0]]).flatMap((c) =>
     bodies[c.id].map((body, page) => ({
@@ -434,6 +456,85 @@ function PolymarketScene() {
         <p className="mt-3 text-[clamp(11px,2.2cqi,15px)] text-muted">
           Chance dada pelos apostadores · US$ {fmtCompact(data.volume)} apostados · polymarket.com
         </p>
+      )}
+    </div>
+  );
+}
+
+/** How far the count went in each state: every state, its share of ballot boxes counted. */
+function CountByState({ states }: { states: StateRowDTO[] }) {
+  return (
+    <div>
+      <p className={kicker}>Apuração por estado · urnas apuradas</p>
+      <ul className="mt-2 grid grid-cols-3 gap-x-3 gap-y-[clamp(4px,1cqi,8px)] @md:grid-cols-4">
+        {states.map((s) => {
+          const pct = s.progress?.countedPct ?? null;
+          return (
+            <li key={s.uf} className="min-w-0">
+              <span className="flex items-baseline justify-between gap-1">
+                <span className="text-[clamp(11px,2.4cqi,16px)] font-semibold text-ink-2">{s.uf}</span>
+                <span className="numeral text-[clamp(11px,2.4cqi,16px)] font-semibold">{fmtPct(pct, 0)}</span>
+              </span>
+              <span className="mt-0.5 block h-[clamp(4px,0.8cqi,7px)] overflow-hidden rounded-full bg-surface-2">
+                <span className="bar block h-full rounded-full bg-live" style={{ width: `${pct ?? 0}%` }} />
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * Runoff: the states where the most voted is not the 1st round's one. Matched by ballot number,
+ * never by name.
+ */
+function Changed({ states, before }: { states: StateRowDTO[]; before: StateRowDTO[] }) {
+  const was = new Map(before.map((s) => [s.uf, s.leader]));
+  const changed = states.filter((s) => {
+    const b = was.get(s.uf);
+    return s.leader && b && s.leader.number !== b.number;
+  });
+  return (
+    <div>
+      <p className={kicker}>Mudou desde o 1º turno · mais votado em cada estado</p>
+      {changed.length === 0 ? (
+        <p className="mt-3 text-[clamp(14px,3.4cqi,22px)]">
+          Até agora, o mais votado em cada estado é o mesmo do 1º turno.
+        </p>
+      ) : (
+        <ul className="mt-2 divide-y divide-line">
+          {changed.map((s) => {
+            const b = was.get(s.uf)!;
+            return (
+              <li
+                key={s.uf}
+                className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 py-[clamp(5px,1.2cqi,10px)]"
+              >
+                <StateFlag uf={s.uf} size={24} />
+                <span className="min-w-0">
+                  <span className="block truncate text-[clamp(13px,3.2cqi,22px)] font-semibold">
+                    {s.name}
+                  </span>
+                  <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-[clamp(11px,2.5cqi,17px)] text-ink-2">
+                    <span className="size-[0.6em] rounded-full" style={{ background: b.color }} aria-hidden />
+                    <span className="truncate">{displayName(b.name)}</span>
+                    <span aria-hidden className="text-muted">
+                      →
+                    </span>
+                    <span
+                      className="size-[0.6em] rounded-full"
+                      style={{ background: s.leader!.color }}
+                      aria-hidden
+                    />
+                    <span className="truncate font-medium text-ink">{displayName(s.leader!.name)}</span>
+                  </span>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );
