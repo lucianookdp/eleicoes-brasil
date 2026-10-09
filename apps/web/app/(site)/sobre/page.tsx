@@ -91,15 +91,19 @@ const SECTIONS: { title: string; icon: ReactNode; body: string[] }[] = [
 
 export default function AboutPage() {
   return (
-    <div className="max-w-3xl pb-8 pt-3">
+    <div className="max-w-3xl pb-8 pt-3 lg:max-w-none">
       <p className="text-[12.5px] font-medium uppercase tracking-wider text-live">Sobre os dados</p>
       <h1 className="mt-1 text-balance text-[28px] font-semibold leading-tight tracking-tight sm:text-[36px]">
         O que você vê aqui, de onde vem e como ler
       </h1>
 
-      <div className="mt-8 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+      {/* One column on phones; on computers, two columns of cards across the page. */}
+      <div className="mt-8 grid gap-3 lg:grid-cols-2">
         {SECTIONS.map((s) => (
-          <section key={s.title} className="flex gap-3 p-4 sm:gap-4 sm:p-5">
+          <section
+            key={s.title}
+            className="flex gap-3 rounded-2xl border border-line bg-surface p-4 sm:gap-4 sm:p-5 lg:odd:last:col-span-2"
+          >
             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface-2 text-ink-2">
               {s.icon}
             </span>
