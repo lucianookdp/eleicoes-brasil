@@ -188,8 +188,8 @@ export class Queries {
     const [ok] = await this.sql<{ at: Date }[]>`
       select coalesce(finished_at, started_at) as at from collector_cycles
       where round_id = ${roundId} and status in ('ok', 'degraded') order by started_at desc limit 1`;
-    const [issue] = await this.sql<{ message: string | null }[]>`
-      select message from ingestion_events
+    const [issue] = await this.sql<{ type: string; message: string | null }[]>`
+      select type, message from ingestion_events
       where round_id = ${roundId} and (type like 'source.%' or type = 'collector.error')
         and occurred_at > now() - interval '10 minutes'
       order by occurred_at desc limit 1`;
@@ -210,7 +210,7 @@ export class Queries {
       mode: last.mode,
       lastCycleAt: toIso(last.startedAt),
       lastSuccessAt: toIso(ok?.at ?? null),
-      lastError: last.error ?? issue?.message ?? null,
+      lastError: publicIssue(null, last.error) ?? publicIssue(issue?.type ?? null, issue?.message ?? null),
     };
   }
 
@@ -885,6 +885,7 @@ export class Queries {
       order by e.id desc limit ${limit}`;
     return rows.map((r) => ({
       ...r,
+      message: publicIssue(r.type, r.message),
       occurredAt: toIso(r.occurredAt)!,
       areaName:
         r.areaKey === 'br'
@@ -1113,6 +1114,23 @@ export class Queries {
 
 function publicOffice(o: OfficeRow): OfficeInfo {
   return { code: o.code, slug: o.slug, name: o.name, kind: o.kind, scope: o.scope, states: o.states };
+}
+
+const INTERNAL_ISSUE = 'Falha interna da coleta; nova tentativa automática.';
+
+/**
+ * Text of a collection problem as shown on the public pages: the source's own errors (TSE
+ * unavailable, file out of format) as recorded, our internal ones never with their details. The
+ * collector already records them this way; this also covers rows written before it did.
+ */
+export function publicIssue(type: string | null, message: string | null): string | null {
+  if (!message) return null;
+  if (type === 'collector.error') return INTERNAL_ISSUE;
+  // Our database's errors in rows from before the collector recorded them generically. Network
+  // errors (ECONNRESET...) are left alone: from a "source." event they are the TSE's.
+  if (/failed query|\b(select|insert|update|delete)\b.*\b(from|into|set)\b|postgres/i.test(message))
+    return INTERNAL_ISSUE;
+  return message;
 }
 
 /** Evenly thins a series, always keeping the first and last points. */
