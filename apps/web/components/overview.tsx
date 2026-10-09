@@ -11,6 +11,7 @@ import { ActivityFeed } from './activity';
 import { BrazilMap } from './brazil-map';
 import { CountingHero } from './counting';
 import { EvolutionChart } from './evolution-chart';
+import { FavoriteCards } from './favorites';
 import { LeadChart } from './lead-chart';
 import { MyCityCard } from './my-city';
 import { CandidateList, FacePhoto, HeadToHead, isHeadToHead, Provenance, RaceBar } from './results';
@@ -370,29 +371,22 @@ function EndSummary({ data, statsOnly = false }: { data: OverviewDTO; statsOnly?
   );
 }
 
+/** The reader's saved places, live (the first four; the rest on the Favoritos page). */
 function Favorites({ data }: { data: OverviewDTO }) {
   const { favorites } = useFavorites();
   const { href } = useRound();
   if (favorites.length === 0) return null;
   return (
-    <section id="favoritos" aria-label="Favoritos">
-      <ul className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
-        {favorites.map((f) => {
-          const state = data.states.find((s) => s.uf.toLowerCase() === f.key);
-          const pct = state?.progress?.countedPct;
-          return (
-            <li key={f.key} className="shrink-0">
-              <Link
-                href={href(f.path)}
-                className="flex min-h-9 items-center gap-2 rounded-full border border-line bg-surface px-3 text-[13px] hover:border-line-strong"
-              >
-                <span className="font-medium">{f.label}</span>
-                <span className="text-muted">{pct != null ? fmtPct(pct, 1) : f.detail}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+    <section id="favoritos" aria-labelledby="favoritos-titulo">
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <h2 id="favoritos-titulo" className="text-[15px] font-semibold">
+          Seus favoritos
+        </h2>
+        <Link href={href('/favorites')} className="shrink-0 text-[13.5px] text-info">
+          {favorites.length > 4 ? `Ver todos (${favorites.length})` : 'Ver todos'}
+        </Link>
+      </div>
+      <FavoriteCards data={data} limit={4} />
     </section>
   );
 }

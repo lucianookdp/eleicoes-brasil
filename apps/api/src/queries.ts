@@ -1001,40 +1001,10 @@ export class Queries {
       from progress_snapshots where round_id = ${round.id} and area_key = 'br'`;
     const start = window?.start ? toIso(window.start) : null;
     const end = window?.end ? toIso(window.end) : null;
-    // Delays only while counting (+30 min for the final marks): files from before the polls close,
-    // or re-read days later, say nothing about how fast the night went.
+    // While counting (+30 min for the final marks): pauses are read against this window.
     const until = end ? new Date(Date.parse(end) + 30 * 60_000).toISOString() : new Date().toISOString();
 
-    const [delayRows, slowest, bad, cycles, issues] = await Promise.all([
-      start
-        ? this.sql<
-            { avg: number | null; p95: number | null; max: number | null; over: number; samples: number }[]
-          >`
-            with d as (
-              select extract(epoch from ((provenance->>'retrievedAt')::timestamptz
-                                          - (provenance->>'sourceGeneratedAt')::timestamptz)) as s
-              from result_snapshots
-              where round_id = ${round.id} and area_type in ('country', 'state')
-                and captured_at between ${start} and ${until} and provenance->>'sourceGeneratedAt' is not null
-                -- Only files generated during the count: one generated days before (still with no votes)
-                -- and read when the count began measures our schedule, not a delay.
-                and (provenance->>'sourceGeneratedAt')::timestamptz >= ${start}
-            )
-            select avg(s)::float8 as avg, percentile_cont(0.95) within group (order by s) as p95,
-                   max(s)::float8 as max, count(*) filter (where s > 60)::int as over, count(*)::int as samples
-            from d where s >= 0`
-        : Promise.resolve([]),
-      start
-        ? this.sql<{ areaKey: string; office: string; seconds: number; at: Date }[]>`
-            select s.area_key as "areaKey", o.name as office, s.captured_at as at,
-                   extract(epoch from ((s.provenance->>'retrievedAt')::timestamptz
-                                       - (s.provenance->>'sourceGeneratedAt')::timestamptz))::float8 as seconds
-            from result_snapshots s join offices o on o.id = s.office_id
-            where s.round_id = ${round.id} and s.area_type in ('country', 'state')
-              and s.captured_at between ${start} and ${until} and s.provenance->>'sourceGeneratedAt' is not null
-              and (s.provenance->>'sourceGeneratedAt')::timestamptz >= ${start}
-            order by seconds desc limit 10`
-        : Promise.resolve([]),
+    const [bad, cycles, issues] = await Promise.all([
       this.sql<{ startedAt: Date; finishedAt: Date; status: 'degraded' | 'failed'; error: string | null }[]>`
         select started_at as "startedAt", coalesce(finished_at, started_at) as "finishedAt", status, error
         from collector_cycles
@@ -1114,26 +1084,9 @@ export class Queries {
           seconds: Math.round((b - a) / 1000),
         });
     }
-    const d = delayRows[0];
     const offices = new Map(round.offices.map((o) => [o.slug, o.name]));
     return {
       counting: { start, end },
-      delay: {
-        avgSeconds: d?.avg ?? null,
-        p95Seconds: d?.p95 ?? null,
-        maxSeconds: d?.max ?? null,
-        overMinute: d?.over ?? 0,
-        samples: d?.samples ?? 0,
-        slowest: slowest
-          .filter((s) => s.seconds >= 0)
-          .map((s) => ({
-            areaKey: s.areaKey,
-            areaName: s.areaKey === 'br' ? 'Brasil' : stateName(s.areaKey.toUpperCase()),
-            office: s.office,
-            seconds: Math.round(s.seconds),
-            at: toIso(s.at)!,
-          })),
-      },
       outages: outages.slice(-100),
       gaps: gaps.slice(-100),
       issues: issues.map((r) => ({

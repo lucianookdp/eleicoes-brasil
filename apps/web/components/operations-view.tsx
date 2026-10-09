@@ -209,7 +209,9 @@ function StatusHero({ data, roundFinal, now }: { data: OperationsDTO; roundFinal
       tone: connection === 'offline' ? 'bad' : connection === 'reconnecting' ? 'warn' : 'good',
     },
   ];
-  const delay = data.delay.avgSeconds;
+  // The TSE's own time for its latest totalization of Brazil: official, unlike a "delay" worked out
+  // from the time written in each file (which does not change when the TSE updates a file).
+  const tse = data.freshness.find((f) => f.areaKey === 'br')?.totalizedAt ?? null;
   return (
     <section aria-labelledby="situacao" className="mb-8 rounded-2xl border border-line bg-surface p-4 sm:p-6">
       <div className="flex flex-wrap items-start gap-3">
@@ -249,11 +251,9 @@ function StatusHero({ data, roundFinal, now }: { data: OperationsDTO; roundFinal
 
       <dl className="mt-5 grid grid-cols-1 gap-3 border-t border-line pt-5 sm:grid-cols-3">
         <Fact
-          label="Do TSE até aqui"
-          value={delay != null ? `${delay.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} s` : '—'}
-          detail={
-            delay != null ? 'em média, nos últimos 15 minutos' : 'nenhum número novo nos últimos 15 minutos'
-          }
+          label="Última totalização do TSE"
+          value={tse ? formatClock(tse) : '—'}
+          detail={tse ? `Brasil, ${sinceText(tse, now)}` : 'o TSE ainda não totalizou'}
         />
         <Fact
           label="Última conferência no TSE"

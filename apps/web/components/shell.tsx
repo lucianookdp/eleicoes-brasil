@@ -25,6 +25,7 @@ import {
   IconPulse,
   IconSearch,
   IconSeats,
+  IconStar,
   IconStates,
   IconSun,
   IconTv,
@@ -151,7 +152,7 @@ type MoreItem = {
 
 /** What "Mais" holds, by importance: the most used as big tiles, then a list. */
 function useMoreItems() {
-  const { href, meta } = useRound();
+  const { href, meta, round } = useRound();
   // The order the author chose: the big tiles first, then the list.
   const tiles: MoreItem[] = [
     ...(meta?.features.comparison === false
@@ -179,7 +180,20 @@ function useMoreItems() {
       hint: 'A apuração passo a passo',
       icon: IconHistory,
     },
+    {
+      to: href('/favorites'),
+      path: '/favorites',
+      label: 'Favoritos',
+      hint: 'Seus estados e cidades, ao vivo',
+      icon: IconStar,
+    },
   ];
+  // Runoff night: the seats in Congress are a 1st-round result, so they go last (and the bar's
+  // room goes to what changes tonight).
+  if (round.round === 2) {
+    const i = tiles.findIndex((t) => t.path === '/benches');
+    if (i >= 0) tiles.push(...tiles.splice(i, 1));
+  }
   // Sharing the site comes last, after these (see MoreContent).
   const links: MoreItem[] = [
     { to: href('/tv'), path: '/tv', label: 'Modo telão', phoneLabel: 'Painel ao vivo', icon: IconTv },
@@ -382,13 +396,6 @@ function Header({ onSearch }: { onSearch: () => void }) {
         )}
         <nav aria-label="Seções" className="ml-1 hidden shrink-0 items-center xl:flex">
           {NAV.map(link)}
-          <Link
-            href="/polymarket"
-            aria-current={pathname.startsWith('/polymarket') ? 'page' : undefined}
-            className={barLink}
-          >
-            Polymarket
-          </Link>
           {/* Items of "Mais" that fit in the bar, in the author's order (see useBarItems). */}
           <div ref={bar.extra} className="flex items-center">
             {bar.items.slice(0, bar.shown).map((i) => (
@@ -402,8 +409,16 @@ function Header({ onSearch }: { onSearch: () => void }) {
               </Link>
             ))}
           </div>
-          <div ref={bar.more}>
+          {/* Polymarket last, after "Mais": it is not the count. Measured with "Mais" (useBarItems). */}
+          <div ref={bar.more} className="flex items-center">
             <MoreMenu skip={bar.skip} />
+            <Link
+              href="/polymarket"
+              aria-current={pathname.startsWith('/polymarket') ? 'page' : undefined}
+              className={barLink}
+            >
+              Polymarket
+            </Link>
           </div>
         </nav>
         {/* Invisible copies of those items, only to know how wide each one is. */}
@@ -680,16 +695,6 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             {n.short}
           </Link>
         ))}
-        <Link
-          href="/polymarket"
-          aria-current={pathname.startsWith('/polymarket') ? 'page' : undefined}
-          className={`${item} flex-1`}
-        >
-          <span className="flex size-8 items-center justify-center">
-            <IconPolymarket />
-          </span>
-          Polymarket
-        </Link>
         <button
           type="button"
           onClick={() => setMore(true)}
@@ -701,6 +706,17 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
           </span>
           Mais
         </button>
+        {/* Last: it is not the count. */}
+        <Link
+          href="/polymarket"
+          aria-current={pathname.startsWith('/polymarket') ? 'page' : undefined}
+          className={`${item} flex-1`}
+        >
+          <span className="flex size-8 items-center justify-center">
+            <IconPolymarket />
+          </span>
+          Polymarket
+        </Link>
       </nav>
       {more && (
         <div
