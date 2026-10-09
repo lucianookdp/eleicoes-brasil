@@ -59,7 +59,13 @@ test('opens the historical timeline', async ({ page }) => {
 test('opens behind the scenes', async ({ page }) => {
   await page.goto('/eleicao/bastidores/?e=demo&t=1');
   await expect(page.getByRole('heading', { name: 'Bastidores' })).toBeVisible();
-  await expect(page.getByText(/^Coleta /)).toBeVisible();
+  // The state of the collection in plain words.
+  await expect(
+    page.getByRole('heading', {
+      level: 2,
+      name: /^(Tudo funcionando|Um pouco instável|Coleta parada|Coleta em pausa|Aguardando o TSE|Apuração encerrada)$/,
+    }),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Ritmo da apuração' })).toBeVisible();
 });
 
