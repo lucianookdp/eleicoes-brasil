@@ -141,7 +141,7 @@ export function TvScenes({ data, states }: { data: OverviewDTO; states: StateRow
       className="@container min-w-0 rounded-2xl border border-line bg-surface p-3"
     >
       <div className="flex items-center gap-2">
-        <div className="scroll-x flex flex-1 gap-1" role="group" aria-label="Cenas">
+        <div className="scroll-x flex min-w-0 flex-1 gap-1" role="group" aria-label="Cenas">
           {groups.map((g) => {
             const s = scenes.find((x) => x.group === g)!;
             const on = now.group === g;
@@ -225,7 +225,7 @@ export function TvScenes({ data, states }: { data: OverviewDTO; states: StateRow
       )}
       {/* Every scene in the same cell: the panel keeps the height of the tallest one, so the race
           beside it never jumps when the scene changes. Only the current one is visible. */}
-      <div className="mt-3 grid">
+      <div className="mt-3 grid grid-cols-1">
         {scenes.map((s, i) => (
           <div
             key={s.id}
@@ -333,7 +333,7 @@ function OfficeScene({ title, results }: { title: string; results: ResultDTO[] }
     <div>
       <p className={kicker}>{title}</p>
       <ul
-        className={`mt-2 grid gap-x-4 ${seats > 1 ? '@md:grid-cols-2' : results.length > 6 ? 'grid-cols-2' : ''}`}
+        className={`mt-2 grid grid-cols-1 gap-x-4 ${seats > 1 ? '@md:grid-cols-2' : results.length > 6 ? '@md:grid-cols-2' : ''}`}
       >
         {results.map((r) => {
           const top = r.candidates.filter(hasValidVotes).slice(0, r.seats ?? 1);
