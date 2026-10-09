@@ -127,6 +127,8 @@ export interface BenchDTO {
   /** States whose result the TSE has finished totalling. The page waits for all of them. */
   statesFinal: number;
   statesTotal: number;
+  /** Names of the states still waiting for the TSE's final totalization. */
+  statesPending: string[];
   parties: {
     abbreviation: string;
     name: string;

@@ -412,6 +412,10 @@ export class Queries {
         seats,
         statesFinal: results.filter((r) => r.final).length,
         statesTotal: keys.length,
+        // Not final yet, including states the TSE has not published at all.
+        statesPending: keys
+          .filter((k) => !results.some((r) => r.areaKey === k && r.final))
+          .map((k) => stateName(k.toUpperCase())),
         parties: [...parties.values()].sort(
           (a, b) => b.seats - a.seats || a.abbreviation.localeCompare(b.abbreviation),
         ),

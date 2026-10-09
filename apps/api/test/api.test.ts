@@ -468,6 +468,7 @@ suite('API (integration)', () => {
     const camara = chambers.find((c) => c.office.slug === 'deputado-federal')!;
     expect(camara.seats).toBe(3);
     expect(camara.statesFinal).toBe(1);
+    expect(camara.statesPending).toHaveLength(camara.statesTotal - 1);
     expect(camara.parties.map((p) => [p.abbreviation, p.seats, p.federation])).toEqual([
       ['PAA', 2, 'PAA / PCC'],
       ['PBB', 1, null],
