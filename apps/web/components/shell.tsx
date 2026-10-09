@@ -25,7 +25,6 @@ import {
   IconPulse,
   IconSearch,
   IconSeats,
-  IconStar,
   IconStates,
   IconSun,
   IconTv,
@@ -138,12 +137,20 @@ function useActive() {
   return (path: string) => SECTION_ROUTES[path]?.replace(/\/$/, '') === pathname;
 }
 
-type MoreItem = { to: string; label: string; icon: typeof IconInfo; path?: string; hint?: string };
+type MoreItem = {
+  to: string;
+  label: string;
+  icon: typeof IconInfo;
+  path?: string;
+  hint?: string;
+  /** Name in the computer's bar, when shorter than the one in "Mais". */
+  short?: string;
+};
 
-/** What "Mais" holds, by importance: the four most used as big tiles, then a list. */
+/** What "Mais" holds, by importance: the most used as big tiles, then a list. */
 function useMoreItems() {
   const { href, meta } = useRound();
-  // The order the author chose: the four big tiles first, then the list.
+  // The order the author chose: the big tiles first, then the list.
   const tiles: MoreItem[] = [
     ...(meta?.features.comparison === false
       ? []
@@ -170,28 +177,93 @@ function useMoreItems() {
       hint: 'A apuração passo a passo',
       icon: IconHistory,
     },
-    { to: `${href()}#favoritos`, label: 'Favoritos', hint: 'Seus locais salvos', icon: IconStar },
   ];
   // Sharing the site comes last, after these (see MoreContent).
   const links: MoreItem[] = [
     { to: href('/tv'), path: '/tv', label: 'Modo telão', icon: IconTv },
-    { to: href('/operations'), path: '/operations', label: 'Bastidores da coleta', icon: IconPulse },
+    {
+      to: href('/operations'),
+      path: '/operations',
+      label: 'Bastidores da coleta',
+      short: 'Bastidores',
+      icon: IconPulse,
+    },
     { to: '/como-funciona', label: 'Como funciona', icon: IconHelp },
     { to: '/sobre', label: 'Sobre os dados', icon: IconData },
   ];
   return { tiles, links };
 }
 
-/** The "Mais" panel, shared by the computer's dropdown and the phone's sheet. */
-function MoreContent({ onPick }: { onPick: () => void }) {
-  const active = useActive();
+/** Room always left free between the bar and search/status, so a longer status ("Dados atrasados")
+ * never makes it overflow. */
+const BAR_MARGIN = 48;
+/** Last count, kept across remounts so a page change does not make the links pop in again. */
+let lastShown = 0;
+
+/**
+ * Computers: as many items of "Mais" as fit in the bar by themselves, in the author's order, with
+ * a margin; the rest stay in "Mais". Measured, not guessed per breakpoint: the room depends on the
+ * page (the round buttons), the status text and the fonts. The arithmetic does not depend on how
+ * many are shown (adding one moves "Mais" by exactly its width), so it cannot flicker.
+ */
+function useBarItems() {
   const { tiles, links } = useMoreItems();
+  const items = [...tiles, ...links];
+  const pathname = usePathname();
+  const [shown, setShown] = useState(lastShown);
+  const row = useRef<HTMLDivElement>(null);
+  const extra = useRef<HTMLDivElement>(null);
+  const more = useRef<HTMLDivElement>(null);
+  const right = useRef<HTMLDivElement>(null);
+  const ruler = useRef<HTMLDivElement>(null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure when the page (the active, bolder link) or the list changes
+  useEffect(() => {
+    const measure = () => {
+      const [m, e, r, w] = [more.current, extra.current, right.current, ruler.current];
+      // The bar is hidden on phones and tablets.
+      if (!m || !e || !r || !w || m.offsetParent === null) return;
+      const room =
+        r.getBoundingClientRect().left -
+        m.getBoundingClientRect().right +
+        e.getBoundingClientRect().width -
+        BAR_MARGIN;
+      let n = 0;
+      let used = 0;
+      for (const child of w.children) {
+        const width = child.getBoundingClientRect().width;
+        if (used + width > room) break;
+        used += width;
+        n++;
+      }
+      lastShown = n;
+      setShown(n);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    for (const el of [row.current, right.current, ruler.current]) if (el) observer.observe(el);
+    return () => observer.disconnect();
+  }, [pathname, items.length]);
+
+  const skip = new Set(items.slice(0, shown).map((i) => i.label));
+  return { items, shown, skip, row, extra, more, right, ruler };
+}
+
+/**
+ * The "Mais" panel, shared by the computer's dropdown and the phone's sheet. `skip`: items the
+ * computer's bar already shows by themselves (see `useBarItems`), not repeated here.
+ */
+function MoreContent({ onPick, skip }: { onPick: () => void; skip?: ReadonlySet<string> }) {
+  const active = useActive();
+  const all = useMoreItems();
+  const tiles = all.tiles.filter((t) => !skip?.has(t.label));
+  const links = all.links.filter((l) => !skip?.has(l.label));
   const current = (i: MoreItem) => (i.path && active(i.path) ? 'page' : undefined);
   return (
     <div className="grid gap-3">
-      <ul className="grid grid-cols-2 gap-2">
+      <ul className={`grid grid-cols-2 gap-2 ${tiles.length === 0 ? 'hidden' : ''}`}>
         {tiles.map((t) => (
-          <li key={t.label}>
+          <li key={t.label} className="odd:last:col-span-2">
             <Link
               href={t.to}
               onClick={onPick}
@@ -275,21 +347,22 @@ function Header({ onSearch }: { onSearch: () => void }) {
   // Only worth a control when there is a choice to make (two rounds, or another election).
   const choice =
     elections.length > 1 || (elections.find((e) => e.slug === round.electionSlug)?.rounds.length ?? 0) > 1;
+  const barLink =
+    'flex h-16 items-center whitespace-nowrap border-b-2 border-transparent px-2.5 text-[15px] text-ink-2 hover:text-ink aria-[current=page]:border-live aria-[current=page]:font-medium aria-[current=page]:text-ink';
   const link = (n: (typeof NAV)[number]) => (
     <Link
       key={n.path}
       href={href(n.path)}
       aria-current={active(n.path) ? 'page' : undefined}
-      className="flex h-16 items-center whitespace-nowrap border-b-2 border-transparent px-2.5 text-[15px] text-ink-2 hover:text-ink aria-[current=page]:border-live aria-[current=page]:font-medium aria-[current=page]:text-ink"
+      className={barLink}
     >
-      {/* Short names until there is room for the full ones. */}
-      <span className="2xl:hidden">{n.short}</span>
-      <span className="hidden 2xl:inline">{n.label}</span>
+      {n.short}
     </Link>
   );
+  const bar = useBarItems();
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-ground/90 backdrop-blur supports-[backdrop-filter]:bg-ground/75">
-      <div className="mx-auto flex h-14 max-w-[1320px] items-center gap-3 px-4 sm:px-6 xl:h-16">
+      <div ref={bar.row} className="mx-auto flex h-14 max-w-[1320px] items-center gap-3 px-4 sm:px-6 xl:h-16">
         <Brand to={href()} />
         {choice && (
           <div className="hidden xl:block">
@@ -301,14 +374,43 @@ function Header({ onSearch }: { onSearch: () => void }) {
           <Link
             href="/polymarket"
             aria-current={pathname.startsWith('/polymarket') ? 'page' : undefined}
-            className="group flex h-16 items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-2.5 text-[15px] text-ink-2 hover:text-ink aria-[current=page]:border-live aria-[current=page]:font-medium aria-[current=page]:text-ink"
+            className={`group gap-1.5 ${barLink}`}
           >
             <IconPolymarket width={17} height={17} />
             Polymarket
           </Link>
-          <MoreMenu />
+          {/* Items of "Mais" that fit in the bar, in the author's order (see useBarItems). */}
+          <div ref={bar.extra} className="flex items-center">
+            {bar.items.slice(0, bar.shown).map((i) => (
+              <Link
+                key={i.label}
+                href={i.to}
+                aria-current={i.path && active(i.path) ? 'page' : undefined}
+                className={barLink}
+              >
+                {i.short ?? i.label}
+              </Link>
+            ))}
+          </div>
+          <div ref={bar.more}>
+            <MoreMenu skip={bar.skip} />
+          </div>
         </nav>
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        {/* Invisible copies of those items, only to know how wide each one is. */}
+        {/* In a box of no size (hidden, it would still widen the page on phones). */}
+        <div
+          aria-hidden
+          className="pointer-events-none invisible absolute left-0 top-0 hidden size-0 overflow-hidden xl:block"
+        >
+          <div ref={bar.ruler} className="flex w-max">
+            {bar.items.map((i) => (
+              <span key={i.label} className={barLink}>
+                {i.short ?? i.label}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div ref={bar.right} className="ml-auto flex shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={onSearch}
@@ -390,11 +492,8 @@ function RoundSwitch({ wide = false }: { wide?: boolean }) {
             className={`h-9 whitespace-nowrap rounded-full px-3.5 text-[14px] text-ink-2 aria-checked:bg-surface-2 aria-checked:font-semibold aria-checked:text-ink ${wide ? 'flex-1' : ''}`}
           >
             {r.round}º turno
-            <span
-              className={`ml-1.5 text-[12.5px] font-normal text-muted ${wide ? '' : 'hidden 2xl:inline'}`}
-            >
-              {date(r.date)}
-            </span>
+            {/* Phones and tablets only: on computers the bar's room goes to the sections. */}
+            {wide && <span className="ml-1.5 text-[12.5px] font-normal text-muted">{date(r.date)}</span>}
           </button>
         ))}
       </div>
@@ -405,9 +504,11 @@ function RoundSwitch({ wide = false }: { wide?: boolean }) {
 const SHORT_DATE = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
 /** "Mais ▾" on computers: the same panel as the phone's sheet, as a dropdown. */
-function MoreMenu() {
+function MoreMenu({ skip }: { skip: ReadonlySet<string> }) {
   const active = useActive();
-  const { tiles, links } = useMoreItems();
+  const all = useMoreItems();
+  const tiles = all.tiles.filter((t) => !skip.has(t.label));
+  const links = all.links.filter((l) => !skip.has(l.label));
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   // Closes on any tap or click outside, and on Esc.
@@ -442,7 +543,7 @@ function MoreMenu() {
       </button>
       {open && (
         <div className="absolute left-0 top-full z-40 mt-1 w-[340px] rounded-2xl border border-line-strong bg-surface p-3 shadow-2xl">
-          <MoreContent onPick={() => setOpen(false)} />
+          <MoreContent onPick={() => setOpen(false)} skip={skip} />
         </div>
       )}
     </div>
