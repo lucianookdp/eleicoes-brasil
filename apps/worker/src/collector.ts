@@ -26,6 +26,8 @@ export interface CollectorOptions {
   reconcileEvery: number;
   /** Municipal files fetched in parallel by the background drain. */
   cityConcurrency: number;
+  /** False while this process must not collect (collector lock lost): the drain pauses. */
+  active?: () => boolean;
 }
 
 interface ResultJob {
@@ -262,7 +264,7 @@ export class Collector {
   /** Runs until stop(): works through the background queue at low request priority. */
   async drainCities(): Promise<void> {
     while (!this.stopped) {
-      if (this.background.size === 0) {
+      if (this.background.size === 0 || this.options.active?.() === false) {
         await sleep(250);
         continue;
       }

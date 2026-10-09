@@ -49,13 +49,13 @@ const source = { ...registered, baseUrl: env.TSE_BASE_URL ?? registered.baseUrl 
 let stopping = false;
 // One collector per round, even while a deploy runs the old and the new container side by side.
 const lock = await holdCollectorLock(env.DATABASE_URL, round.slug, {
-  onWaiting: () => log.warn({ round: round.slug }, 'another collector is running this round; waiting'),
-  onLost: () => {
-    if (stopping) return;
-    // Another collector may take over now: stop, and let the platform restart us to wait again.
-    log.fatal({ round: round.slug }, 'lost the collector lock connection; exiting');
-    process.exit(1);
-  },
+  onWaiting: () =>
+    log.warn(
+      { round: round.slug },
+      'another collector is running this round, or the database is down; waiting',
+    ),
+  onLost: () => log.error({ round: round.slug }, 'lost the collector lock; collection paused'),
+  onRegained: () => log.info({ round: round.slug }, 'collector lock taken again; collection resumes'),
 });
 
 const { db, sql, close } = createDatabase(env.DATABASE_URL, { max: env.TSE_CONCURRENCY + 5 });
@@ -82,6 +82,7 @@ const collector = new Collector(provider, store, log, {
   maxResultFetchesPerCycle: env.MAX_RESULT_FETCHES_PER_CYCLE,
   reconcileEvery: Math.max(1, Math.round(300 / env.TSE_POLL_INTERVAL)),
   cityConcurrency: env.TSE_CONCURRENCY,
+  active: () => lock.held,
 });
 http.onRequest(collector.onRequest);
 
@@ -111,7 +112,18 @@ process.on('SIGTERM', shutdown);
 // Background work (EA15, state deputies, municipal files) drains continuously; headline cycles
 // never overlap.
 void collector.drainCities();
+let paused = false;
 while (!stopping) {
+  if (!lock.held) {
+    paused = true;
+    await new Promise((r) => setTimeout(r, 1000));
+    continue;
+  }
+  if (paused) {
+    // Files fetched just before the pause may not have been stored: download them again.
+    paused = false;
+    provider.resetConditionalCache();
+  }
   const started = Date.now();
   let wait = env.TSE_POLL_INTERVAL * 1000;
   try {

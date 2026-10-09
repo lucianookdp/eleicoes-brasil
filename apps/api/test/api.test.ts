@@ -616,6 +616,31 @@ suite('API (integration)', () => {
     expect(stale.headers.etag).toBe(good.headers.etag);
     expect(stale.headers['x-data-stale']).toBe('1');
     expect(stale.headers['cache-control']).not.toContain('s-maxage=3600');
+    // Nothing to fall back to: the error itself must not be cacheable either.
+    down = true;
+    const failed = await app.app.inject(`/api/elections/test-1/states?v=${version}`);
+    down = false;
+    expect(failed.statusCode).toBe(500);
+    expect(failed.headers['cache-control']).toBe('no-store');
+    // The live stream still opens: an EventSource never retries after an error response.
+    await app.app.listen({ host: '127.0.0.1', port: 0 });
+    const { port } = app.app.server.address() as { port: number };
+    const stream = async (round: string) => {
+      const ctl = new AbortController();
+      const res = await fetch(`http://127.0.0.1:${port}/api/realtime/elections/${round}`, {
+        signal: ctl.signal,
+      });
+      const first = res.ok ? new TextDecoder().decode((await res.body!.getReader().read()).value) : '';
+      ctl.abort();
+      return { status: res.status, type: res.headers.get('content-type'), first };
+    };
+    down = true;
+    const live = await stream('test-1');
+    down = false;
+    expect(live.status).toBe(200);
+    expect(live.type).toContain('text/event-stream');
+    expect(live.first).toContain('event: ready');
+    expect((await stream('no-such-round')).status).toBe(404);
     // Once the database is back (and the short-lived stale entry has expired), the same URL is
     // fresh and safe to cache long again.
     await new Promise((r) => setTimeout(r, 20));
