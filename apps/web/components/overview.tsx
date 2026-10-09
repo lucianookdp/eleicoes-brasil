@@ -14,6 +14,7 @@ import { EvolutionChart } from './evolution-chart';
 import { FavoriteCards } from './favorites';
 import { LeadChart } from './lead-chart';
 import { MyCityCard } from './my-city';
+import { OccurrencesSummary } from './occurrences';
 import { CandidateList, FacePhoto, HeadToHead, isHeadToHead, Provenance, RaceBar } from './results';
 import { ShareButton } from './share-button';
 import { useRound } from './shell';
@@ -157,10 +158,8 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
               )}
             </section>
           </Panel>
-          {/* Runoff: the face-off above already names both; here only turnout, blank and null. */}
-          {headline && faceOff && <EndSummary data={data} statsOnly />}
-          <MyCityCard headlineOffice={headlineOffice?.slug} />
-          <Favorites data={data} />
+          {/* In the order a reader asks on election night (one column on a phone): who leads, how
+              much is counted, their city, their governor, their saved places; turnout last. */}
           <Panel className="p-4 sm:p-5">
             <CountingHero
               progress={data.progress}
@@ -169,7 +168,13 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
               votesFor={headlineOffice?.name}
             />
           </Panel>
+          {/* Once the count is over: what the round recorded, for readers who want to check. */}
+          {data.round.status === 'final' && <OccurrencesSummary />}
+          <MyCityCard headlineOffice={headlineOffice?.slug} />
           <GovernorRunoffs data={data} />
+          <Favorites data={data} />
+          {/* Runoff: the face-off above already names both; here only turnout, blank and null. */}
+          {headline && faceOff && <EndSummary data={data} statsOnly />}
         </div>
 
         <Panel className="lg:sticky lg:top-20 lg:col-span-5">

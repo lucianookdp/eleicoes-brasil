@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import type { ApiError } from '@/lib/api';
 import { API_URL } from '@/lib/api';
-import { displayName, fmtInt, fmtPct, fmtPp, fmtSigned, initials, shownTime } from '@/lib/format';
+import { displayName, fmtCompact, fmtInt, fmtPct, fmtPp, fmtSigned, initials, shownTime } from '@/lib/format';
 import { useResult } from '@/lib/queries';
 import { ShareButton } from './share-button';
 import { useRound } from './shell';
@@ -208,6 +208,12 @@ export function HeadToHead({ result }: { result: ResultDTO }) {
   const diff = Math.abs((a.votes ?? 0) - (b.votes ?? 0));
   const pp = Math.abs((a.percent ?? 0) - (b.percent ?? 0));
   const counted = result.progress.countedPct ?? 0;
+  // Voters registered in the ballot boxes not counted yet: the TSE's own numbers, no forecast.
+  const { electorateTotal, electorateCounted } = result.progress;
+  const voterLeft =
+    electorateTotal != null && electorateCounted != null
+      ? Math.max(0, electorateTotal - electorateCounted)
+      : null;
   const over = result.final || counted >= 100;
   const started = (a.votes ?? 0) + (b.votes ?? 0) > 0;
   const leader = (a.votes ?? 0) >= (b.votes ?? 0) ? a : b;
@@ -268,7 +274,8 @@ export function HeadToHead({ result }: { result: ResultDTO }) {
             </p>
             <p className="text-[13px] text-muted">
               {pp.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} pontos de diferença
-              {!over && ` · faltam ${fmtPct(100 - counted, 1)} das urnas`}
+              {!over &&
+                ` · faltam ${fmtPct(100 - counted, 1)} das urnas${voterLeft ? ` (~${fmtCompact(voterLeft)} eleitores)` : ''}`}
             </p>
           </>
         )}
