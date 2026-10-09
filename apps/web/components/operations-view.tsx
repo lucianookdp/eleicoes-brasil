@@ -5,6 +5,7 @@ import { formatClock } from '@eleicoes/election-core';
 import { useEffect, useState } from 'react';
 import { ago, fmtCompact, fmtInt } from '@/lib/format';
 import { useOperations, useOverview } from '@/lib/queries';
+import { useRealtime } from '@/lib/realtime';
 import { TILES } from '@/lib/tiles';
 import { ActivityFeed } from './activity';
 import { useRound } from './shell';
@@ -19,34 +20,6 @@ function useNow(ms = 1000) {
   return now;
 }
 
-const STATE_LABEL: Record<IngestionStatus['state'], { label: string; cls: string; hint: string }> = {
-  healthy: {
-    label: 'funcionando',
-    cls: 'text-live bg-live-soft',
-    hint: 'Conferimos o TSE a cada poucos segundos.',
-  },
-  degraded: {
-    label: 'instável',
-    cls: 'text-warn bg-warn-soft',
-    hint: 'A última tentativa teve falhas. Os dados podem atrasar um pouco.',
-  },
-  offline: {
-    label: 'parada',
-    cls: 'text-bad bg-bad-soft',
-    hint: 'A coleta não responde há mais de 2 minutos.',
-  },
-  idle: {
-    label: 'pausada',
-    cls: 'text-muted bg-surface-2',
-    hint: 'Nenhuma coleta em andamento para esta eleição.',
-  },
-  waiting: {
-    label: 'aguardando o TSE',
-    cls: 'text-info bg-surface-2',
-    hint: 'O TSE ainda não publicou os dados desta eleição. Conferimos a cada minuto.',
-  },
-};
-
 /**
  * Behind the scenes ("Bastidores"): our infrastructure, not the TSE's. How fast data is
  * arriving, how the collector is talking to the source, and how fresh each area is.
@@ -58,7 +31,6 @@ export function OperationsView() {
   const now = useNow();
   if (!data)
     return error ? <ErrorNotice error={error} retry={() => refetch()} /> : <Skeleton className="h-96" />;
-  const s = STATE_LABEL[data.ingestion.state];
 
   return (
     <>
@@ -78,70 +50,40 @@ export function OperationsView() {
           votesAt={overview.headline?.provenance?.retrievedAt ?? null}
         />
       )}
-      <Panel className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 text-[14px]">
-        <span className={`inline-flex items-center gap-2 rounded-md px-2.5 py-1 font-medium ${s.cls}`}>
-          <span
-            className={`size-2 rounded-full bg-current ${data.ingestion.state === 'healthy' ? 'pulse-dot' : ''}`}
-            aria-hidden
-          />
-          Coleta {s.label}
-        </span>
-        <span className="text-ink-2">{s.hint}</span>
-        <span className="text-muted">Última verificação {sinceText(data.ingestion.lastCycleAt, now)}</span>
-        {data.ingestion.lastError && (
-          <span className="w-full truncate font-mono text-[12px] text-warn">{data.ingestion.lastError}</span>
-        )}
-      </Panel>
+      <StatusHero data={data} roundFinal={overview?.round.status === 'final'} now={now} />
 
-      <section aria-labelledby="ritmo" className="mb-8">
-        <SectionTitle id="ritmo" title="Ritmo da apuração">
-          Média dos últimos 5 minutos.
-        </SectionTitle>
-        <div className="mb-3 rounded-xl border border-line bg-surface px-4 py-3">
-          <p className="text-[13px] text-muted">
-            Tempo entre o TSE divulgar um número e ele aparecer aqui (Brasil e estados, últimos 15 min)
-          </p>
-          <p className="numeral text-[28px] leading-tight">
-            {data.delay.avgSeconds != null
-              ? `${data.delay.avgSeconds.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} s`
-              : '—'}
-            <span className="ml-3 text-[14px] font-normal text-muted">
-              {data.delay.p95Seconds != null
-                ? `95% em até ${data.delay.p95Seconds.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} s · ${data.delay.samples} atualizações`
-                : 'sem atualizações recentes'}
-            </span>
-          </p>
-        </div>
-        <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Tile label="Urnas por minuto" value={fmtInt(Math.round(data.processing.sectionsPerMinute))} />
-          <Tile label="Votos por minuto" value={fmtCompact(data.processing.votesPerMinute)} />
-          <Tile
-            label="Atualizações de estados por minuto"
-            value={data.processing.statesPerMinute.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}
-          />
-          <Tile
-            label="Atualizações de municípios por minuto"
-            value={data.processing.citiesPerMinute.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}
-          />
-        </dl>
-      </section>
-
+      <SectionTitle id="ritmo" title="Ritmo da apuração">
+        O que mudou nos últimos 5 minutos.
+      </SectionTitle>
       <div className="mb-8 grid items-start gap-6 lg:grid-cols-12 [&>*]:min-w-0">
         <section aria-labelledby="calor" className="lg:col-span-5">
-          <SectionTitle id="calor" title="Onde a apuração avançou">
-            Urnas apuradas por estado nos últimos 5 minutos.
-          </SectionTitle>
+          <h3 id="calor" className="mb-2 text-[15px] font-semibold">
+            Onde a apuração avançou
+          </h3>
+          <p className="-mt-1 mb-2 text-[13px] text-muted">
+            Quanto mais escuro, mais urnas apuradas no estado.
+          </p>
           <Panel className="p-3 sm:p-4">
             <Heatmap heat={data.heat} />
           </Panel>
         </section>
         <section aria-labelledby="log" className="lg:col-span-7">
-          <SectionTitle id="log" title="Atualizações recentes" />
+          <h3 id="log" className="mb-2 text-[15px] font-semibold">
+            Atualizações recentes
+          </h3>
+          <p className="-mt-1 mb-2 text-[13px] text-muted">Cada novo lote de urnas apuradas, na hora.</p>
           <Panel className="max-h-[420px] overflow-y-auto px-3 py-1 sm:px-4">
             <ActivityFeed events={data.events} max={60} />
           </Panel>
         </section>
       </div>
+
+      <section aria-labelledby="frescor" className="mb-8">
+        <SectionTitle id="frescor" title="Quando cada lugar foi atualizado">
+          Há quanto tempo o Brasil e cada estado receberam números novos.
+        </SectionTitle>
+        <Freshness items={data.freshness} now={now} />
+      </section>
 
       {meta?.features.advancedOperations !== false && (
         <details className="group mb-8 rounded-xl border border-line bg-surface px-4 py-3">
@@ -178,20 +120,189 @@ export function OperationsView() {
                 }
               />
             </dl>
+            <dl className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <Tile
+                label="Atraso: 95% em até"
+                value={
+                  data.delay.p95Seconds != null
+                    ? `${data.delay.p95Seconds.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} s`
+                    : '—'
+                }
+                detail={`${fmtInt(data.delay.samples)} atualizações em 15 min`}
+              />
+              <Tile label="Votos por minuto" value={fmtCompact(data.processing.votesPerMinute)} />
+              <Tile
+                label="Atualizações de estados por minuto"
+                value={data.processing.statesPerMinute.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}
+              />
+              <Tile
+                label="Atualizações de municípios por minuto"
+                value={data.processing.citiesPerMinute.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}
+              />
+            </dl>
             <Panel className="p-3 sm:p-4">
               <Cycles cycles={data.cycles} />
             </Panel>
+            {data.ingestion.lastError && (
+              <p className="mt-3 text-[12.5px] text-muted">
+                Último problema registrado:{' '}
+                <span className="font-mono text-[12px] text-warn">{data.ingestion.lastError}</span>
+              </p>
+            )}
           </section>
         </details>
       )}
-
-      <section aria-labelledby="frescor">
-        <SectionTitle id="frescor" title="Última atualização por local">
-          Há quanto tempo cada lugar recebeu dados novos.
-        </SectionTitle>
-        <Freshness items={data.freshness} now={now} />
-      </section>
     </>
+  );
+}
+
+type Tone = 'good' | 'warn' | 'bad' | 'muted' | 'info';
+const TONE: Record<Tone, string> = {
+  good: 'text-live bg-live-soft',
+  warn: 'text-warn bg-warn-soft',
+  bad: 'text-bad bg-bad-soft',
+  muted: 'text-muted bg-surface-2',
+  info: 'text-info bg-surface-2',
+};
+
+/** The collection's state for anyone: what it means for the numbers on screen, not how it works. */
+const HERO: Record<IngestionStatus['state'], { title: string; text: string; tone: Tone }> = {
+  healthy: {
+    title: 'Tudo funcionando',
+    text: 'Conferimos o TSE a cada poucos segundos, e os números novos aparecem aqui sozinhos.',
+    tone: 'good',
+  },
+  degraded: {
+    title: 'Um pouco instável',
+    text: 'Algumas consultas ao TSE falharam. Os números podem demorar um pouco mais para chegar.',
+    tone: 'warn',
+  },
+  offline: {
+    title: 'Coleta parada',
+    text: 'Não falamos com o TSE há mais de 2 minutos. Os números na tela são os últimos que chegaram.',
+    tone: 'bad',
+  },
+  idle: { title: 'Coleta em pausa', text: 'Não há apuração em andamento agora.', tone: 'muted' },
+  waiting: {
+    title: 'Aguardando o TSE',
+    text: 'O TSE ainda não publicou os números desta eleição. Conferimos a cada minuto.',
+    tone: 'info',
+  },
+};
+
+/**
+ * Top of the page: whether the numbers are arriving, in plain words, the path they take (TSE → our
+ * collection → the reader's screen) and three facts anyone understands. The jargon lives in
+ * "Detalhes técnicos".
+ */
+function StatusHero({ data, roundFinal, now }: { data: OperationsDTO; roundFinal: boolean; now: number }) {
+  const { connection } = useRealtime();
+  const state = data.ingestion.state;
+  const hero =
+    roundFinal && (state === 'idle' || state === 'healthy')
+      ? {
+          title: 'Apuração encerrada',
+          text: 'Todos os números já chegaram. Seguimos conferindo o TSE de tempos em tempos.',
+          tone: 'good' as Tone,
+        }
+      : HERO[state];
+  const steps: { name: string; text: string; tone: Tone }[] = [
+    {
+      name: 'TSE',
+      text: state === 'waiting' ? 'ainda não publicou' : 'publica os números',
+      tone: state === 'waiting' ? 'info' : 'good',
+    },
+    {
+      name: 'Nossa coleta',
+      text:
+        state === 'offline'
+          ? 'parada'
+          : state === 'degraded'
+            ? 'instável'
+            : state === 'idle'
+              ? 'em pausa'
+              : 'confere a cada poucos segundos',
+      tone: state === 'offline' ? 'bad' : state === 'degraded' ? 'warn' : state === 'idle' ? 'muted' : 'good',
+    },
+    {
+      name: 'Sua tela',
+      text:
+        connection === 'offline'
+          ? 'sem internet'
+          : connection === 'reconnecting'
+            ? 'reconectando'
+            : 'atualiza sozinha',
+      tone: connection === 'offline' ? 'bad' : connection === 'reconnecting' ? 'warn' : 'good',
+    },
+  ];
+  const delay = data.delay.avgSeconds;
+  return (
+    <section aria-labelledby="situacao" className="mb-8 rounded-2xl border border-line bg-surface p-4 sm:p-6">
+      <div className="flex flex-wrap items-start gap-3">
+        <span
+          className={`mt-1 flex size-3 shrink-0 rounded-full bg-current ${TONE[hero.tone].split(' ')[0]}`}
+          aria-hidden
+        />
+        <div className="min-w-0 flex-1">
+          <h2 id="situacao" className="text-[22px] font-semibold leading-tight tracking-tight sm:text-[26px]">
+            {hero.title}
+          </h2>
+          <p className="mt-1 max-w-2xl text-[14.5px] text-ink-2">{hero.text}</p>
+        </div>
+      </div>
+
+      {/* The path of a number, from the TSE to this screen. */}
+      <ol className="mt-5 grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:items-center">
+        {steps.map((step, i) => (
+          <li key={step.name} className="contents">
+            {i > 0 && (
+              <span aria-hidden className="hidden text-center text-[18px] text-muted sm:block">
+                →
+              </span>
+            )}
+            <span className="flex items-center gap-3 rounded-xl border border-line bg-surface-2/40 px-3 py-2.5">
+              <span
+                className={`flex size-2.5 shrink-0 rounded-full bg-current ${TONE[step.tone].split(' ')[0]}`}
+              />
+              <span className="min-w-0">
+                <span className="block text-[14.5px] font-semibold">{step.name}</span>
+                <span className="block truncate text-[13px] text-muted">{step.text}</span>
+              </span>
+            </span>
+          </li>
+        ))}
+      </ol>
+
+      <dl className="mt-5 grid grid-cols-1 gap-3 border-t border-line pt-5 sm:grid-cols-3">
+        <Fact
+          label="Do TSE até aqui"
+          value={delay != null ? `${delay.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} s` : '—'}
+          detail={
+            delay != null ? 'em média, nos últimos 15 minutos' : 'nenhum número novo nos últimos 15 minutos'
+          }
+        />
+        <Fact
+          label="Última conferência no TSE"
+          value={sinceText(data.ingestion.lastCycleAt, now)}
+          detail={data.ingestion.lastCycleAt ? `às ${formatClock(data.ingestion.lastCycleAt)}` : undefined}
+        />
+        <Fact
+          label="Urnas apuradas por minuto"
+          value={fmtInt(Math.round(data.processing.sectionsPerMinute))}
+          detail="média dos últimos 5 minutos"
+        />
+      </dl>
+    </section>
+  );
+}
+
+function Fact({ label, value, detail }: { label: string; value: string; detail?: string }) {
+  return (
+    <div>
+      <dt className="text-[13px] text-muted">{label}</dt>
+      <dd className="numeral text-[30px] font-semibold leading-tight">{value}</dd>
+      {detail && <dd className="text-[12.5px] text-muted">{detail}</dd>}
+    </div>
   );
 }
 
@@ -332,7 +443,7 @@ function Freshness({ items, now }: { items: OperationsDTO['freshness']; now: num
         return (
           <li key={f.areaKey} className="rounded-lg border border-line bg-surface px-2.5 py-2">
             <p className="truncate text-[12.5px] text-ink-2">{f.name}</p>
-            <p className={`font-mono text-[14px] ${tone}`}>
+            <p className={`numeral text-[15px] font-medium ${tone}`}>
               {f.updatedAt ? `${ago(f.updatedAt, now)}` : 'sem dados'}
             </p>
           </li>
