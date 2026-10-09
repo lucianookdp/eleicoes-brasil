@@ -3,6 +3,7 @@
 import { hasValidVotes, type OverviewDTO, type ResultDTO, type StateRowDTO } from '@eleicoes/election-core';
 import { type ReactNode, useEffect, useState } from 'react';
 import { displayName, fmtCompact, fmtPct } from '@/lib/format';
+import { usePolymarket } from '@/lib/polymarket';
 import { useEvents, useOfficeStates } from '@/lib/queries';
 import { ActivityFeed } from './activity';
 import { BrazilMap } from './brazil-map';
@@ -11,7 +12,7 @@ import { useRound } from './shell';
 import { StateFlag } from './ui';
 
 /** Seconds each scene stays on screen. */
-const SCENE_SECONDS = 12;
+export const SCENE_SECONDS = 12;
 
 /** One page on screen. A long list (governors, senators) is split into pages that each fit,
  * shown one after another, so the panel never grows taller than the map. */
@@ -22,8 +23,8 @@ const PER_PAGE = { 1: 14, 2: 10 } as const;
 const pagesOf = <T,>(list: T[], size: number) =>
   Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, (i + 1) * size));
 
-/** Every scene the reader can pick, in this order. */
-const CATALOG = [
+/** Every scene the reader can pick, in this order. Polymarket is not the count: off unless picked. */
+export const CATALOG = [
   { id: 'mapa', title: 'Mapa' },
   { id: 'placar', title: 'Estados' },
   { id: 'falta', title: 'Falta apurar' },
@@ -31,14 +32,16 @@ const CATALOG = [
   { id: 'senadores', title: 'Senadores' },
   { id: 'comparecimento', title: 'Comparecimento' },
   { id: 'atualizacoes', title: 'Últimas atualizações' },
+  { id: 'polymarket', title: 'Polymarket', hint: 'apostas, não é resultado oficial' },
 ] as const;
-type SceneId = (typeof CATALOG)[number]['id'];
+export type SceneId = (typeof CATALOG)[number]['id'];
 const ALL = CATALOG.map((c) => c.id) as SceneId[];
+const DEFAULT = ALL.filter((id) => id !== 'polymarket');
 const PICK_KEY = 'eleicoes:telao-cenas';
 
 /** The reader's pick, kept in this browser only (a TV set up once stays as it was). */
-function useSceneChoice() {
-  const [chosen, setChosen] = useState<SceneId[]>(ALL);
+export function useSceneChoice() {
+  const [chosen, setChosen] = useState<SceneId[]>(DEFAULT);
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(PICK_KEY) ?? 'null') as string[] | null;
@@ -64,9 +67,18 @@ function useSceneChoice() {
 /**
  * The right half of the big screen goes through the scenes the reader picked, by itself, for a TV
  * nobody touches (the headline race on the left never moves). Scenes without data right now are
- * skipped. A click on a title jumps to it; the button pauses; "Escolher" picks the scenes.
+ * skipped. A click on a title jumps to it; the button pauses. The scenes are picked before
+ * starting, above the screen (TvSetup).
  */
-export function TvScenes({ data, states }: { data: OverviewDTO; states: StateRowDTO[] }) {
+export function TvScenes({
+  data,
+  states,
+  chosen,
+}: {
+  data: OverviewDTO;
+  states: StateRowDTO[];
+  chosen: SceneId[];
+}) {
   const { round } = useRound();
   const governor = data.round.offices.find((o) => o.slug === 'governador');
   const senator = data.round.offices.find((o) => o.slug === 'senador');
@@ -75,8 +87,6 @@ export function TvScenes({ data, states }: { data: OverviewDTO; states: StateRow
   const events = useEvents(round.slug, 12).data;
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [picking, setPicking] = useState(false);
-  const { chosen, toggle } = useSceneChoice();
 
   const left = states
     .filter((s) => s.progress && s.progress.status !== 'not-started' && (s.progress.countedPct ?? 0) < 100)
@@ -102,6 +112,7 @@ export function TvScenes({ data, states }: { data: OverviewDTO; states: StateRow
     senadores: office('Senadores', senators?.results),
     comparecimento:
       data.progress?.turnoutPct != null && data.headline ? [<Turnout key="comp" data={data} />] : [],
+    polymarket: [],
     atualizacoes:
       events && events.length > 0
         ? [
@@ -112,6 +123,8 @@ export function TvScenes({ data, states }: { data: OverviewDTO; states: StateRow
           ]
         : [],
   };
+  // Only asked from Polymarket when picked (it is the reader's browser that asks, never our API).
+  bodies.polymarket = chosen.includes('polymarket') ? [<PolymarketScene key="polymarket" />] : [];
   const picked = CATALOG.filter((c) => chosen.includes(c.id) && bodies[c.id].length > 0);
   // Whatever was picked, the map is always there to fall back on.
   const scenes: Scene[] = (picked.length > 0 ? picked : [CATALOG[0]]).flatMap((c) =>
@@ -187,42 +200,7 @@ export function TvScenes({ data, states }: { data: OverviewDTO; states: StateRow
             </svg>
           </button>
         )}
-        <button
-          type="button"
-          aria-expanded={picking}
-          onClick={() => setPicking((p) => !p)}
-          className="h-8 shrink-0 rounded-full border border-line px-3 text-[13px] text-ink-2 hover:border-line-strong aria-expanded:border-live aria-expanded:text-ink"
-        >
-          Escolher
-        </button>
       </div>
-      {picking && (
-        <fieldset className="mt-3 rounded-xl border border-line bg-surface-2/40 p-3">
-          <legend className="px-1 text-[13px] text-ink-2">
-            O que passa no telão (o presidente fica sempre)
-          </legend>
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-1 @md:grid-cols-3">
-            {CATALOG.map((c) => (
-              <li key={c.id}>
-                <label className="flex min-h-9 cursor-pointer items-center gap-2 text-[14px]">
-                  <input
-                    type="checkbox"
-                    checked={chosen.includes(c.id)}
-                    onChange={() => toggle(c.id)}
-                    className="size-4 accent-[var(--live)]"
-                  />
-                  <span>
-                    {c.title}
-                    {bodies[c.id].length === 0 && (
-                      <span className="ml-1 text-[12px] text-muted">(sem dados agora)</span>
-                    )}
-                  </span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        </fieldset>
-      )}
       {/* Every scene in the same cell: the panel keeps the height of the tallest one, so the race
           beside it never jumps when the scene changes. Only the current one is visible. */}
       <div className="mt-3 grid grid-cols-1">
@@ -407,6 +385,56 @@ function Turnout({ data }: { data: OverviewDTO }) {
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+/**
+ * Polymarket's winner market, read live from Polymarket by the reader's browser. Clearly labelled:
+ * a betting market, not the count. Shown only when the reader picked it.
+ */
+function PolymarketScene() {
+  const { data, error } = usePolymarket();
+  const top = data?.winner.slice(0, 4) ?? [];
+  return (
+    <div>
+      <p className="text-[clamp(12px,2.6cqi,18px)] font-medium text-warn">
+        Polymarket · apostas, não é resultado oficial
+      </p>
+      <p className="mt-0.5 text-[clamp(15px,3.6cqi,24px)] font-semibold">
+        Quem vence a eleição presidencial?
+      </p>
+      {error && <p className="mt-3 text-[14px] text-muted">Polymarket indisponível agora.</p>}
+      {!data && !error && <p className="mt-3 text-[14px] text-muted">Carregando…</p>}
+      <ul className="mt-3 grid gap-[clamp(8px,1.6cqi,14px)]">
+        {top.map((o) => (
+          <li key={o.name} className="flex items-center gap-3">
+            {o.image ? (
+              // biome-ignore lint/performance/noImgElement: Polymarket's own small thumbnail
+              <img
+                src={o.image}
+                alt=""
+                width={40}
+                height={40}
+                className="size-[clamp(32px,7cqi,52px)] shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <span className="size-[clamp(32px,7cqi,52px)] shrink-0 rounded-full bg-surface-2" aria-hidden />
+            )}
+            <span className="min-w-0 flex-1 truncate text-[clamp(14px,3.6cqi,26px)] font-semibold">
+              {o.name}
+            </span>
+            <span className="numeral text-[clamp(18px,5.5cqi,40px)] font-bold">
+              {Math.round(o.price * 100)}%
+            </span>
+          </li>
+        ))}
+      </ul>
+      {data && (
+        <p className="mt-3 text-[clamp(11px,2.2cqi,15px)] text-muted">
+          Chance dada pelos apostadores · US$ {fmtCompact(data.volume)} apostados · polymarket.com
+        </p>
+      )}
     </div>
   );
 }

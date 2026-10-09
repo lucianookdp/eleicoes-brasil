@@ -8,7 +8,7 @@ import { useCity, useOverview } from '@/lib/queries';
 import { IconPin, Logo } from './icons';
 import { FacePhoto } from './results';
 import { useRound } from './shell';
-import { TvScenes } from './tv-scenes';
+import { CATALOG, SCENE_SECONDS, TvScenes, useSceneChoice } from './tv-scenes';
 import { EmptyState, ErrorNotice, Skeleton } from './ui';
 
 const CLOCK = new Intl.DateTimeFormat('pt-BR', {
@@ -26,8 +26,19 @@ export function TvView() {
   const { round } = useRound();
   const { data, error, refetch } = useOverview(round.slug);
   const myCity = useMyCity();
+  const choice = useSceneChoice();
   const box = useRef<HTMLDivElement>(null);
   const [full, setFull] = useState(false);
+  const [started, setStarted] = useState(false);
+  // Full screen where the browser allows it (not iPhones): otherwise the panel is brought into view.
+  // Either way the screen is kept awake from then on.
+  const start = () => {
+    setStarted(true);
+    const el = box.current;
+    if (!el) return;
+    if (document.fullscreenEnabled && el.requestFullscreen) el.requestFullscreen().catch(() => {});
+    else el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -42,7 +53,7 @@ export function TvView() {
     return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
   useEffect(() => {
-    if (!full || !('wakeLock' in navigator)) return;
+    if (!(full || started) || !('wakeLock' in navigator)) return;
     let lock: WakeLockSentinel | null = null;
     navigator.wakeLock
       .request('screen')
@@ -53,7 +64,7 @@ export function TvView() {
     return () => {
       lock?.release().catch(() => {});
     };
-  }, [full]);
+  }, [full, started]);
 
   if (!data)
     return error ? <ErrorNotice error={error} retry={() => refetch()} /> : <Skeleton className="h-[70vh]" />;
@@ -64,33 +75,76 @@ export function TvView() {
   const counted = data.progress?.countedPct ?? null;
   const live = data.round.status === 'live';
   const states = data.states.filter((s) => s.uf !== 'ZZ');
+  // Races this round does not have (no senate race in a runoff, for example).
+  const absent = new Set<string>();
+  if (!data.round.offices.some((o) => o.slug === 'governador')) absent.add('governadores');
+  if (!data.round.offices.some((o) => o.slug === 'senador')) absent.add('senadores');
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-tight">Modo telão</h1>
-          <p className="text-[13.5px] text-muted">Para TV, projetor ou transmissão. Atualiza sozinho.</p>
-        </div>
+      <div className="mb-3">
+        <h1 className="text-[22px] font-semibold tracking-tight">
+          {/* A phone is no TV: same page, a name that fits it. */}
+          <span className="sm:hidden">Painel ao vivo</span>
+          <span className="hidden sm:inline">Modo telão</span>
+        </h1>
+        <p className="text-[13.5px] text-muted">
+          <span className="sm:hidden">Deixe o celular parado e acompanhe sem tocar. Atualiza sozinho.</span>
+          <span className="hidden sm:inline">Para TV, projetor ou transmissão. Atualiza sozinho.</span>
+        </p>
+      </div>
+
+      {/* Set it up first, then start: the screen itself only shows the content. */}
+      <section aria-labelledby="montar" className="mb-4 rounded-2xl border border-line bg-surface p-4 sm:p-5">
+        <h2 id="montar" className="text-[17px] font-semibold">
+          <span className="sm:hidden">Monte seu painel</span>
+          <span className="hidden sm:inline">Monte seu telão</span>
+        </h2>
+        <p className="mt-0.5 text-[13.5px] text-ink-2">
+          Escolha o que passa ao lado do resultado para presidente, que fica sempre na tela. Cada item aparece
+          por {SCENE_SECONDS} segundos, um depois do outro.
+        </p>
+        <ul className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1 min-[420px]:grid-cols-2 lg:grid-cols-4">
+          {CATALOG.map((c) => (
+            <li key={c.id}>
+              <label className="flex min-h-10 cursor-pointer items-center gap-2.5 text-[14.5px]">
+                <input
+                  type="checkbox"
+                  checked={choice.chosen.includes(c.id)}
+                  onChange={() => choice.toggle(c.id)}
+                  className="size-4 shrink-0 accent-[var(--live)]"
+                />
+                <span>
+                  {c.title}
+                  {absent.has(c.id) && (
+                    <span className="ml-1 text-[12px] text-muted">(não há nesta etapa)</span>
+                  )}
+                  {'hint' in c && <span className="block text-[12px] leading-tight text-warn">{c.hint}</span>}
+                </span>
+              </label>
+            </li>
+          ))}
+        </ul>
         <button
           type="button"
-          onClick={() => box.current?.requestFullscreen?.().catch(() => {})}
-          className="inline-flex h-9 items-center gap-2 rounded-full border border-line px-3.5 text-[13.5px] text-ink-2 hover:border-line-strong hover:text-ink"
+          onClick={start}
+          className="mt-3 inline-flex h-11 items-center gap-2 rounded-full bg-live px-5 text-[15px] font-semibold text-ground hover:opacity-90"
         >
           <svg
             viewBox="0 0 24 24"
-            width={16}
-            height={16}
+            width={17}
+            height={17}
             fill="none"
             stroke="currentColor"
-            strokeWidth={2}
+            strokeWidth={2.2}
             aria-hidden
           >
             <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          Tela cheia
+          <span className="sm:hidden">Iniciar</span>
+          <span className="hidden sm:inline">Iniciar em tela cheia</span>
         </button>
-      </div>
+      </section>
 
       <div
         ref={box}
@@ -149,7 +203,7 @@ export function TvView() {
               </div>
               {myCity.city && <TvCity office={headline.office.slug} />}
             </section>
-            <TvScenes data={data} states={states} />
+            <TvScenes data={data} states={states} chosen={choice.chosen} />
           </div>
         )}
 
