@@ -121,7 +121,7 @@ export default function HowItWorksPage() {
     );
   };
   return (
-    <div className="max-w-5xl pb-8 pt-3">
+    <div className="max-w-5xl pb-8 pt-3 lg:max-w-none">
       <p className="text-[12.5px] font-medium uppercase tracking-wider text-live">Como funciona</p>
       <h1 className="mt-1 text-balance text-[28px] font-semibold leading-tight tracking-tight sm:text-[36px]">
         Da urna à sua tela, em segundos
@@ -151,32 +151,35 @@ export default function HowItWorksPage() {
         </section>
       </div>
 
-      <section className="mt-12 max-w-2xl">
-        <h2 className="text-[20px] font-semibold">Perguntas comuns</h2>
-        <div className="mt-3 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
-          {QUESTIONS.map((item) => (
-            <details key={item.q} className="group px-4 py-1">
-              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 font-medium">
-                {item.q}
-                <IconChevron
-                  width={16}
-                  height={16}
-                  className="shrink-0 rotate-90 text-muted transition-transform group-open:-rotate-90"
-                />
-              </summary>
-              <p className="pb-3 leading-relaxed text-ink-2">{item.a}</p>
-            </details>
-          ))}
-        </div>
-      </section>
+      {/* Computers: the questions and the links side by side, as wide as the diagram above. */}
+      <div className="mt-12 grid items-start gap-x-6 gap-y-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <section>
+          <h2 className="text-[20px] font-semibold">Perguntas comuns</h2>
+          <div className="mt-3 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+            {QUESTIONS.map((item) => (
+              <details key={item.q} className="group px-4 py-1">
+                <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 font-medium">
+                  {item.q}
+                  <IconChevron
+                    width={16}
+                    height={16}
+                    className="shrink-0 rotate-90 text-muted transition-transform group-open:-rotate-90"
+                  />
+                </summary>
+                <p className="pb-3 leading-relaxed text-ink-2">{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
 
-      <div className="mt-8 grid max-w-2xl gap-2 sm:grid-cols-2">
-        <MoreLink href="/eleicao/bastidores/" icon={<IconPulse />} title="Bastidores">
-          O ritmo da apuração e da nossa coleta, ao vivo
-        </MoreLink>
-        <MoreLink href="/sobre" icon={<IconData />} title="Sobre os dados">
-          De onde vêm, como ler os horários e o que calculamos
-        </MoreLink>
+        <div className="grid gap-2 sm:grid-cols-2 lg:mt-[44px] lg:grid-cols-1">
+          <MoreLink href="/eleicao/bastidores/" icon={<IconPulse />} title="Bastidores">
+            O ritmo da apuração e da nossa coleta, ao vivo
+          </MoreLink>
+          <MoreLink href="/sobre" icon={<IconData />} title="Sobre os dados">
+            De onde vêm, como ler os horários e o que calculamos
+          </MoreLink>
+        </div>
       </div>
     </div>
   );
