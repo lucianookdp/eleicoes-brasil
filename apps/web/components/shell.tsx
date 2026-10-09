@@ -143,6 +143,8 @@ type MoreItem = {
   icon: typeof IconInfo;
   path?: string;
   hint?: string;
+  /** Name on phones, when the computer's one does not fit a phone ("Modo telão"). */
+  phoneLabel?: string;
   /** Name in the computer's bar, when shorter than the one in "Mais". */
   short?: string;
 };
@@ -180,7 +182,7 @@ function useMoreItems() {
   ];
   // Sharing the site comes last, after these (see MoreContent).
   const links: MoreItem[] = [
-    { to: href('/tv'), path: '/tv', label: 'Modo telão', icon: IconTv },
+    { to: href('/tv'), path: '/tv', label: 'Modo telão', phoneLabel: 'Painel ao vivo', icon: IconTv },
     {
       to: href('/operations'),
       path: '/operations',
@@ -253,7 +255,16 @@ function useBarItems() {
  * The "Mais" panel, shared by the computer's dropdown and the phone's sheet. `skip`: items the
  * computer's bar already shows by themselves (see `useBarItems`), not repeated here.
  */
-function MoreContent({ onPick, skip }: { onPick: () => void; skip?: ReadonlySet<string> }) {
+function MoreContent({
+  onPick,
+  skip,
+  phone = false,
+}: {
+  onPick: () => void;
+  skip?: ReadonlySet<string>;
+  /** The phone's sheet: some items have a phone name. */
+  phone?: boolean;
+}) {
   const active = useActive();
   const all = useMoreItems();
   const tiles = all.tiles.filter((t) => !skip?.has(t.label));
@@ -291,7 +302,7 @@ function MoreContent({ onPick, skip }: { onPick: () => void; skip?: ReadonlySet<
               className="flex min-h-11 items-center gap-3 px-3 text-[14.5px] text-ink-2 hover:bg-surface-2 hover:text-ink aria-[current=page]:font-medium aria-[current=page]:text-ink"
             >
               <l.icon className="shrink-0 text-muted" />
-              <span className="flex-1">{l.label}</span>
+              <span className="flex-1">{(phone && l.phoneLabel) || l.label}</span>
               <IconChevron width={15} height={15} className="text-muted" />
             </Link>
           </li>
@@ -374,9 +385,8 @@ function Header({ onSearch }: { onSearch: () => void }) {
           <Link
             href="/polymarket"
             aria-current={pathname.startsWith('/polymarket') ? 'page' : undefined}
-            className={`group gap-1.5 ${barLink}`}
+            className={barLink}
           >
-            <IconPolymarket width={17} height={17} />
             Polymarket
           </Link>
           {/* Items of "Mais" that fit in the bar, in the author's order (see useBarItems). */}
@@ -718,7 +728,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
                 <IconClose />
               </button>
             </div>
-            <MoreContent onPick={() => setMore(false)} />
+            <MoreContent onPick={() => setMore(false)} phone />
           </div>
         </div>
       )}

@@ -355,8 +355,10 @@ test('polymarket: its own page, with Polymarket named and linked', async ({ page
 
 test('telão: the headline race and the map, with a full-screen button', async ({ page }) => {
   await page.goto('/eleicao/telao/?e=demo&t=1');
-  await expect(page.getByRole('heading', { level: 1, name: 'Modo telão' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Tela cheia' })).toBeVisible();
+  // "Painel ao vivo" on phones: same page, a name that fits it.
+  await expect(page.getByRole('heading', { level: 1, name: /^(Modo telão|Painel ao vivo)$/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Monte seu (telão|painel)$/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Iniciar/ })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Resultado' }).getByText('%').first()).toBeVisible();
   await expect(page.getByRole('group', { name: 'Mapa do Brasil por estado' })).toBeVisible();
 });
@@ -401,8 +403,8 @@ test('telão: the right half goes through scenes, and a title jumps to one', asy
   await expect(panel.getByText('Mais votado em cada estado')).toBeVisible();
   await expect(panel.getByRole('button', { name: 'Pausar a troca automática' })).toBeVisible();
   // The reader picks what goes round; the choice stays in this browser.
-  await panel.getByRole('button', { name: 'Escolher' }).click();
-  await panel.getByRole('checkbox', { name: /^Mapa/ }).uncheck();
+  // Picked before starting, above the screen.
+  await page.getByRole('checkbox', { name: /^Mapa/ }).uncheck();
   const tabs = panel.getByRole('group', { name: 'Cenas' });
   await expect(tabs.getByRole('button', { name: 'Mapa', exact: true })).toHaveCount(0);
   await page.reload();
