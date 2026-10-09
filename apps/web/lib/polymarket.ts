@@ -133,8 +133,10 @@ export function usePolymarket() {
   });
 }
 
-export type Range = '1w' | '1m' | 'max';
-const FIDELITY: Record<Range, number> = { '1w': 60, '1m': 360, max: 1440 };
+/** The same periods as Polymarket's own chart. */
+export type Range = '1h' | '6h' | '1d' | '1w' | '1m' | 'max';
+/** Minutes between points: fine for the short periods, daily for the whole history. */
+const FIDELITY: Record<Range, number> = { '1h': 1, '6h': 5, '1d': 15, '1w': 60, '1m': 360, max: 1440 };
 
 /** Price history of each "Yes" token (0–1 over time), for the chart. */
 export function usePriceHistory(tokens: string[], range: Range) {
