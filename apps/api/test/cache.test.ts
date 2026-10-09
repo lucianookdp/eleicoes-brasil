@@ -8,7 +8,9 @@ describe('ResponseCache', () => {
     const second = await cache.get('r', 'k', async () => {
       throw new Error('database down');
     });
-    expect(second.etag).toBe(first.etag);
+    expect(second.body.etag).toBe(first.body.etag);
+    expect(first.stale).toBe(false);
+    expect(second.stale).toBe(true);
   });
 
   it('still fails when there is nothing to fall back to', async () => {
@@ -29,9 +31,11 @@ describe('ResponseCache after an update', () => {
     const second = await cache.get('r', 'k', async () => {
       throw new Error('database down');
     });
-    expect(second.etag).toBe(first.etag);
+    expect(second.body.etag).toBe(first.body.etag);
+    expect(second.stale).toBe(true);
     cache.invalidate('r'); // the next update once the database is back
     const third = await cache.get('r', 'k', async () => ({ n: 2 }));
-    expect(third.etag).not.toBe(first.etag);
+    expect(third.body.etag).not.toBe(first.body.etag);
+    expect(third.stale).toBe(false);
   });
 });

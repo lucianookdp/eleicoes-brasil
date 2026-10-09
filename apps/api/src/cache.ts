@@ -32,26 +32,33 @@ export class CachedBody {
   }
 }
 
+/** A cached body, and whether it is the last good one served because the database failed. */
+export interface Served {
+  body: CachedBody;
+  stale: boolean;
+}
+
 /**
  * Per-process response cache. Entries are keyed by round, so a NOTIFY from the worker drops
  * exactly the rounds that changed. The TTL is only a safety net for missed notifications.
  */
 export class ResponseCache {
-  private entries = new Map<string, { expires: number; value: Promise<CachedBody> }>();
+  private entries = new Map<string, { expires: number; value: Promise<Served> }>();
 
   constructor(private readonly ttlMs: number) {}
 
-  get(round: string, key: string, load: () => Promise<unknown>): Promise<CachedBody> {
+  get(round: string, key: string, load: () => Promise<unknown>): Promise<Served> {
     const k = `${round}\u0000${key}`;
     const hit = this.entries.get(k);
     if (hit && hit.expires > Date.now()) return hit.value;
     // Store the promise so concurrent requests share one database round-trip. If the database
-    // fails, keep serving the last good body (expired, not invalidated) instead of an error.
-    const stale = hit?.value;
+    // fails, keep serving the last good body (expired, not invalidated) instead of an error,
+    // flagged as stale so it is never cached long under a newer data version.
+    const previous = hit?.value;
     const value = load()
-      .then((v) => new CachedBody(v))
-      .catch((err) => {
-        if (stale) return stale;
+      .then((v): Served => ({ body: new CachedBody(v), stale: false }))
+      .catch(async (err): Promise<Served> => {
+        if (previous) return { body: (await previous).body, stale: true };
         throw err;
       });
     this.entries.set(k, { expires: Date.now() + this.ttlMs, value });

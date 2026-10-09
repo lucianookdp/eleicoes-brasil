@@ -106,7 +106,12 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
   };
   /** Sends a cached, pre-compressed body with its ETag (304 when the client already has it). */
   const send = async (reply: FastifyReply, round: string, key: string, load: () => Promise<unknown>) => {
-    const entry = await cache.get(round, key, load);
+    const { body: entry, stale } = await cache.get(round, key, load);
+    if (stale) {
+      // The database failed and this is the last good body: a CDN must not keep it (under a
+      // versioned URL, for an hour), or readers would miss the update once the database is back.
+      reply.header('cache-control', 'public, max-age=3, s-maxage=3').header('x-data-stale', '1');
+    }
     reply
       .header('etag', entry.etag)
       .header('vary', 'accept-encoding')

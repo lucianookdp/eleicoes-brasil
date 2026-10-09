@@ -489,4 +489,43 @@ suite('API (integration)', () => {
     }
     await open.app.close();
   });
+
+  it('never lets a CDN keep the last good body long when the database fails', async () => {
+    let down = false;
+    const flaky = new Proxy(sql, {
+      apply: (target, self, args) => {
+        if (down) throw new Error('database down');
+        return Reflect.apply(target, self, args);
+      },
+    });
+    const app = await buildApp({
+      sql: flaky,
+      env: apiEnvSchema.parse({ DATABASE_URL: url, CACHE_TTL_SECONDS: '0.001' }),
+      logger: false,
+    });
+    const good = await app.app.inject('/api/elections/test-1/overview');
+    expect(good.statusCode).toBe(200);
+    const version = Date.now() + 120_000;
+    app.onEvent(
+      JSON.stringify({
+        type: 'country.updated',
+        electionId: 'test-1',
+        timestamp: new Date(version).toISOString(),
+      }),
+    );
+    down = true;
+    const stale = await app.app.inject(`/api/elections/test-1/overview?v=${version}`);
+    down = false;
+    expect(stale.statusCode).toBe(200);
+    expect(stale.headers.etag).toBe(good.headers.etag);
+    expect(stale.headers['x-data-stale']).toBe('1');
+    expect(stale.headers['cache-control']).not.toContain('s-maxage=3600');
+    // Once the database is back (and the short-lived stale entry has expired), the same URL is
+    // fresh and safe to cache long again.
+    await new Promise((r) => setTimeout(r, 20));
+    const fresh = await app.app.inject(`/api/elections/test-1/overview?v=${version}`);
+    expect(fresh.headers['x-data-stale']).toBeUndefined();
+    expect(fresh.headers['cache-control']).toContain('s-maxage=3600');
+    await app.app.close();
+  });
 });

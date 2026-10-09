@@ -110,7 +110,8 @@ Uma estrutura serve a todas as eleições ([schema.ts](../packages/database/src/
 | Arquivo fora do formato esperado | evento `source.schema`; ciclo marcado como instável; os demais arquivos seguem |
 | TSE fora do ar | nada é apagado; o site mostra “dados atrasados” com o horário do último sucesso |
 | Números incoerentes (seções > total…) | gravados como publicados, com evento `quality.issue` |
-| Banco fora do ar | o ciclo falha e o próximo baixa tudo de novo |
+| Banco fora do ar | o ciclo falha e o próximo baixa tudo de novo; a API serve a última resposta boa, com cache curto (`x-data-stale: 1`), para o CDN não guardá-la |
+| Dois coletores da mesma rodada (deploy sobreposto) | o segundo espera o primeiro sair (advisory lock no Postgres) |
 
 ## Modo de desenvolvimento
 
