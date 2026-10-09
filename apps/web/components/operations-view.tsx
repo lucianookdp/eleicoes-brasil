@@ -6,8 +6,7 @@ import { useEffect, useState } from 'react';
 import { ago, fmtCompact, fmtInt } from '@/lib/format';
 import { useOperations, useOverview } from '@/lib/queries';
 import { useRealtime } from '@/lib/realtime';
-import { TILES } from '@/lib/tiles';
-import { ActivityFeed } from './activity';
+import { Occurrences } from './occurrences';
 import { useRound } from './shell';
 import { ErrorNotice, FreshnessNotice, Panel, SectionTitle, Skeleton } from './ui';
 
@@ -21,8 +20,8 @@ function useNow(ms = 1000) {
 }
 
 /**
- * Behind the scenes ("Bastidores"): our infrastructure, not the TSE's. How fast data is
- * arriving, how the collector is talking to the source, and how fresh each area is.
+ * "Transparência da apuração" (the page that was "Bastidores", same address): whether the numbers
+ * are arriving now, everything abnormal recorded for the round, and the technical details folded.
  */
 export function OperationsView() {
   const { round, meta } = useRound();
@@ -35,10 +34,10 @@ export function OperationsView() {
   return (
     <>
       <div className="mb-5">
-        <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Bastidores</h1>
-        <p className="text-[13.5px] text-muted">
-          O ritmo da apuração e o funcionamento da nossa coleta de dados. Este painel mostra o nosso sistema,
-          não os sistemas do TSE.
+        <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Transparência da apuração</h1>
+        <p className="max-w-3xl text-[13.5px] text-muted">
+          Se os números estão chegando agora e tudo o que registramos de anormal na divulgação dos resultados
+          e na nossa coleta.
         </p>
       </div>
 
@@ -52,38 +51,7 @@ export function OperationsView() {
       )}
       <StatusHero data={data} roundFinal={overview?.round.status === 'final'} now={now} />
 
-      <SectionTitle id="ritmo" title="Ritmo da apuração">
-        O que mudou nos últimos 5 minutos.
-      </SectionTitle>
-      <div className="mb-8 grid items-start gap-6 lg:grid-cols-12 [&>*]:min-w-0">
-        <section aria-labelledby="calor" className="lg:col-span-5">
-          <h3 id="calor" className="mb-2 text-[15px] font-semibold">
-            Onde a apuração avançou
-          </h3>
-          <p className="-mt-1 mb-2 text-[13px] text-muted">
-            Quanto mais escuro, mais urnas apuradas no estado.
-          </p>
-          <Panel className="p-3 sm:p-4">
-            <Heatmap heat={data.heat} />
-          </Panel>
-        </section>
-        <section aria-labelledby="log" className="lg:col-span-7">
-          <h3 id="log" className="mb-2 text-[15px] font-semibold">
-            Atualizações recentes
-          </h3>
-          <p className="-mt-1 mb-2 text-[13px] text-muted">Cada novo lote de urnas apuradas, na hora.</p>
-          <Panel className="max-h-[420px] overflow-y-auto px-3 py-1 sm:px-4">
-            <ActivityFeed events={data.events} max={60} />
-          </Panel>
-        </section>
-      </div>
-
-      <section aria-labelledby="frescor" className="mb-8">
-        <SectionTitle id="frescor" title="Quando cada lugar foi atualizado">
-          Há quanto tempo o Brasil e cada estado receberam números novos.
-        </SectionTitle>
-        <Freshness items={data.freshness} now={now} />
-      </section>
+      <Occurrences />
 
       {meta?.features.advancedOperations !== false && (
         <details className="group mb-8 rounded-xl border border-line bg-surface px-4 py-3">
@@ -93,7 +61,13 @@ export function OperationsView() {
               +
             </span>
           </summary>
-          <section aria-labelledby="coleta" className="mt-3">
+          <section aria-labelledby="frescor" className="mt-3">
+            <SectionTitle id="frescor" title="Quando cada lugar foi atualizado">
+              Há quanto tempo o Brasil e cada estado receberam números novos.
+            </SectionTitle>
+            <Freshness items={data.freshness} now={now} />
+          </section>
+          <section aria-labelledby="coleta" className="mt-6">
             <SectionTitle id="coleta" title="Nossa coleta">
               Consultas do nosso sistema aos arquivos públicos do TSE nos últimos{' '}
               {data.requests.windowMinutes} minutos.
@@ -329,54 +303,6 @@ function Tile({
       <dt className="text-[12px] text-muted">{label}</dt>
       <dd className={`numeral text-[22px] leading-tight ${tone === 'bad' ? 'text-bad' : ''}`}>{value}</dd>
       {detail && <dd className="text-[11.5px] text-muted">{detail}</dd>}
-    </div>
-  );
-}
-
-function Heatmap({ heat }: { heat: OperationsDTO['heat'] }) {
-  const max = Math.max(1, ...heat.map((h) => h.sections));
-  return (
-    <div>
-      <div
-        className="mx-auto grid max-w-[360px] grid-cols-7 gap-1"
-        role="list"
-        aria-label="Urnas apuradas nos últimos 5 minutos, por estado"
-      >
-        {heat.map((h) => {
-          const pos = TILES[h.uf];
-          if (!pos) return null;
-          const k = h.sections / max;
-          return (
-            <div
-              key={h.uf}
-              role="listitem"
-              aria-label={`${h.uf}: ${fmtInt(h.sections)} urnas`}
-              title={`${h.uf}: ${fmtInt(h.sections)} urnas, ${fmtInt(h.updates)} atualizações`}
-              className="flex aspect-square flex-col items-center justify-center rounded-md text-[11px] font-semibold"
-              style={{
-                gridColumn: pos[0] + 1,
-                gridRow: pos[1] + 1,
-                background:
-                  h.sections > 0
-                    ? `color-mix(in oklab, var(--seq-high) ${Math.round(18 + k * 82)}%, var(--seq-low))`
-                    : 'var(--surface-2)',
-                color: k > 0.55 ? 'var(--ground)' : 'var(--ink-2)',
-              }}
-            >
-              {h.uf}
-            </div>
-          );
-        })}
-      </div>
-      <div className="mt-3 flex items-center justify-center gap-2 text-[12px] text-muted">
-        <span>menos</span>
-        <span
-          className="h-2 w-24 rounded-full"
-          style={{ background: 'linear-gradient(90deg, var(--seq-low), var(--seq-high))' }}
-          aria-hidden
-        />
-        <span>mais urnas</span>
-      </div>
     </div>
   );
 }

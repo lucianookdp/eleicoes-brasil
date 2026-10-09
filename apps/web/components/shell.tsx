@@ -186,8 +186,8 @@ function useMoreItems() {
     {
       to: href('/operations'),
       path: '/operations',
-      label: 'Bastidores da coleta',
-      short: 'Bastidores',
+      label: 'Transparência da apuração',
+      short: 'Transparência',
       icon: IconPulse,
     },
     { to: '/como-funciona', label: 'Como funciona', icon: IconHelp },

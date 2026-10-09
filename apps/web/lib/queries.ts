@@ -6,6 +6,7 @@ import type {
   CityDetailDTO,
   CityRowDTO,
   CompareDTO,
+  OccurrencesDTO,
   OfficeStatesDTO,
   OperationsDTO,
   OverviewDTO,
@@ -79,6 +80,12 @@ export const useSeries = (round: string, office: string | undefined, area: strin
     queryFn: () => api<SeriesDTO>(`${base(round)}/series?office=${office}&area=${area}`),
     enabled: !!office,
     placeholderData: keepPreviousData,
+  });
+
+export const useOccurrences = (round: string) =>
+  useQuery({
+    queryKey: [round, 'occurrences'],
+    queryFn: () => api<OccurrencesDTO>(`${base(round)}/occurrences`),
   });
 
 export const useOperations = (round: string) =>

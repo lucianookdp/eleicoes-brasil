@@ -53,8 +53,9 @@ exportação estática do Next servida por nginx. O worker aplica as migrações
 3. O site abre no 2º turno a partir da meia-noite (Brasília) do dia 25, mesmo antes da apuração.
 4. Depois de 100%, o worker reconfere Brasil e estados a cada ciclo por 30 minutos: é quando o
    TSE marca o "Eleito" (aparece o aviso de vencedor).
-5. Arquivos que "voltam no tempo" (mais de 1 ponto a menos de urnas apuradas) são ignorados e
-   registrados no log como `going back ignored`.
+5. Arquivos que "voltam no tempo" (mais de 1 ponto a menos de urnas apuradas) são ignorados,
+   registrados no log como `file going back in time ignored` e listados na página Transparência
+   (ocorrências).
 6. Ensaio completo com dados fictícios: `DEMO_EMBEDDED=true ELECTION_ROUND=demo-2 DEMO_ROUND=2
    DEMO_DURATION_MINUTES=3` no worker local.
 

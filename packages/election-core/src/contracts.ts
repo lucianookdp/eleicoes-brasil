@@ -262,6 +262,49 @@ export interface OperationsDTO {
   events: ActivityEventDTO[];
 }
 
+/**
+ * Everything abnormal recorded for a round: in the files the TSE publishes (inconsistent numbers,
+ * files out of format or going back in time), in their delivery (delays, the TSE unavailable) and in
+ * our own collection (pauses). Facts recorded as they happened; repeats are grouped.
+ */
+export interface OccurrencesDTO {
+  /** Brazil/state result files: TSE generation time → stored here, over the whole round. */
+  delay: {
+    avgSeconds: number | null;
+    p95Seconds: number | null;
+    maxSeconds: number | null;
+    /** Files that took more than a minute. */
+    overMinute: number;
+    samples: number;
+    slowest: { areaKey: string; areaName: string; office: string; seconds: number; at: string }[];
+  };
+  /** Collection cycles that failed or were unstable, merged into periods. */
+  outages: {
+    from: string;
+    to: string;
+    status: 'degraded' | 'failed';
+    cycles: number;
+    reason: string | null;
+  }[];
+  /** While the count was running: stretches with no check of the TSE for more than 90 s. */
+  gaps: { from: string; to: string; seconds: number }[];
+  /** Issues found in the published files, grouped by kind and place. */
+  issues: {
+    type: string;
+    code: string;
+    severity: 'error' | 'warning';
+    areaKey: string | null;
+    areaName: string | null;
+    office: string | null;
+    count: number;
+    first: string;
+    last: string;
+    detail: string | null;
+  }[];
+  /** When the count started and ended (Brazil), to read the periods against. */
+  counting: { start: string | null; end: string | null };
+}
+
 export interface TimelineDTO {
   start: string | null;
   end: string | null;

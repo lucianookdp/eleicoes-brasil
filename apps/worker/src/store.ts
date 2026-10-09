@@ -223,17 +223,16 @@ export class Store {
   ): Promise<ProgressChange[]> {
     // Last entry per area wins: a batch must not upsert the same row twice.
     const latest = [...new Map(entries.map((e) => [e.area.key, e])).values()];
+    const regressions: { area: AreaRef; from: number | null; to: number | null }[] = [];
     const changed = latest.filter((e) => {
       const prev = this.progress.get(e.area.key);
       if (prev && isRegression(countedPct(prev), countedPct(e.progress))) {
-        this.log.warn(
-          { area: e.area.key, from: countedPct(prev), to: countedPct(e.progress) },
-          'progress going back ignored',
-        );
+        regressions.push({ area: e.area, from: countedPct(prev), to: countedPct(e.progress) });
         return false;
       }
       return progressChanged(prev, e.progress);
     });
+    if (regressions.length > 0) await this.recordRegressions(regressions, null, provenance, now);
     if (changed.length === 0) return [];
 
     const changes: ProgressChange[] = changed.map((e) => {
@@ -344,9 +343,11 @@ export class Store {
     const compact = compactCandidates(result.candidates);
     const pct = countedPct(result.progress);
     if (isRegression(prev?.countedPct, pct)) {
-      this.log.warn(
-        { area: area.key, office: office.slug, from: prev?.countedPct, to: pct },
-        'result going back ignored',
+      await this.recordRegressions(
+        [{ area, from: prev?.countedPct ?? null, to: pct }],
+        office.slug,
+        provenance,
+        now,
       );
       return false;
     }
@@ -474,6 +475,33 @@ export class Store {
       })
       .onConflictDoNothing();
     this.knownPhotos.add(candidateKey);
+  }
+
+  /**
+   * A published file with fewer ballot boxes counted than the one before ("going back in time"): it
+   * is ignored, so the screen never steps back, and recorded, because it is an inconsistency of the
+   * publication readers may want to know about (the occurrences page).
+   */
+  private async recordRegressions(
+    list: { area: AreaRef; from: number | null; to: number | null }[],
+    office: string | null,
+    provenance: Provenance,
+    now: string,
+  ) {
+    for (const r of list)
+      this.log.warn({ area: r.area.key, office, from: r.from, to: r.to }, 'file going back in time ignored');
+    await this.db.insert(ingestionEvents).values(
+      list.map((r) => ({
+        roundId: this.roundId,
+        occurredAt: now,
+        type: 'quality.regression',
+        areaKey: r.area.key,
+        stateCode: r.area.state,
+        countedPct: r.to,
+        message: `counted went back from ${r.from}% to ${r.to}%`.slice(0, 500),
+        context: { office, from: r.from, to: r.to, sourceFile: provenance.sourceFile },
+      })),
+    );
   }
 
   // ------------------------------------------------------------------ events, cycles, status
