@@ -335,6 +335,13 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
     return send(reply, id, 'operations', () => queries.operations(id));
   });
 
+  // Everything abnormal recorded for the round (delays, outages, issues in the published files).
+  app.get('/api/elections/:id/occurrences', async (req, reply) => {
+    const { id } = roundParams.parse(req.params);
+    live(reply);
+    return send(reply, id, 'occurrences', () => queries.occurrences(id));
+  });
+
   app.get('/api/elections/:id/events', async (req, reply) => {
     const { id } = roundParams.parse(req.params);
     const q = z

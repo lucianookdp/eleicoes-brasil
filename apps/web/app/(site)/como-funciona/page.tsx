@@ -173,8 +173,8 @@ export default function HowItWorksPage() {
         </section>
 
         <div className="grid gap-2 sm:grid-cols-2 lg:mt-[44px] lg:grid-cols-1">
-          <MoreLink href="/eleicao/bastidores/" icon={<IconPulse />} title="Bastidores">
-            O ritmo da apuração e da nossa coleta, ao vivo
+          <MoreLink href="/eleicao/bastidores/" icon={<IconPulse />} title="Transparência da apuração">
+            Se os números estão chegando e tudo o que registramos de anormal
           </MoreLink>
           <MoreLink href="/sobre" icon={<IconData />} title="Sobre os dados">
             De onde vêm, como ler os horários e o que calculamos

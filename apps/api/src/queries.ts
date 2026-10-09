@@ -17,6 +17,7 @@ import {
   hasValidVotes,
   type IngestionStatus,
   type LeaderDTO,
+  type OccurrencesDTO,
   type OfficeInfo,
   type OfficeStatesDTO,
   type OperationsDTO,
@@ -982,6 +983,178 @@ export class Queries {
       }),
       cycles: cycles.map((c) => ({ ...c, startedAt: toIso(c.startedAt)! })),
       events,
+    };
+  }
+
+  // ---------------------------------------------------------------- occurrences
+
+  /**
+   * Everything abnormal recorded for the round, for readers who want to check after the count:
+   * delays, the TSE unavailable, pauses of our collection, issues in the published files. Facts
+   * as recorded; repeats grouped.
+   */
+  async occurrences(slug: string): Promise<OccurrencesDTO> {
+    const round = await this.round(slug);
+    const [window] = await this.sql<{ start: Date | null; end: Date | null }[]>`
+      select min(captured_at) filter (where counted_pct > 0) as start,
+             min(captured_at) filter (where counted_pct >= 100) as end
+      from progress_snapshots where round_id = ${round.id} and area_key = 'br'`;
+    const start = window?.start ? toIso(window.start) : null;
+    const end = window?.end ? toIso(window.end) : null;
+    // Delays only while counting (+30 min for the final marks): files from before the polls close,
+    // or re-read days later, say nothing about how fast the night went.
+    const until = end ? new Date(Date.parse(end) + 30 * 60_000).toISOString() : new Date().toISOString();
+
+    const [delayRows, slowest, bad, cycles, issues] = await Promise.all([
+      start
+        ? this.sql<
+            { avg: number | null; p95: number | null; max: number | null; over: number; samples: number }[]
+          >`
+            with d as (
+              select extract(epoch from ((provenance->>'retrievedAt')::timestamptz
+                                          - (provenance->>'sourceGeneratedAt')::timestamptz)) as s
+              from result_snapshots
+              where round_id = ${round.id} and area_type in ('country', 'state')
+                and captured_at between ${start} and ${until} and provenance->>'sourceGeneratedAt' is not null
+            )
+            select avg(s)::float8 as avg, percentile_cont(0.95) within group (order by s) as p95,
+                   max(s)::float8 as max, count(*) filter (where s > 60)::int as over, count(*)::int as samples
+            from d where s >= 0`
+        : Promise.resolve([]),
+      start
+        ? this.sql<{ areaKey: string; office: string; seconds: number; at: Date }[]>`
+            select s.area_key as "areaKey", o.name as office, s.captured_at as at,
+                   extract(epoch from ((s.provenance->>'retrievedAt')::timestamptz
+                                       - (s.provenance->>'sourceGeneratedAt')::timestamptz))::float8 as seconds
+            from result_snapshots s join offices o on o.id = s.office_id
+            where s.round_id = ${round.id} and s.area_type in ('country', 'state')
+              and s.captured_at between ${start} and ${until} and s.provenance->>'sourceGeneratedAt' is not null
+            order by seconds desc limit 10`
+        : Promise.resolve([]),
+      this.sql<{ startedAt: Date; finishedAt: Date; status: 'degraded' | 'failed'; error: string | null }[]>`
+        select started_at as "startedAt", coalesce(finished_at, started_at) as "finishedAt", status, error
+        from collector_cycles
+        where round_id = ${round.id} and status in ('degraded', 'failed')
+        order by started_at limit 5000`,
+      start
+        ? this.sql<{ startedAt: Date }[]>`
+            select started_at as "startedAt" from collector_cycles
+            where round_id = ${round.id} and started_at between ${start} and ${until}
+            order by started_at`
+        : Promise.resolve([]),
+      this.sql<
+        {
+          type: string;
+          code: string;
+          severity: 'error' | 'warning';
+          areaKey: string | null;
+          state: string | null;
+          office: string | null;
+          count: number;
+          first: Date;
+          last: Date;
+          detail: string | null;
+          message: string | null;
+          city: string | null;
+        }[]
+      >`
+        with ev as (
+          select e.type, e.area_key, e.state_code, e.occurred_at, e.message, e.context->>'office' as office,
+                 coalesce(i->>'code', case e.type when 'quality.regression' then 'regression' else e.type end) as code,
+                 coalesce(i->>'severity',
+                          case when e.type in ('source.unavailable', 'collector.error') then 'warning' else 'error' end) as severity,
+                 i->>'message' as detail
+          from ingestion_events e
+          left join lateral jsonb_array_elements(
+            case when jsonb_typeof(e.context->'issues') = 'array' then e.context->'issues' else '[]'::jsonb end
+          ) i on true
+          where e.round_id = ${round.id}
+            and e.type in ('quality.issue', 'quality.regression', 'source.schema', 'source.unavailable', 'collector.error')
+        ), g as (
+          select type, code, severity, area_key, state_code, office, count(*)::int as count,
+                 min(occurred_at) as first, max(occurred_at) as last, max(detail) as detail, max(message) as message
+          from ev group by 1, 2, 3, 4, 5, 6
+        )
+        select g.type, g.code, g.severity, g.area_key as "areaKey", g.state_code as state, g.office, g.count,
+               g.first, g.last, g.detail, g.message, c.name as city
+        from g
+        left join cities c on g.area_key like '%-_____' and c.state_code = g.state_code
+          and c.provider_id = right(g.area_key, 5) and c.provider = ${round.provider}
+        order by g.severity = 'error' desc, g.last desc
+        limit 400`,
+    ]);
+
+    // Unstable cycles a minute apart or less are one period; its reason is the last one given.
+    const outages: OccurrencesDTO['outages'] = [];
+    for (const c of bad) {
+      const prev = outages.at(-1);
+      const from = toIso(c.startedAt)!;
+      const to = toIso(c.finishedAt)!;
+      if (prev && Date.parse(from) - Date.parse(prev.to) <= 60_000) {
+        prev.to = to;
+        prev.cycles++;
+        if (c.status === 'failed') prev.status = 'failed';
+        prev.reason = publicIssue(null, c.error) ?? prev.reason;
+      } else {
+        outages.push({ from, to, status: c.status, cycles: 1, reason: publicIssue(null, c.error) });
+      }
+    }
+    const gaps: OccurrencesDTO['gaps'] = [];
+    for (let i = 1; i < cycles.length; i++) {
+      const a = new Date(cycles[i - 1]!.startedAt).getTime();
+      const b = new Date(cycles[i]!.startedAt).getTime();
+      if (b - a > 90_000)
+        gaps.push({
+          from: toIso(cycles[i - 1]!.startedAt)!,
+          to: toIso(cycles[i]!.startedAt)!,
+          seconds: Math.round((b - a) / 1000),
+        });
+    }
+    const d = delayRows[0];
+    const offices = new Map(round.offices.map((o) => [o.slug, o.name]));
+    return {
+      counting: { start, end },
+      delay: {
+        avgSeconds: d?.avg ?? null,
+        p95Seconds: d?.p95 ?? null,
+        maxSeconds: d?.max ?? null,
+        overMinute: d?.over ?? 0,
+        samples: d?.samples ?? 0,
+        slowest: slowest
+          .filter((s) => s.seconds >= 0)
+          .map((s) => ({
+            areaKey: s.areaKey,
+            areaName: s.areaKey === 'br' ? 'Brasil' : stateName(s.areaKey.toUpperCase()),
+            office: s.office,
+            seconds: Math.round(s.seconds),
+            at: toIso(s.at)!,
+          })),
+      },
+      outages: outages.slice(-100),
+      gaps: gaps.slice(-100),
+      issues: issues.map((r) => ({
+        type: r.type,
+        code: r.code,
+        severity: r.severity === 'warning' ? 'warning' : 'error',
+        areaKey: r.areaKey,
+        areaName:
+          r.areaKey === 'br'
+            ? 'Brasil'
+            : r.city
+              ? `${titleCase(r.city)} (${r.state})`
+              : r.state
+                ? stateName(r.state)
+                : null,
+        office: r.office ? (offices.get(r.office) ?? r.office) : null,
+        count: r.count,
+        first: toIso(r.first)!,
+        last: toIso(r.last)!,
+        // Our own failures never with their details (see publicIssue).
+        detail:
+          r.type === 'collector.error'
+            ? publicIssue(r.type, r.message)
+            : (r.detail ?? publicIssue(r.type, r.message)),
+      })),
     };
   }
 

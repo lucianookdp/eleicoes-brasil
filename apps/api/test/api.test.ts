@@ -649,4 +649,71 @@ suite('API (integration)', () => {
     expect(fresh.headers['cache-control']).toContain('s-maxage=3600');
     await app.app.close();
   });
+
+  it('lists every occurrence of the round: grouped, with outages merged and our errors without details', async () => {
+    const [round] = await sql<{ id: string }[]>`select id from election_rounds where slug = 'test-1'`;
+    const id = round!.id;
+    const [office] = await sql<
+      { id: string }[]
+    >`select id from offices where round_id = ${id} and slug = 'presidente'`;
+    // The count ran from 20:30 to 23:00.
+    await sql`insert into progress_snapshots (round_id, area_key, area_type, captured_at, counted_pct, progress)
+      values (${id}, 'br', 'country', '2026-10-04T20:30:00Z', 5, '{}'),
+             (${id}, 'br', 'country', '2026-10-04T23:00:00Z', 100, '{}')`;
+    // A Brazil file generated at 21:40:00 and stored at 21:42:30: 150 s.
+    await sql`insert into result_snapshots (round_id, office_id, area_key, area_type, captured_at, votes, provenance)
+      values (${id}, ${office!.id}, 'br', 'country', '2026-10-04T21:42:30Z', '{}',
+        ${JSON.stringify({ retrievedAt: '2026-10-04T21:42:30Z', sourceGeneratedAt: '2026-10-04T21:40:00Z' })}::jsonb)`;
+    const issue = {
+      office: 'presidente',
+      issues: [
+        { code: 'counted-exceeds-total', severity: 'error', message: 'sections counted (12) > total (10)' },
+      ],
+    };
+    await sql`insert into ingestion_events (round_id, occurred_at, type, area_key, state_code, message, context) values
+      (${id}, '2026-10-04T21:00:00Z', 'quality.issue', 'sp', 'SP', 'x', ${JSON.stringify(issue)}::jsonb),
+      (${id}, '2026-10-04T21:05:00Z', 'quality.issue', 'sp', 'SP', 'x', ${JSON.stringify(issue)}::jsonb),
+      (${id}, '2026-10-04T21:10:00Z', 'quality.regression', 'rj', 'RJ', 'counted went back from 40% to 30%',
+        ${JSON.stringify({ office: 'presidente', from: 40, to: 30 })}::jsonb),
+      (${id}, '2026-10-04T21:20:00Z', 'collector.error', null, null,
+        'Error: Failed query: select "checksum" from area_results', ${JSON.stringify({ what: 'cycle' })}::jsonb)`;
+    // Two unstable cycles 5 s apart are one period; one failed an hour later is another.
+    await sql`insert into collector_cycles (id, round_id, mode, started_at, finished_at, status, error) values
+      (gen_random_uuid(), ${id}, 'PRODUCTION', '2026-10-04T21:30:00Z', '2026-10-04T21:30:02Z', 'degraded', null),
+      (gen_random_uuid(), ${id}, 'PRODUCTION', '2026-10-04T21:30:07Z', '2026-10-04T21:30:09Z', 'degraded', 'blocked by source (HTTP 403)'),
+      (gen_random_uuid(), ${id}, 'PRODUCTION', '2026-10-04T22:30:00Z', '2026-10-04T22:30:01Z', 'failed', 'Error: Failed query: insert into x')`;
+
+    const res = await built.app.inject('/api/elections/test-1/occurrences');
+    expect(res.statusCode).toBe(200);
+    const o = res.json();
+    expect(o.counting).toEqual({ start: '2026-10-04T20:30:00.000Z', end: '2026-10-04T23:00:00.000Z' });
+    expect(o.delay.samples).toBe(1);
+    expect(o.delay.maxSeconds).toBe(150);
+    expect(o.delay.overMinute).toBe(1);
+    expect(o.outages).toEqual([
+      expect.objectContaining({ status: 'degraded', cycles: 2, reason: 'blocked by source (HTTP 403)' }),
+      expect.objectContaining({
+        status: 'failed',
+        cycles: 1,
+        reason: 'Falha interna da coleta; nova tentativa automática.',
+      }),
+    ]);
+    const counted = o.issues.find((i: { code: string }) => i.code === 'counted-exceeds-total');
+    expect(counted).toMatchObject({
+      severity: 'error',
+      count: 2,
+      areaName: 'São Paulo',
+      office: 'Presidente',
+    });
+    expect(o.issues.find((i: { code: string }) => i.code === 'regression')).toMatchObject({
+      severity: 'error',
+      areaName: 'Rio de Janeiro',
+    });
+    const internal = o.issues.find((i: { type: string }) => i.type === 'collector.error');
+    expect(internal).toMatchObject({
+      severity: 'warning',
+      detail: 'Falha interna da coleta; nova tentativa automática.',
+    });
+    expect(res.body).not.toContain('Failed query');
+  });
 });
