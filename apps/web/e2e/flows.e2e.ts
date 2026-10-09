@@ -396,7 +396,8 @@ test('computer bar: "Mais" items that fit are shown by themselves, not repeated 
   await bar.getByRole('button', { name: 'Mais' }).click();
   await expect(bar.getByRole('link', { name: /Linha do tempo/ })).toBeVisible();
   await expect(bar.getByRole('link', { name: /^Comparar/ })).toHaveCount(1);
-  await expect(page.getByRole('link', { name: /Favoritos/ })).toHaveCount(0);
+  // Favoritos lives in "Mais" (or in the bar, when it fits), once.
+  await expect(page.getByRole('link', { name: /^Favoritos/ })).toHaveCount(1);
 });
 
 test('telão: the right half goes through scenes, and a title jumps to one', async ({ page }) => {
