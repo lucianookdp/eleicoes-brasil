@@ -43,6 +43,13 @@
       "when": 1791485923483,
       "tag": "0005_live_clients",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791546001842,
+      "tag": "0006_headline_and_issue_indexes",
+      "breakpoints": true
     }
   ]
 }

@@ -7,6 +7,8 @@ import {
   electionRounds,
   elections,
   offices,
+  progressSnapshots,
+  resultSnapshots,
   runMigrations,
 } from '@eleicoes/database';
 import { type BenchesDTO, emptyProgress } from '@eleicoes/election-core';
@@ -488,6 +490,100 @@ suite('API (integration)', () => {
       expect(res.headers['access-control-allow-origin']).toBe('*');
     }
     await open.app.close();
+  });
+
+  it('rebuilds the count as it was at a past moment, cached as immutable', async () => {
+    const [round] = await sql<{ id: string }[]>`select id from election_rounds where slug = 'test-1'`;
+    const [office] = await sql<{ id: string }[]>`
+      select id from offices where round_id = ${round!.id} and slug = 'presidente'`;
+    const snap = (areaKey: string, at: string, pct: number, candidates: [string, number, number][]) => ({
+      progress: {
+        roundId: round!.id,
+        areaKey,
+        areaType: areaKey === 'br' ? 'country' : 'state',
+        stateCode: areaKey === 'br' ? null : areaKey.toUpperCase(),
+        capturedAt: at,
+        countedPct: pct,
+        progress: { ...emptyProgress(), status: 'in-progress' as const, sectionsCountedPct: pct },
+      },
+      result: {
+        roundId: round!.id,
+        officeId: office!.id,
+        areaKey,
+        areaType: areaKey === 'br' ? 'country' : 'state',
+        stateCode: areaKey === 'br' ? null : areaKey.toUpperCase(),
+        capturedAt: at,
+        countedPct: pct,
+        votes: {
+          total: 0,
+          valid: 0,
+          nominal: 0,
+          legend: null,
+          blank: 0,
+          null: 0,
+          annulled: 0,
+          annulledSubJudice: 0,
+        },
+        candidates,
+        provenance: {
+          provider: 'TSE',
+          adapter: 'tse-2026@2026-v1',
+          sourceFile: '/x.json',
+          sourceId: '1',
+          retrievedAt: at,
+          sourceGeneratedAt: null,
+          etag: null,
+          checksum: at,
+        },
+      },
+    });
+    const rows = [
+      snap('br', '2026-10-04T21:00:00Z', 10, [
+        ['91', 100, 60],
+        ['92', 66, 40],
+      ]),
+      snap('sp', '2026-10-04T21:00:00Z', 12, [
+        ['91', 50, 70],
+        ['92', 20, 30],
+      ]),
+      snap('br', '2026-10-04T22:00:00Z', 30, [
+        ['91', 200, 40],
+        ['92', 300, 60],
+      ]),
+      snap('sp', '2026-10-04T22:00:00Z', 35, [
+        ['91', 60, 40],
+        ['92', 90, 60],
+      ]),
+    ];
+    await db.insert(progressSnapshots).values(rows.map((r) => r.progress));
+    await db.insert(resultSnapshots).values(rows.map((r) => r.result));
+
+    const at = async (iso: string) => {
+      const res = await built.app.inject(`/api/elections/test-1/timeline?at=${iso}`);
+      expect(res.statusCode).toBe(200);
+      return { body: res.json(), cache: res.headers['cache-control'] };
+    };
+    const early = await at('2026-10-04T21:30:00Z');
+    expect(early.cache).toContain('s-maxage=3600');
+    expect(early.body.progress.countedPct).toBe(10);
+    expect(early.body.headline.candidates.map((c: { votes: number }) => c.votes)).toEqual([100, 66]);
+    expect(early.body.states.find((s: { uf: string }) => s.uf === 'SP')).toMatchObject({
+      countedPct: 12,
+      leader: { number: '91' },
+    });
+    const late = await at('2026-10-04T22:30:00Z');
+    expect(late.body.progress.countedPct).toBe(30);
+    expect(late.body.states.find((s: { uf: string }) => s.uf === 'SP')).toMatchObject({
+      countedPct: 35,
+      leader: { number: '92' },
+    });
+    const before = await at('2026-10-04T20:00:00Z');
+    expect(before.body.progress).toBeNull();
+    expect(before.body.headline).toBeNull();
+    expect(before.body.states.every((s: { leader: unknown }) => s.leader === null)).toBe(true);
+    // A moment that is still "now" keeps the short cache: snapshots may still arrive for it.
+    const recent = await built.app.inject(`/api/elections/test-1/timeline?at=${new Date().toISOString()}`);
+    expect(recent.headers['cache-control']).not.toContain('s-maxage=3600');
   });
 
   it('never lets a CDN keep the last good body long when the database fails', async () => {

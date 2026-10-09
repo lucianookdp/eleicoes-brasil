@@ -299,6 +299,12 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
     live(reply);
     if (q.at) {
       const at = new Date(q.at).toISOString();
+      // A moment more than a minute ago never changes (snapshots are only ever added at the
+      // current time): kept out of the per-update invalidation, and cached longer.
+      if (Date.parse(at) < Date.now() - 60_000) {
+        reply.header('cache-control', 'public, max-age=300, s-maxage=3600');
+        return send(reply, `${id}@past`, `timeline-at:${at}`, () => queries.timelineAt(id, at));
+      }
       return send(reply, id, `timeline-at:${at}`, () => queries.timelineAt(id, at));
     }
     return send(reply, id, 'timeline', () => queries.timeline(id));
