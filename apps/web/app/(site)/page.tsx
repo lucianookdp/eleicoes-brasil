@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { api } from '@/lib/api';
-import { defaultElection, electionHref } from '@/lib/rounds';
+import { defaultElection, electionHref, pickRound } from '@/lib/rounds';
 
 /** Opens the election that matters now: live, else the latest with data, else the demo. */
 export default function Home() {
@@ -17,7 +17,8 @@ export default function Home() {
   const election = data && defaultElection(data);
   useEffect(() => {
     if (!election) return;
-    const round = election.rounds.filter((r) => r.status !== 'scheduled').at(-1) ?? election.rounds[0]!;
+    // The same choice as a link without "t": never a second rule that could disagree with it.
+    const round = pickRound([election], election.slug) ?? election.rounds[0]!;
     router.replace(electionHref(round));
   }, [election, router]);
   return (

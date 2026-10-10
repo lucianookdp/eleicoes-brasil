@@ -454,3 +454,29 @@ test('Painel ao vivo on a phone: covers the screen, fits with no scrolling, × c
   await close.click();
   await expect(close).toHaveCount(0);
 });
+
+test('"/" opens the round a link without "t" opens; TV mode on the title line, credit as a button', async ({
+  page,
+  isMobile,
+}) => {
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/eleicao\/\?e=[\w-]+&t=\d/);
+  const opened = new URL(page.url()).searchParams;
+  await page.goto(`/eleicao/?e=${opened.get('e')}`);
+  await expect(page.getByText(new RegExp(`^${opened.get('t')}º turno ·`))).toBeVisible();
+
+  const title = page.getByRole('heading', { level: 1 });
+  const tv = page.getByRole('link', { name: 'Assistir no modo telão' });
+  const projects = page.getByRole('contentinfo').getByText('Ver projetos');
+  if (isMobile) {
+    // Phones reach the panel from "Mais", and the credit stays one quiet line.
+    await expect(tv).toBeHidden();
+    await expect(projects).toBeHidden();
+    return;
+  }
+  const [h, b] = [(await title.boundingBox())!, (await tv.boundingBox())!];
+  expect(Math.abs(h.y + h.height / 2 - (b.y + b.height / 2))).toBeLessThan(6);
+  // At the right end of the line, away from the title.
+  expect(b.x - (h.x + h.width)).toBeGreaterThan(100);
+  await expect(projects).toBeVisible();
+});

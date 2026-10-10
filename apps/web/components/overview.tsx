@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useFavorites } from '@/lib/favorites';
 import { displayName, fmtInt, fmtPct } from '@/lib/format';
 import { useEvents, useOfficeStates, useOverview, useSeries } from '@/lib/queries';
+import { electionHref } from '@/lib/rounds';
 import { ActivityFeed } from './activity';
 import { BrazilMap } from './brazil-map';
 import { CountingHero } from './counting';
@@ -40,23 +41,33 @@ const DATE = new Intl.DateTimeFormat('pt-BR', {
 export function RoundTitle({ compact = false }: { compact?: boolean }) {
   const { round, href } = useRound();
   return (
-    <div className={`flex items-start justify-between gap-4 ${compact ? 'mb-4' : 'mb-5'}`}>
-      <div className="min-w-0">
-        <h1 className="text-[22px] font-semibold tracking-tight sm:text-[28px]">{round.electionName}</h1>
-        <p className="text-[13.5px] text-muted">
-          {round.round}º turno · {DATE.format(new Date(`${round.date}T12:00:00Z`))}
-          {round.environment === 'simulado2026' && ' · simulação oficial do TSE'}
-          {round.environment === 'replay' && ' · reprodução de uma apuração gravada'}
-        </p>
+    <div className={compact ? 'mb-4' : 'mb-5'}>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="min-w-0 text-[22px] font-semibold tracking-tight sm:text-[28px]">
+          {round.electionName}
+        </h1>
+        {/* Big screens: the TV mode in plain sight, at the right of the title's line, for a TV or a projector.
+            A ring in the logo's three colours, so it reads as the site's own feature, not a status. */}
+        <Link
+          href={href('/tv')}
+          className="group hidden shrink-0 rounded-full bg-[linear-gradient(100deg,#12A15F,#F6C343_50%,#2563D9)] p-[1.5px] transition-shadow hover:shadow-[0_0_0_3px_var(--surface-2)] lg:inline-flex"
+        >
+          <span className="flex items-center gap-2 rounded-full bg-surface py-1 pl-1 pr-3.5 text-[14px] font-medium text-ink transition-colors group-hover:bg-surface-2">
+            <span className="flex size-7 items-center justify-center rounded-full bg-surface-2 text-ink transition-colors group-hover:bg-ground">
+              <IconTv />
+            </span>
+            Assistir no modo telão
+            <span aria-hidden className="text-muted transition-transform group-hover:translate-x-0.5">
+              →
+            </span>
+          </span>
+        </Link>
       </div>
-      {/* Big screens: the TV mode in plain sight at the top of the page, for a TV or a projector. */}
-      <Link
-        href={href('/tv')}
-        className="hidden shrink-0 items-center gap-2 rounded-full border border-live/50 bg-live-soft px-4 py-2 text-[14.5px] font-medium text-ink hover:border-live lg:inline-flex"
-      >
-        <IconTv className="text-live" />
-        Assistir no modo telão
-      </Link>
+      <p className="text-[13.5px] text-muted">
+        {round.round}º turno · {DATE.format(new Date(`${round.date}T12:00:00Z`))}
+        {round.environment === 'simulado2026' && ' · simulação oficial do TSE'}
+        {round.environment === 'replay' && ' · reprodução de uma apuração gravada'}
+      </p>
     </div>
   );
 }
@@ -178,7 +189,7 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
             </section>
           </Panel>
           {/* In the order a reader asks on election night (one column on a phone): who leads, how
-              much is counted, their city, their governor, their saved places; turnout last. */}
+              much is counted, their city, their governor, their saved places; then turnout. */}
           <Panel className="p-4 sm:p-5">
             <CountingHero
               progress={data.progress}
@@ -187,61 +198,71 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
               votesFor={headlineOffice?.name}
             />
           </Panel>
-          {/* Once the count is over: what the round recorded, for readers who want to check. */}
-          {data.round.status === 'final' && <OccurrencesSummary />}
-          <MyCityCard headlineOffice={headlineOffice?.slug} />
+          {/* Big screens show it under the map, fixed with it (see the right column). */}
+          <div className="lg:hidden">
+            <MyCityCard headlineOffice={headlineOffice?.slug} />
+          </div>
           <GovernorRunoffs data={data} />
           <Favorites data={data} />
           {/* Runoff: the face-off above already names both; here only turnout, blank and null. */}
           {headline && faceOff && <EndSummary data={data} statsOnly />}
+          {/* Last: once the count is over, what the round recorded, for readers who want to check. */}
+          {data.round.status === 'final' && <OccurrencesSummary />}
         </div>
 
-        <Panel className="lg:sticky lg:top-20 lg:col-span-5">
-          <Tabs
-            label="Detalhes da apuração"
-            value={activeTab}
-            onChange={setTab}
-            tabs={[
-              { value: 'mapa', label: 'Mapa' },
-              { value: 'estados', label: 'Estados' },
-              ...(headlineOffice ? [{ value: 'evolucao' as const, label: 'Evolução' }] : []),
-              { value: 'atividade', label: 'Atualizações' },
-            ]}
-          >
-            {activeTab === 'mapa' && (
-              <BrazilMap key={round.slug} states={states} allowLeader={!!headlineOffice} />
-            )}
-            {activeTab === 'estados' && (
-              <div className="max-h-[70vh] overflow-y-auto pr-1 lg:max-h-[calc(100vh-14rem)]">
-                <StatesTable
-                  states={data.states}
-                  leaderLabel={headlineOffice ? 'Mais votado' : undefined}
-                  compact
-                />
-              </div>
-            )}
-            {activeTab === 'evolucao' &&
-              (series.data ? (
-                <div className="grid gap-6">
-                  <LeadChart series={series.data} />
-                  <EvolutionChart series={series.data} majority />
+        {/* Fixed while the page scrolls: the map and, under it, the reader's own city. On a screen
+            too short for both, this column scrolls by itself. */}
+        <div className="grid gap-4 lg:sticky lg:top-20 lg:col-span-5 lg:max-h-[calc(100dvh-6rem)] lg:gap-6 lg:overflow-y-auto lg:[scrollbar-width:thin] [&>*]:min-w-0">
+          <Panel>
+            <Tabs
+              label="Detalhes da apuração"
+              value={activeTab}
+              onChange={setTab}
+              tabs={[
+                { value: 'mapa', label: 'Mapa' },
+                { value: 'estados', label: 'Estados' },
+                ...(headlineOffice ? [{ value: 'evolucao' as const, label: 'Evolução' }] : []),
+                { value: 'atividade', label: 'Atualizações' },
+              ]}
+            >
+              {activeTab === 'mapa' && (
+                <BrazilMap key={round.slug} states={states} allowLeader={!!headlineOffice} />
+              )}
+              {activeTab === 'estados' && (
+                <div className="max-h-[70vh] overflow-y-auto pr-1 lg:max-h-[calc(100vh-14rem)]">
+                  <StatesTable
+                    states={data.states}
+                    leaderLabel={headlineOffice ? 'Mais votado' : undefined}
+                    compact
+                  />
                 </div>
-              ) : (
-                <Skeleton className="h-72" />
-              ))}
-            {activeTab === 'atividade' && (
-              <>
-                <ActivityFeed events={events.data ?? []} max={18} dense />
-                <Link
-                  href={href('/operations')}
-                  className="mt-3 inline-flex min-h-10 items-center text-[13.5px] text-info"
-                >
-                  Ver os bastidores da apuração
-                </Link>
-              </>
-            )}
-          </Tabs>
-        </Panel>
+              )}
+              {activeTab === 'evolucao' &&
+                (series.data ? (
+                  <div className="grid gap-6">
+                    <LeadChart series={series.data} />
+                    <EvolutionChart series={series.data} majority />
+                  </div>
+                ) : (
+                  <Skeleton className="h-72" />
+                ))}
+              {activeTab === 'atividade' && (
+                <>
+                  <ActivityFeed events={events.data ?? []} max={18} dense />
+                  <Link
+                    href={href('/operations')}
+                    className="mt-3 inline-flex min-h-10 items-center text-[13.5px] text-info"
+                  >
+                    Ver os bastidores da apuração
+                  </Link>
+                </>
+              )}
+            </Tabs>
+          </Panel>
+          <div className="hidden lg:block">
+            <MyCityCard headlineOffice={headlineOffice?.slug} />
+          </div>
+        </div>
       </div>
     </>
   );
@@ -267,7 +288,7 @@ export function decision(result: ResultDTO) {
 
 /** Shown only once the TSE itself marks the headline race as decided (runoff or elected). */
 function DecidedBanner({ result }: { result: ResultDTO }) {
-  const { round } = useRound();
+  const { round, elections } = useRound();
   const { leaders, inRunoff, elected, decided } = decision(result);
   // 1st round: runoff or outright win. 2nd round: only the win, once the TSE marks it.
   if (!decided || leaders.length < 2 || (round.round !== 1 && decided !== 'elected')) return null;
@@ -277,23 +298,48 @@ function DecidedBanner({ result }: { result: ResultDTO }) {
       <WinnerCard result={result} winner={winner} runnerUp={leaders.find((c) => c.key !== winner.key)} />
     );
   }
-  const pair = inRunoff.length >= 2 ? inRunoff : leaders;
-  const a = displayName(pair[0]!.ballotName);
-  const b = displayName(pair[1]!.ballotName);
+  const [a, b] = inRunoff.length >= 2 ? inRunoff : leaders;
+  // The runoff itself, once the TSE has published it: one click away.
+  const next = elections
+    .find((e) => e.slug === round.electionSlug)
+    ?.rounds.find((r) => r.round === round.round + 1);
+  const seat = result.office.name === 'Presidente' ? 'a Presidência' : `a vaga de ${result.office.name}`;
   return (
-    // A headline, part of the page (like a news site's lead), not a notification-style box.
-    <div role="status" className="mb-5 border-b border-line pb-4">
-      <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-live">
-        <span className="size-1.5 rounded-full bg-live" aria-hidden />
-        Resultado definido pelo TSE
-      </p>
-      <p className="mt-1 text-balance text-[22px] font-semibold leading-tight tracking-tight sm:text-[26px]">
-        Vai ter 2º turno
-      </p>
-      <p className="mt-1 text-[15px] text-ink-2">
-        {`${a} e ${b} disputam a ${result.office.name === 'Presidente' ? 'Presidência' : `vaga de ${result.office.name}`} no dia ${runoffDate(round.year)}.`}
-      </p>
-    </div>
+    // The news of the 1st round: a card of its own, in the two finalists' colours.
+    <section
+      role="status"
+      aria-label="Resultado definido pelo TSE"
+      className="relative mb-5 overflow-hidden rounded-xl border border-line bg-surface"
+    >
+      <span aria-hidden className="absolute inset-x-0 top-0 flex h-1">
+        <span className="flex-1" style={{ background: a!.color }} />
+        <span className="flex-1" style={{ background: b!.color }} />
+      </span>
+      <div className="flex flex-col gap-4 p-4 pt-5 sm:p-6 sm:pt-7 md:flex-row md:items-center md:justify-between md:gap-8">
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-live">
+            <span className="size-1.5 rounded-full bg-live" aria-hidden />
+            Resultado definido pelo TSE
+          </p>
+          <h2 className="mt-1 text-[28px] font-semibold leading-tight tracking-tight sm:text-[36px]">
+            Vai ter 2º turno
+          </h2>
+          <p className="mt-1.5 text-pretty text-[15.5px] text-ink-2 sm:text-[17px]">
+            <strong className="font-semibold text-ink">{displayName(a!.ballotName)}</strong> e{' '}
+            <strong className="font-semibold text-ink">{displayName(b!.ballotName)}</strong> disputam {seat}{' '}
+            no dia <strong className="font-semibold text-ink">{runoffDate(round.year)}</strong>.
+          </p>
+        </div>
+        {next && (
+          <Link
+            href={electionHref(next)}
+            className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-ink px-6 text-[15.5px] font-semibold text-ground hover:opacity-90"
+          >
+            Ver o 2º turno <span aria-hidden>→</span>
+          </Link>
+        )}
+      </div>
+    </section>
   );
 }
 

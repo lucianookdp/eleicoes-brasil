@@ -95,16 +95,22 @@ export function TvScenes({
   states,
   chosen,
   fill = false,
+  compact = false,
+  withMap = false,
+  grow = 1,
   className = '',
 }: {
   data: OverviewDTO;
   states: StateRowDTO[];
   chosen: SceneId[];
-  /**
-   * The phone's full-screen panel: the scenes fill exactly the height left (no scrolling), and
-   * long lists come in smaller pages.
-   */
+  /** Full screen (TV or phone panel): the scenes take exactly the height left, with no scrolling. */
   fill?: boolean;
+  /** The phone's panel: long lists come in smaller pages. */
+  compact?: boolean;
+  /** No room for the map of Brazil beside the race: it becomes the first scene. */
+  withMap?: boolean;
+  /** How far a scene may be enlarged to use the height of a big screen (1: never). */
+  grow?: number;
   className?: string;
 }) {
   const { round } = useRound();
@@ -127,11 +133,11 @@ export function TvScenes({
       voters: (s.progress?.electorateTotal ?? 0) * (1 - (s.progress?.countedPct ?? 0) / 100),
     }))
     .sort((a, b) => b.voters - a.voters)
-    .slice(0, fill ? 5 : 6);
+    .slice(0, compact ? 5 : 6);
   const office = (title: string, results: ResultDTO[] | undefined) => {
     if (!results || results.length === 0) return [];
     const seats = Math.max(...results.map((r) => r.seats ?? 1)) > 1 ? 2 : 1;
-    return pagesOf(results, (fill ? PER_PAGE_COMPACT : PER_PAGE)[seats]).map((page) => (
+    return pagesOf(results, (compact ? PER_PAGE_COMPACT : PER_PAGE)[seats]).map((page) => (
       <OfficeScene key={page[0]!.areaKey} title={title} results={page} />
     ));
   };
@@ -155,7 +161,7 @@ export function TvScenes({
         ? [
             <div key="atualizacoes">
               <p className={kicker}>Últimas atualizações</p>
-              <ActivityFeed events={events} max={fill ? 6 : 10} />
+              <ActivityFeed events={events} max={compact ? 6 : 10} />
             </div>,
           ]
         : [],
@@ -163,8 +169,8 @@ export function TvScenes({
   // Only asked from Polymarket when picked (it is the reader's browser that asks, never our API).
   bodies.polymarket = chosen.includes('polymarket') ? [<PolymarketScene key="polymarket" />] : [];
   const picked = catalogFor(round.round).filter((c) => chosen.includes(c.id) && bodies[c.id].length > 0);
-  // The map of Brazil sits fixed beside the race on big screens (TvView); on the phone's panel there
-  // is no room for it there, so it is the first scene.
+  // The map of Brazil sits fixed beside the race on wide screens (TvView); where there is no room
+  // for it there (phones, narrower or upright screens), it is the first scene.
   const map: Scene = {
     id: 'mapa-0',
     group: 'mapa',
@@ -199,7 +205,7 @@ export function TvScenes({
             body: bodies[fallback.id][0],
           },
         ];
-  const scenes: Scene[] = fill ? [map, ...listed] : listed;
+  const scenes: Scene[] = withMap ? [map, ...listed] : listed;
   const groups = [...new Set(scenes.map((s) => s.group))];
 
   const current = scenes.length > 0 ? index % scenes.length : 0;
@@ -277,8 +283,9 @@ export function TvScenes({
             inert={i !== current}
             className={`${fill ? 'absolute inset-0 overflow-hidden' : '[grid-area:1/1]'} transition-opacity duration-500 ${i === current ? 'opacity-100' : 'invisible opacity-0'}`}
           >
-            {/* The map scales itself; anything else is shrunk to fit when a short phone has less room. */}
-            {fill && s.group !== 'mapa' ? <Fit>{s.body}</Fit> : s.body}
+            {/* The map scales itself; anything else is shrunk to fit a short screen, or enlarged to
+                use a tall one. */}
+            {fill && s.group !== 'mapa' ? <Fit grow={grow}>{s.body}</Fit> : s.body}
           </div>
         ))}
       </div>
@@ -586,10 +593,12 @@ function Changed({ states, before }: { states: StateRowDTO[]; before: StateRowDT
 }
 
 /**
- * Phone panel: shows its content whole in the height it was given. When the content is taller (a
- * short phone), it is scaled down proportionally, never cut, and never below half size.
+ * Full screen: shows its content whole in the height it was given. Taller content (a short phone)
+ * is scaled down proportionally, never cut and never below half size; shorter content is enlarged
+ * up to `grow` to use a big screen. Enlarging narrows the room the content has to lay itself out,
+ * which may make it taller: every size that turned out too big lowers the ceiling, so it settles.
  */
-function Fit({ children }: { children: ReactNode }) {
+function Fit({ children, grow = 1 }: { children: ReactNode; grow?: number }) {
   const outer = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
   const [k, setK] = useState(1);
@@ -597,13 +606,19 @@ function Fit({ children }: { children: ReactNode }) {
     const o = outer.current;
     const i = inner.current;
     if (!o || !i) return;
+    let seen = { room: 0, width: 0, ceiling: grow };
     const measure = () => {
+      // The natural (unscaled) height at the current scale's width.
       const need = i.scrollHeight;
       const room = o.clientHeight;
+      const width = o.clientWidth;
       if (!need || !room) return;
+      // Another screen size: what was learnt about the ceiling no longer holds.
+      if (room !== seen.room || width !== seen.width) seen = { room, width, ceiling: grow };
       setK((prev) => {
-        // need is the natural (unscaled) height: the scale that fits is simply room / need.
-        const next = Math.max(0.5, Math.min(1, room / need));
+        const fits = room / need;
+        if (fits < prev && prev > 1) seen.ceiling = Math.max(1, Math.min(seen.ceiling, prev - 0.03));
+        const next = Math.max(0.5, Math.min(seen.ceiling, fits));
         return Math.abs(next - prev) < 0.01 ? prev : next;
       });
     };
@@ -612,13 +627,22 @@ function Fit({ children }: { children: ReactNode }) {
     observer.observe(o);
     observer.observe(i);
     return () => observer.disconnect();
-  }, []);
+  }, [grow]);
+  // A big screen (grow): the scene sits in the middle of its room, not stuck to the top of it.
+  const centre = grow > 1;
   return (
-    <div ref={outer} className="h-full overflow-hidden">
+    <div ref={outer} className={`h-full overflow-hidden ${centre ? 'flex flex-col justify-center' : ''}`}>
       <div
         ref={inner}
+        className={centre ? 'shrink-0' : undefined}
         style={
-          k < 1 ? { transform: `scale(${k})`, transformOrigin: 'top left', width: `${100 / k}%` } : undefined
+          k !== 1
+            ? {
+                transform: `scale(${k})`,
+                transformOrigin: centre ? 'left center' : 'top left',
+                width: `${100 / k}%`,
+              }
+            : undefined
         }
       >
         {children}
