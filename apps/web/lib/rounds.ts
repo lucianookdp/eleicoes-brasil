@@ -20,11 +20,14 @@ export function pickRound(
   const election = elections.find((e) => e.slug === electionSlug);
   if (!election) return null;
   if (turno) return election.rounds.find((r) => String(r.round) === turno) ?? null;
-  // Latest round that already started or whose day has come (on runoff day the site opens on the
-  // runoff from midnight, not only once the count starts); otherwise the first one.
+  // The latest round that already started or whose day has come. And once a round is over, the
+  // next one as soon as it exists: the runoff is what people come for from then on, even with
+  // zero votes (the TSE publishes it, with the candidates, days after the 1st round).
   const today = todayInBrasilia(now);
-  const started = election.rounds.filter((r) => r.status !== 'scheduled' || r.date <= today);
-  return started.at(-1) ?? election.rounds[0] ?? null;
+  const open = election.rounds.filter(
+    (r, i) => r.status !== 'scheduled' || r.date <= today || election.rounds[i - 1]?.status === 'final',
+  );
+  return open.at(-1) ?? election.rounds[0] ?? null;
 }
 
 /** "2026-10-25": the calendar day in Brasília, where election days are counted. */

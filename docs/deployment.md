@@ -56,7 +56,8 @@ exportação estática do Next servida por nginx. O worker aplica as migrações
      Mais de 30 respostas 404 em um minuto abrem o circuito e param a coleta por 5 minutos.
 2. O 1º turno fica guardado, encerrado; os links com `t=1` continuam funcionando, e as Bancadas
    sempre leem o 1º turno.
-3. O site abre no 2º turno a partir da meia-noite (Brasília) do dia 25, mesmo antes da apuração.
+3. O site abre no 2º turno assim que ele existe no banco e o 1º turno está encerrado (e, em
+   qualquer caso, a partir da meia-noite de Brasília do dia 25), mesmo antes da apuração.
 4. Depois de 100%, o worker reconfere Brasil e estados a cada ciclo por 30 minutos: é quando o
    TSE marca o "Eleito" (aparece o aviso de vencedor).
 5. Arquivos que "voltam no tempo" (mais de 1 ponto a menos de urnas apuradas) são ignorados,

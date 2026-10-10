@@ -40,23 +40,33 @@ const DATE = new Intl.DateTimeFormat('pt-BR', {
 export function RoundTitle({ compact = false }: { compact?: boolean }) {
   const { round, href } = useRound();
   return (
-    <div className={`flex items-start justify-between gap-4 ${compact ? 'mb-4' : 'mb-5'}`}>
-      <div className="min-w-0">
-        <h1 className="text-[22px] font-semibold tracking-tight sm:text-[28px]">{round.electionName}</h1>
-        <p className="text-[13.5px] text-muted">
-          {round.round}º turno · {DATE.format(new Date(`${round.date}T12:00:00Z`))}
-          {round.environment === 'simulado2026' && ' · simulação oficial do TSE'}
-          {round.environment === 'replay' && ' · reprodução de uma apuração gravada'}
-        </p>
+    <div className={compact ? 'mb-4' : 'mb-5'}>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <h1 className="min-w-0 text-[22px] font-semibold tracking-tight sm:text-[28px]">
+          {round.electionName}
+        </h1>
+        {/* Big screens: the TV mode in plain sight, on the title's own line, for a TV or a projector.
+            A ring in the logo's three colours, so it reads as the site's own feature, not a status. */}
+        <Link
+          href={href('/tv')}
+          className="group hidden shrink-0 rounded-full bg-[linear-gradient(100deg,#12A15F,#F6C343_50%,#2563D9)] p-[1.5px] transition-shadow hover:shadow-[0_0_0_3px_var(--surface-2)] lg:inline-flex"
+        >
+          <span className="flex items-center gap-2 rounded-full bg-surface py-1 pl-1 pr-3.5 text-[14px] font-medium text-ink transition-colors group-hover:bg-surface-2">
+            <span className="flex size-7 items-center justify-center rounded-full bg-surface-2 text-ink transition-colors group-hover:bg-ground">
+              <IconTv />
+            </span>
+            Assistir no modo telão
+            <span aria-hidden className="text-muted transition-transform group-hover:translate-x-0.5">
+              →
+            </span>
+          </span>
+        </Link>
       </div>
-      {/* Big screens: the TV mode in plain sight at the top of the page, for a TV or a projector. */}
-      <Link
-        href={href('/tv')}
-        className="hidden shrink-0 items-center gap-2 rounded-full border border-live/50 bg-live-soft px-4 py-2 text-[14.5px] font-medium text-ink hover:border-live lg:inline-flex"
-      >
-        <IconTv className="text-live" />
-        Assistir no modo telão
-      </Link>
+      <p className="text-[13.5px] text-muted">
+        {round.round}º turno · {DATE.format(new Date(`${round.date}T12:00:00Z`))}
+        {round.environment === 'simulado2026' && ' · simulação oficial do TSE'}
+        {round.environment === 'replay' && ' · reprodução de uma apuração gravada'}
+      </p>
     </div>
   );
 }
