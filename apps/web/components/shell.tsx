@@ -63,7 +63,6 @@ export function ElectionShell({
   const params = useSearchParams();
   const round = pickRound(elections, electionSlug, params.get('t'));
   const [searchOpen, setSearchOpen] = useState(false);
-  const pathname = usePathname();
 
   useEffect(countVisit, []);
 
@@ -102,15 +101,6 @@ export function ElectionShell({
           Pular para o conteúdo
         </a>
         <Header onSearch={() => setSearchOpen(true)} />
-        {round.demo && pathname.startsWith('/eleicao') && (
-          <div
-            className="border-b border-warn/30 bg-warn-soft px-4 py-1.5 text-center text-[13px] text-warn"
-            role="note"
-          >
-            Eleição de demonstração, com candidatos e partidos fictícios. Estes números não são resultados
-            reais.
-          </div>
-        )}
         <main id="conteudo" className="mx-auto w-full max-w-[1320px] px-4 pb-28 pt-5 sm:px-6 xl:pb-12">
           {children}
         </main>

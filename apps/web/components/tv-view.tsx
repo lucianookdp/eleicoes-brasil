@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { displayName, fmtInt, fmtPct } from '@/lib/format';
 import { useMyCity } from '@/lib/my-city';
 import { useCity, useOverview } from '@/lib/queries';
+import { BrazilMap } from './brazil-map';
 import { IconPin, Logo } from './icons';
 import { FacePhoto } from './results';
 import { useRound } from './shell';
@@ -233,7 +234,9 @@ export function TvView() {
             className={
               panel
                 ? 'flex min-h-0 flex-1 flex-col gap-3'
-                : 'grid items-center gap-[clamp(16px,2.5vw,48px)] lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]'
+                : // Big screens: the race, the map of Brazil (fixed) and the scenes going round, side by
+                  // side; medium screens: race and map on top, the scenes under them.
+                  'grid items-center gap-[clamp(16px,2.5vw,48px)] lg:grid-cols-2 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)]'
             }
           >
             <section aria-label="Resultado" className="@container min-w-0 shrink-0">
@@ -266,7 +269,21 @@ export function TvView() {
               </div>
               {myCity.city && !panel && <TvCity office={headline.office.slug} />}
             </section>
-            <TvScenes data={data} states={states} chosen={choice.chosen} fill={panel} />
+            {!panel && (
+              <section
+                aria-label="Mapa do Brasil: mais votado em cada estado"
+                className="min-w-0 rounded-2xl border border-line bg-surface p-3"
+              >
+                <BrazilMap key={round.slug} states={states} only="leader" card={false} />
+              </section>
+            )}
+            <TvScenes
+              data={data}
+              states={states}
+              chosen={choice.chosen}
+              fill={panel}
+              className="lg:col-span-2 xl:col-span-1"
+            />
           </div>
         )}
 

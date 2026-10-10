@@ -85,11 +85,14 @@ export function BrazilMap({
   highlight,
   only,
   fit = false,
+  card = true,
 }: {
   states: StateRowDTO[];
   allowLeader?: boolean;
   /** Fill the parent's height (the full-screen panel), without the hover card. */
   fit?: boolean;
+  /** The details card under the map (and its "toque ou passe o mouse" hint): not on a TV. */
+  card?: boolean;
   /** One way of colouring only, without the switch (the TV mode shows the most voted). */
   only?: Mode;
   /** When a list filter is on: only these states (lowercase UF) keep full colour. */
@@ -206,7 +209,9 @@ export function BrazilMap({
         </svg>
         {/* A tap both pins a state and focuses it (focus sets `active`): the card is still the
             pinned one, so it keeps its link. Only hovering another state shows a card without it. */}
-        {!fit && <StateCard state={shown} pinned={!!pinned && (active === null || active === pinned)} />}
+        {!fit && card && (
+          <StateCard state={shown} pinned={!!pinned && (active === null || active === pinned)} />
+        )}
       </div>
     </div>
   );
