@@ -12,6 +12,7 @@ import { BrazilMap } from './brazil-map';
 import { CountingHero } from './counting';
 import { EvolutionChart } from './evolution-chart';
 import { FavoriteCards } from './favorites';
+import { IconTv } from './icons';
 import { LeadChart } from './lead-chart';
 import { MyCityCard } from './my-city';
 import { OccurrencesSummary } from './occurrences';
@@ -29,15 +30,25 @@ const DATE = new Intl.DateTimeFormat('pt-BR', {
 });
 
 export function RoundTitle({ compact = false }: { compact?: boolean }) {
-  const { round } = useRound();
+  const { round, href } = useRound();
   return (
-    <div className={compact ? 'mb-4' : 'mb-5'}>
-      <h1 className="text-[22px] font-semibold tracking-tight sm:text-[28px]">{round.electionName}</h1>
-      <p className="text-[13.5px] text-muted">
-        {round.round}º turno · {DATE.format(new Date(`${round.date}T12:00:00Z`))}
-        {round.environment === 'simulado2026' && ' · simulação oficial do TSE'}
-        {round.environment === 'replay' && ' · reprodução de uma apuração gravada'}
-      </p>
+    <div className={`flex items-start justify-between gap-4 ${compact ? 'mb-4' : 'mb-5'}`}>
+      <div className="min-w-0">
+        <h1 className="text-[22px] font-semibold tracking-tight sm:text-[28px]">{round.electionName}</h1>
+        <p className="text-[13.5px] text-muted">
+          {round.round}º turno · {DATE.format(new Date(`${round.date}T12:00:00Z`))}
+          {round.environment === 'simulado2026' && ' · simulação oficial do TSE'}
+          {round.environment === 'replay' && ' · reprodução de uma apuração gravada'}
+        </p>
+      </div>
+      {/* Big screens: the TV mode in plain sight at the top of the page, for a TV or a projector. */}
+      <Link
+        href={href('/tv')}
+        className="hidden shrink-0 items-center gap-2 rounded-full border border-live/50 bg-live-soft px-4 py-2 text-[14.5px] font-medium text-ink hover:border-live lg:inline-flex"
+      >
+        <IconTv className="text-live" />
+        Assistir no modo telão
+      </Link>
     </div>
   );
 }
