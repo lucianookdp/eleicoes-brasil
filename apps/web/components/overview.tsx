@@ -1,6 +1,6 @@
 'use client';
 
-import type { OverviewDTO, ResultDTO } from '@eleicoes/election-core';
+import type { CandidateDTO, OverviewDTO, ResultDTO } from '@eleicoes/election-core';
 import { hasValidVotes } from '@eleicoes/election-core';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -16,7 +16,15 @@ import { IconTv } from './icons';
 import { LeadChart } from './lead-chart';
 import { MyCityCard } from './my-city';
 import { OccurrencesSummary } from './occurrences';
-import { CandidateList, FacePhoto, HeadToHead, isHeadToHead, Provenance, RaceBar } from './results';
+import {
+  CandidateList,
+  FacePhoto,
+  HeadToHead,
+  isHeadToHead,
+  Provenance,
+  RaceBar,
+  StatusPill,
+} from './results';
 import { ShareButton } from './share-button';
 import { useRound } from './shell';
 import { StatesTable } from './states-table';
@@ -246,9 +254,8 @@ function runoffDate(year: number) {
   return new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(d);
 }
 
-/** Shown only once the TSE itself marks the headline race as decided (runoff or elected). */
-/** The race's outcome as the TSE states it. */
-function decision(result: ResultDTO) {
+/** The race's outcome as the TSE states it: nothing is "decided" before the TSE says so. */
+export function decision(result: ResultDTO) {
   const leaders = result.candidates.filter(hasValidVotes);
   // During the count the TSE flags the race (md); once final it marks the candidates instead.
   const inRunoff = leaders.filter((c) => /2º turno/i.test(c.status ?? ''));
@@ -258,13 +265,20 @@ function decision(result: ResultDTO) {
   return { leaders, inRunoff, elected, decided };
 }
 
+/** Shown only once the TSE itself marks the headline race as decided (runoff or elected). */
 function DecidedBanner({ result }: { result: ResultDTO }) {
   const { round } = useRound();
   const { leaders, inRunoff, elected, decided } = decision(result);
   // 1st round: runoff or outright win. 2nd round: only the win, once the TSE marks it.
   if (!decided || leaders.length < 2 || (round.round !== 1 && decided !== 'elected')) return null;
+  if (decided === 'elected') {
+    const winner = elected ?? leaders[0]!;
+    return (
+      <WinnerCard result={result} winner={winner} runnerUp={leaders.find((c) => c.key !== winner.key)} />
+    );
+  }
   const pair = inRunoff.length >= 2 ? inRunoff : leaders;
-  const a = displayName((decided === 'elected' ? (elected ?? leaders[0]) : pair[0])!.ballotName);
+  const a = displayName(pair[0]!.ballotName);
   const b = displayName(pair[1]!.ballotName);
   return (
     // A headline, part of the page (like a news site's lead), not a notification-style box.
@@ -274,15 +288,105 @@ function DecidedBanner({ result }: { result: ResultDTO }) {
         Resultado definido pelo TSE
       </p>
       <p className="mt-1 text-balance text-[22px] font-semibold leading-tight tracking-tight sm:text-[26px]">
-        {decided === 'runoff'
-          ? 'Vai ter 2º turno'
-          : `${a} venceu ${round.round === 1 ? 'no 1º turno' : 'o 2º turno'}`}
+        Vai ter 2º turno
       </p>
       <p className="mt-1 text-[15px] text-ink-2">
-        {decided === 'runoff'
-          ? `${a} e ${b} disputam a ${result.office.name === 'Presidente' ? 'Presidência' : `vaga de ${result.office.name}`} no dia ${runoffDate(round.year)}.`
-          : `Eleição para ${result.office.name}.`}
+        {`${a} e ${b} disputam a ${result.office.name === 'Presidente' ? 'Presidência' : `vaga de ${result.office.name}`} no dia ${runoffDate(round.year)}.`}
       </p>
+    </div>
+  );
+}
+
+/**
+ * The winner, once the TSE itself says so: who won, with how much and by how much. The same sober
+ * card for any candidate (their own colour is the only accent) and no celebration effects.
+ */
+function WinnerCard({
+  result,
+  winner,
+  runnerUp,
+}: {
+  result: ResultDTO;
+  winner: CandidateDTO;
+  runnerUp: CandidateDTO | undefined;
+}) {
+  const { round } = useRound();
+  const mates = winner.runningMates.filter((m) => m.role === 'vice' && (m.ballotName || m.name));
+  const gap = runnerUp ? winner.votes - runnerUp.votes : null;
+  const gapPp =
+    runnerUp && winner.percent != null && runnerUp.percent != null ? winner.percent - runnerUp.percent : null;
+  const numbers = result.votesPublishable;
+  return (
+    <section
+      role="status"
+      aria-label="Resultado definido pelo TSE"
+      className="enter-row relative mb-5 overflow-hidden rounded-xl border border-line bg-surface"
+    >
+      <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ background: winner.color }} />
+      <div className="p-4 pt-5 sm:p-6 sm:pt-7">
+        <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-live">
+          <span className="size-1.5 rounded-full bg-live" aria-hidden />
+          Resultado definido pelo TSE
+        </p>
+        {/* Big screens: who won on the left, the numbers on the right, so the card stays short. */}
+        <div className="mt-3 lg:flex lg:items-center lg:gap-8">
+          <div className="flex min-w-0 items-center gap-4 sm:gap-5 lg:flex-1">
+            <span
+              className="shrink-0 rounded-full p-[3px]"
+              style={{ boxShadow: `inset 0 0 0 2px ${winner.color}` }}
+            >
+              <FacePhoto
+                c={winner}
+                fallbackRound={round.slug}
+                sizeClass="size-[76px] text-[24px] sm:size-28 sm:text-[32px]"
+              />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-balance text-[23px] font-semibold leading-tight tracking-tight sm:text-[32px]">
+                {displayName(winner.ballotName)} venceu {round.round === 1 ? 'no 1º turno' : 'o 2º turno'}
+              </h2>
+              <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[14.5px] text-ink-2">
+                <StatusPill c={winner} result={result} rank={1} />
+                <span>
+                  {result.office.name} · {winner.party.abbreviation} · {winner.number}
+                </span>
+              </p>
+              {mates.length > 0 && (
+                <p className="mt-0.5 text-[13.5px] text-muted">
+                  Vice: {mates.map((m) => displayName(m.ballotName || m.name)).join(', ')}
+                </p>
+              )}
+            </div>
+          </div>
+          {numbers && (
+            <dl className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-line sm:mt-5 sm:grid-cols-3 lg:mt-0 lg:w-[54%] lg:shrink-0">
+              <WinnerFact value={fmtPct(winner.percent)} label="dos votos válidos" />
+              <WinnerFact value={fmtInt(winner.votes)} label="votos" />
+              {runnerUp && gap != null && (
+                <WinnerFact
+                  wide
+                  value={fmtInt(gap)}
+                  label={`votos de vantagem sobre ${displayName(runnerUp.ballotName)}${gapPp != null ? ` (${fmtPct(gapPp).replace('%', ' p.p.')})` : ''}`}
+                />
+              )}
+            </dl>
+          )}
+        </div>
+        <p className="mt-3 text-[13px] text-muted">
+          Votos de {fmtPct(result.progress.countedPct)} das urnas. Fonte: TSE.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function WinnerFact({ value, label, wide = false }: { value: string; label: string; wide?: boolean }) {
+  return (
+    <div
+      className={`flex flex-col-reverse justify-end bg-surface-2 px-3 py-3 min-[360px]:px-3.5 ${wide ? 'col-span-2 sm:col-span-1' : ''}`}
+    >
+      <dt className="mt-0.5 text-[12.5px] leading-snug text-muted">{label}</dt>
+      <dd className="numeral text-[18px] leading-tight min-[360px]:text-[22px] sm:text-[26px]">{value}</dd>
     </div>
   );
 }

@@ -296,6 +296,11 @@ test('runoff over: the winner banner, only once the TSE marks "Eleito"', async (
     return;
   }
   await expect(banner).toContainText(new RegExp(elected.ballotName, 'i'));
+  // The card says with how much and by how much, under the TSE's own "Eleito".
+  const card = page.getByRole('status', { name: 'Resultado definido pelo TSE' });
+  await expect(card.getByText('dos votos válidos')).toBeVisible();
+  await expect(card.getByText(/^votos de vantagem sobre /)).toBeVisible();
+  await expect(card.getByText('Eleito', { exact: true })).toBeVisible();
   await expect(page.getByText(/Aguardando o TSE/)).toHaveCount(0);
 });
 
