@@ -7,6 +7,7 @@ import { useMyCity } from '@/lib/my-city';
 import { useCity, useOverview } from '@/lib/queries';
 import { BrazilMap } from './brazil-map';
 import { IconPin, Logo } from './icons';
+import { decision } from './overview';
 import { FacePhoto } from './results';
 import { useRound } from './shell';
 import { catalogFor, SCENE_SECONDS, TvScenes, useSceneChoice } from './tv-scenes';
@@ -95,6 +96,8 @@ export function TvView() {
   const headline = data.headline;
   const shown = (headline?.candidates ?? []).filter(hasValidVotes).slice(0, 4);
   const pair = shown.length === 2 || (round.round === 2 && shown.length >= 2);
+  const outcome = headline ? decision(headline) : null;
+  const winner = outcome?.decided === 'elected' ? (outcome.elected ?? outcome.leaders[0]) : null;
   const counted = data.progress?.countedPct ?? null;
   const live = data.round.status === 'live';
   const states = data.states.filter((s) => s.uf !== 'ZZ');
@@ -240,6 +243,22 @@ export function TvView() {
             }
           >
             <section aria-label="Resultado" className="@container min-w-0 shrink-0">
+              {winner && (
+                // The winner, in words, once the TSE marks it: a TV across the room has no other cue.
+                <div role="status" className={panel ? 'mb-2' : 'mb-[clamp(14px,2vw,36px)]'}>
+                  <p
+                    className={`flex items-center gap-[0.5em] font-semibold uppercase tracking-wide text-live ${panel ? 'text-[11px]' : 'text-[clamp(11px,2.3cqi,20px)]'}`}
+                  >
+                    <span className="size-[0.5em] rounded-full bg-live" aria-hidden />
+                    Resultado definido pelo TSE
+                  </p>
+                  <p
+                    className={`text-balance font-semibold leading-tight tracking-tight ${panel ? 'text-[19px]' : 'mt-[0.15em] text-[clamp(20px,6.4cqi,56px)]'}`}
+                  >
+                    {displayName(winner.ballotName)} venceu {round.round === 1 ? 'no 1º turno' : 'o 2º turno'}
+                  </p>
+                </div>
+              )}
               {pair ? (
                 <Pair a={shown[0]!} b={shown[1]!} fallbackRound={round.slug} compact={panel} />
               ) : (
