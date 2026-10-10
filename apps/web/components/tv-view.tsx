@@ -30,15 +30,32 @@ export function TvView() {
   const box = useRef<HTMLDivElement>(null);
   const [full, setFull] = useState(false);
   const [started, setStarted] = useState(false);
-  // Full screen where the browser allows it (not iPhones): otherwise the panel is brought into view.
-  // Either way the screen is kept awake from then on.
+  // Phones: the panel covers the whole screen in one view, sized to fit with no scrolling (iPhones
+  // have no full screen for pages, so it is the page itself that covers everything; elsewhere the
+  // browser's bars go too). Computers: the browser's full screen. Either way the screen stays awake.
+  const [panel, setPanel] = useState(false);
   const start = () => {
     setStarted(true);
     const el = box.current;
     if (!el) return;
+    const phone = window.matchMedia('(max-width: 767px)').matches;
+    if (phone) setPanel(true);
     if (document.fullscreenEnabled && el.requestFullscreen) el.requestFullscreen().catch(() => {});
-    else el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else if (!phone) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+  const exit = () => {
+    setPanel(false);
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  };
+  // Nothing behind the panel scrolls while it is open.
+  useEffect(() => {
+    if (!panel) return;
+    const before = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = before;
+    };
+  }, [panel]);
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -48,7 +65,12 @@ export function TvView() {
 
   // Keeps the screen on while in full screen (optional: some browsers refuse, that's fine).
   useEffect(() => {
-    const onChange = () => setFull(document.fullscreenElement === box.current);
+    const onChange = () => {
+      const on = document.fullscreenElement === box.current;
+      setFull(on);
+      // Left the browser's full screen (back gesture): the phone panel closes with it.
+      if (!on) setPanel(false);
+    };
     document.addEventListener('fullscreenchange', onChange);
     return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
@@ -148,11 +170,17 @@ export function TvView() {
 
       <div
         ref={box}
-        className="flex flex-col gap-[clamp(16px,2.2vw,40px)] rounded-2xl border border-line bg-ground p-4 sm:p-6 [&:fullscreen]:h-screen [&:fullscreen]:overflow-auto [&:fullscreen]:rounded-none [&:fullscreen]:border-0 [&:fullscreen]:p-[3vw]"
+        className={
+          panel
+            ? 'fixed inset-0 z-[60] flex h-[100dvh] flex-col gap-3 overflow-hidden bg-ground px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-[max(10px,env(safe-area-inset-top))]'
+            : 'flex flex-col gap-[clamp(16px,2.2vw,40px)] rounded-2xl border border-line bg-ground p-4 sm:p-6 [&:fullscreen]:h-screen [&:fullscreen]:overflow-auto [&:fullscreen]:rounded-none [&:fullscreen]:border-0 [&:fullscreen]:p-[3vw]'
+        }
       >
-        <header className="flex flex-wrap items-center justify-between gap-3">
+        <header
+          className={`flex shrink-0 items-center justify-between gap-3 ${panel ? 'flex-nowrap' : 'flex-wrap'}`}
+        >
           <div className="flex items-center gap-3">
-            <Logo size={34} />
+            <Logo size={panel ? 24 : 34} />
             <div className="leading-tight">
               <p className="text-[clamp(16px,1.6vw,28px)] font-semibold">Eleições Brasil</p>
               <p className="text-[clamp(13px,1.1vw,20px)] text-muted">
@@ -161,7 +189,9 @@ export function TvView() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-4 text-[clamp(14px,1.3vw,24px)]">
+          <div
+            className={`flex shrink-0 items-center ${panel ? 'gap-2.5 text-[13px]' : 'gap-4 text-[clamp(14px,1.3vw,24px)]'}`}
+          >
             {live ? (
               <span className="flex items-center gap-2 font-semibold text-bad">
                 <span className="pulse-dot inline-block size-[0.6em] rounded-full bg-current" aria-hidden />
@@ -169,45 +199,80 @@ export function TvView() {
               </span>
             ) : (
               <span className="font-medium text-ink-2">
-                {data.round.status === 'final' ? 'Apuração encerrada' : 'Aguardando'}
+                {data.round.status === 'final' ? (panel ? 'Encerrada' : 'Apuração encerrada') : 'Aguardando'}
               </span>
             )}
             <time className="numeral text-muted">{CLOCK.format(now)}</time>
+            {panel && (
+              <button
+                type="button"
+                onClick={exit}
+                aria-label="Sair do painel"
+                className="-mr-1 flex size-9 items-center justify-center rounded-full border border-line text-ink-2"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width={16}
+                  height={16}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.2}
+                  aria-hidden
+                >
+                  <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
           </div>
         </header>
 
         {!headline || shown.length === 0 ? (
           <EmptyState title="Ainda não há votos apurados." />
         ) : (
-          <div className="grid items-center gap-[clamp(16px,2.5vw,48px)] lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-            <section aria-label="Resultado" className="@container min-w-0">
+          <div
+            className={
+              panel
+                ? 'flex min-h-0 flex-1 flex-col gap-3'
+                : 'grid items-center gap-[clamp(16px,2.5vw,48px)] lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]'
+            }
+          >
+            <section aria-label="Resultado" className="@container min-w-0 shrink-0">
               {pair ? (
-                <Pair a={shown[0]!} b={shown[1]!} fallbackRound={round.slug} />
+                <Pair a={shown[0]!} b={shown[1]!} fallbackRound={round.slug} compact={panel} />
               ) : (
-                <ul className="grid gap-[clamp(10px,1.4vw,24px)]">
+                <ul className={panel ? 'grid gap-2' : 'grid gap-[clamp(10px,1.4vw,24px)]'}>
                   {shown.map((c) => (
-                    <Row key={c.key} c={c} fallbackRound={round.slug} />
+                    <Row key={c.key} c={c} fallbackRound={round.slug} compact={panel} />
                   ))}
                 </ul>
               )}
-              <div className="mt-[clamp(16px,2.4vw,44px)]">
-                <p className="flex items-baseline justify-between text-[clamp(14px,1.3vw,24px)] text-ink-2">
+              {/* Phone panel: one line (label, number and bar side by side) to leave room for the scenes. */}
+              <div className={panel ? 'mt-2 flex items-center gap-3' : 'mt-[clamp(16px,2.4vw,44px)]'}>
+                <p
+                  className={`flex items-baseline justify-between text-ink-2 ${panel ? 'shrink-0 gap-2 text-[13px]' : 'text-[clamp(14px,1.3vw,24px)]'}`}
+                >
                   <span>Urnas apuradas</span>
-                  <span className="numeral text-[clamp(18px,2vw,36px)] font-semibold text-ink">
+                  <span
+                    className={`numeral font-semibold text-ink ${panel ? 'text-[16px]' : 'text-[clamp(18px,2vw,36px)]'}`}
+                  >
                     {fmtPct(counted, 2)}
                   </span>
                 </p>
-                <div className="mt-2 h-[clamp(6px,0.6vw,12px)] overflow-hidden rounded-full bg-surface-2">
+                <div
+                  className={`h-[clamp(6px,0.6vw,12px)] overflow-hidden rounded-full bg-surface-2 ${panel ? 'flex-1' : 'mt-2'}`}
+                >
                   <div className="bar h-full rounded-full bg-live" style={{ width: `${counted ?? 0}%` }} />
                 </div>
               </div>
-              {myCity.city && <TvCity office={headline.office.slug} />}
+              {myCity.city && !panel && <TvCity office={headline.office.slug} />}
             </section>
-            <TvScenes data={data} states={states} chosen={choice.chosen} />
+            <TvScenes data={data} states={states} chosen={choice.chosen} fill={panel} />
           </div>
         )}
 
-        <footer className="flex flex-wrap justify-between gap-2 text-[clamp(12px,1vw,18px)] text-muted">
+        <footer
+          className={`flex-wrap justify-between gap-2 text-[clamp(12px,1vw,18px)] text-muted ${panel ? 'hidden' : 'flex'}`}
+        >
           <span>Dados oficiais do TSE</span>
           <span className="font-medium text-ink-2">eleicoes.lucianookdp.dev</span>
         </footer>
@@ -217,18 +282,36 @@ export function TvView() {
 }
 
 /** Two finalists side by side, with one split bar. */
-function Pair({ a, b, fallbackRound }: { a: CandidateDTO; b: CandidateDTO; fallbackRound: string }) {
+function Pair({
+  a,
+  b,
+  fallbackRound,
+  compact = false,
+}: {
+  a: CandidateDTO;
+  b: CandidateDTO;
+  fallbackRound: string;
+  /** The phone's full-screen panel: smaller faces, so the scenes below get the room. */
+  compact?: boolean;
+}) {
   const total = (a.votes ?? 0) + (b.votes ?? 0);
   const left = total ? ((a.votes ?? 0) / total) * 100 : 50;
   return (
     <div>
       <div className="grid grid-cols-2 gap-[clamp(12px,2vw,40px)]">
         {[a, b].map((c, i) => (
-          <div key={c.key} className={`flex min-w-0 flex-col gap-2 ${i ? 'items-end text-right' : ''}`}>
+          <div
+            key={c.key}
+            className={`flex min-w-0 flex-col ${compact ? 'gap-1' : 'gap-2'} ${i ? 'items-end text-right' : ''}`}
+          >
             <FacePhoto
               c={c}
               fallbackRound={fallbackRound}
-              sizeClass="size-[clamp(64px,16cqi,150px)] text-[clamp(18px,4cqi,40px)]"
+              sizeClass={
+                compact
+                  ? 'size-11 text-[14px]'
+                  : 'size-[clamp(64px,16cqi,150px)] text-[clamp(18px,4cqi,40px)]'
+              }
             />
             <p className="flex max-w-full items-center gap-2 text-[clamp(16px,4.2cqi,38px)] font-semibold">
               <span
@@ -254,13 +337,23 @@ function Pair({ a, b, fallbackRound }: { a: CandidateDTO; b: CandidateDTO; fallb
 }
 
 /** One of several candidates (1st round): face, name, big %, a bar. */
-function Row({ c, fallbackRound }: { c: CandidateDTO; fallbackRound: string }) {
+function Row({
+  c,
+  fallbackRound,
+  compact = false,
+}: {
+  c: CandidateDTO;
+  fallbackRound: string;
+  compact?: boolean;
+}) {
   return (
     <li className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-[clamp(8px,2.5cqi,24px)]">
       <FacePhoto
         c={c}
         fallbackRound={fallbackRound}
-        sizeClass="size-[clamp(36px,9cqi,84px)] text-[clamp(13px,2.4cqi,24px)]"
+        sizeClass={
+          compact ? 'size-8 text-[11px]' : 'size-[clamp(36px,9cqi,84px)] text-[clamp(13px,2.4cqi,24px)]'
+        }
       />
       <div className="min-w-0">
         <p className="truncate text-[clamp(14px,4cqi,32px)] font-semibold">{displayName(c.ballotName)}</p>

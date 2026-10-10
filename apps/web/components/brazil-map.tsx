@@ -84,9 +84,12 @@ export function BrazilMap({
   allowLeader = true,
   highlight,
   only,
+  fit = false,
 }: {
   states: StateRowDTO[];
   allowLeader?: boolean;
+  /** Fill the parent's height (the full-screen panel), without the hover card. */
+  fit?: boolean;
   /** One way of colouring only, without the switch (the TV mode shows the most voted). */
   only?: Mode;
   /** When a list filter is on: only these states (lowercase UF) keep full colour. */
@@ -105,7 +108,7 @@ export function BrazilMap({
   ];
 
   return (
-    <div>
+    <div className={fit ? 'flex h-full min-h-0 flex-col' : undefined}>
       <div className="mb-2 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
         {allowLeader && !only ? (
           <Segmented
@@ -122,11 +125,11 @@ export function BrazilMap({
         )}
         <Legend mode={mode} leaders={leaders} />
       </div>
-      <div className="relative">
+      <div className={fit ? 'relative min-h-0 flex-1' : 'relative'}>
         <svg
           // A bit wider than the map itself, for the labels in the ocean.
           viewBox="0 0 652 639"
-          className="mx-auto block h-auto w-full max-w-[600px]"
+          className={fit ? 'mx-auto block h-full w-full' : 'mx-auto block h-auto w-full max-w-[600px]'}
           role="group"
           aria-label="Mapa do Brasil por estado"
         >
@@ -203,7 +206,7 @@ export function BrazilMap({
         </svg>
         {/* A tap both pins a state and focuses it (focus sets `active`): the card is still the
             pinned one, so it keeps its link. Only hovering another state shows a card without it. */}
-        <StateCard state={shown} pinned={!!pinned && (active === null || active === pinned)} />
+        {!fit && <StateCard state={shown} pinned={!!pinned && (active === null || active === pinned)} />}
       </div>
     </div>
   );

@@ -409,9 +409,8 @@ function Header({ onSearch }: { onSearch: () => void }) {
               </Link>
             ))}
           </div>
-          {/* Polymarket last, after "Mais": it is not the count. Measured with "Mais" (useBarItems). */}
+          {/* Polymarket last but one, then "Mais" at the very end. Measured together (useBarItems). */}
           <div ref={bar.more} className="flex items-center">
-            <MoreMenu skip={bar.skip} />
             <Link
               href="/polymarket"
               aria-current={pathname.startsWith('/polymarket') ? 'page' : undefined}
@@ -419,6 +418,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
             >
               Polymarket
             </Link>
+            <MoreMenu skip={bar.skip} />
           </div>
         </nav>
         {/* Invisible copies of those items, only to know how wide each one is. */}
@@ -695,6 +695,17 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             {n.short}
           </Link>
         ))}
+        {/* Polymarket last but one: it is not the count; "Mais" closes the bar. */}
+        <Link
+          href="/polymarket"
+          aria-current={pathname.startsWith('/polymarket') ? 'page' : undefined}
+          className={`${item} flex-1`}
+        >
+          <span className="flex size-8 items-center justify-center">
+            <IconPolymarket />
+          </span>
+          Polymarket
+        </Link>
         <button
           type="button"
           onClick={() => setMore(true)}
@@ -706,17 +717,6 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
           </span>
           Mais
         </button>
-        {/* Last: it is not the count. */}
-        <Link
-          href="/polymarket"
-          aria-current={pathname.startsWith('/polymarket') ? 'page' : undefined}
-          className={`${item} flex-1`}
-        >
-          <span className="flex size-8 items-center justify-center">
-            <IconPolymarket />
-          </span>
-          Polymarket
-        </Link>
       </nav>
       {more && (
         <div

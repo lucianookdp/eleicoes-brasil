@@ -425,3 +425,26 @@ test('Poderes: big buttons switch between governors and senators', async ({ page
   await expect(page).toHaveURL(/cargo=senador/);
   await expect(page.getByRole('heading', { level: 1, name: 'Senadores' })).toBeVisible();
 });
+
+test('Painel ao vivo on a phone: covers the screen, fits with no scrolling, × closes it', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, 'the full-screen panel is for phones');
+  await page.goto('/eleicao/telao/?e=demo&t=2');
+  await page.getByRole('button', { name: /^Iniciar/ }).click();
+  const close = page.getByRole('button', { name: 'Sair do painel' });
+  await expect(close).toBeVisible();
+  const fit = await page.evaluate(() => {
+    const box = document.querySelector('[aria-label="Sair do painel"]')!.closest('.fixed')!;
+    const r = box.getBoundingClientRect();
+    return {
+      covers: r.top === 0 && Math.round(r.height) === innerHeight,
+      scrolls: box.scrollHeight - box.clientHeight,
+    };
+  });
+  expect(fit.covers).toBe(true);
+  expect(fit.scrolls).toBeLessThanOrEqual(1);
+  await close.click();
+  await expect(close).toHaveCount(0);
+});

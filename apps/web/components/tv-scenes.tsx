@@ -1,7 +1,7 @@
 'use client';
 
 import { hasValidVotes, type OverviewDTO, type ResultDTO, type StateRowDTO } from '@eleicoes/election-core';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { displayName, fmtCompact, fmtPct } from '@/lib/format';
 import { usePolymarket } from '@/lib/polymarket';
 import { useEvents, useOfficeStates, useOverview } from '@/lib/queries';
@@ -20,6 +20,8 @@ type Scene = { id: string; group: SceneId; title: string; page: number; pages: n
 
 /** States per page: governors in two columns, senators (two per state) a little fewer. */
 const PER_PAGE = { 1: 14, 2: 10 } as const;
+/** The same on a phone's full-screen panel, where the scenes get half the height. */
+const PER_PAGE_COMPACT = { 1: 7, 2: 4 } as const;
 const pagesOf = <T,>(list: T[], size: number) =>
   Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, (i + 1) * size));
 
@@ -86,10 +88,16 @@ export function TvScenes({
   data,
   states,
   chosen,
+  fill = false,
 }: {
   data: OverviewDTO;
   states: StateRowDTO[];
   chosen: SceneId[];
+  /**
+   * The phone's full-screen panel: the scenes fill exactly the height left (no scrolling), and
+   * long lists come in smaller pages.
+   */
+  fill?: boolean;
 }) {
   const { round } = useRound();
   const governor = data.round.offices.find((o) => o.slug === 'governador');
@@ -111,18 +119,18 @@ export function TvScenes({
       voters: (s.progress?.electorateTotal ?? 0) * (1 - (s.progress?.countedPct ?? 0) / 100),
     }))
     .sort((a, b) => b.voters - a.voters)
-    .slice(0, 6);
+    .slice(0, fill ? 5 : 6);
   const office = (title: string, results: ResultDTO[] | undefined) => {
     if (!results || results.length === 0) return [];
     const seats = Math.max(...results.map((r) => r.seats ?? 1)) > 1 ? 2 : 1;
-    return pagesOf(results, PER_PAGE[seats]).map((page) => (
+    return pagesOf(results, (fill ? PER_PAGE_COMPACT : PER_PAGE)[seats]).map((page) => (
       <OfficeScene key={page[0]!.areaKey} title={title} results={page} />
     ));
   };
   // The pages of each scene; none: nothing to show right now (no one left to count, no senate race).
   const bodies: Record<SceneId, ReactNode[]> = {
     // The most voted only: how far the count went in each state has its own scene.
-    mapa: [<BrazilMap key={round.slug} states={states} only="leader" />],
+    mapa: [<BrazilMap key={round.slug} states={states} only="leader" fit={fill} />],
     apuracao: states.some((s) => s.progress) ? [<CountByState key="apuracao" states={states} />] : [],
     virada:
       round.round === 2 && states.some((s) => s.leader) && firstStates
@@ -140,7 +148,7 @@ export function TvScenes({
         ? [
             <div key="atualizacoes">
               <p className={kicker}>Últimas atualizações</p>
-              <ActivityFeed events={events} max={10} />
+              <ActivityFeed events={events} max={fill ? 6 : 10} />
             </div>,
           ]
         : [],
@@ -173,7 +181,7 @@ export function TvScenes({
   return (
     <section
       aria-label="Painel que muda sozinho"
-      className="@container min-w-0 rounded-2xl border border-line bg-surface p-3"
+      className={`@container min-w-0 rounded-2xl border border-line bg-surface p-3 ${fill ? 'flex min-h-0 flex-1 flex-col' : ''}`}
     >
       <div className="flex items-center gap-2">
         <div className="scroll-x flex min-w-0 flex-1 gap-1" role="group" aria-label="Cenas">
@@ -225,15 +233,16 @@ export function TvScenes({
       </div>
       {/* Every scene in the same cell: the panel keeps the height of the tallest one, so the race
           beside it never jumps when the scene changes. Only the current one is visible. */}
-      <div className="mt-3 grid grid-cols-1">
+      <div className={fill ? 'relative mt-2 min-h-0 flex-1' : 'mt-3 grid grid-cols-1'}>
         {scenes.map((s, i) => (
           <div
             key={s.id}
             aria-hidden={i !== current}
             inert={i !== current}
-            className={`[grid-area:1/1] transition-opacity duration-500 ${i === current ? 'opacity-100' : 'invisible opacity-0'}`}
+            className={`${fill ? 'absolute inset-0 overflow-hidden' : '[grid-area:1/1]'} transition-opacity duration-500 ${i === current ? 'opacity-100' : 'invisible opacity-0'}`}
           >
-            {s.body}
+            {/* The map scales itself; anything else is shrunk to fit when a short phone has less room. */}
+            {fill && s.group !== 'mapa' ? <Fit>{s.body}</Fit> : s.body}
           </div>
         ))}
       </div>
@@ -536,6 +545,48 @@ function Changed({ states, before }: { states: StateRowDTO[]; before: StateRowDT
           })}
         </ul>
       )}
+    </div>
+  );
+}
+
+/**
+ * Phone panel: shows its content whole in the height it was given. When the content is taller (a
+ * short phone), it is scaled down proportionally, never cut, and never below half size.
+ */
+function Fit({ children }: { children: ReactNode }) {
+  const outer = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLDivElement>(null);
+  const [k, setK] = useState(1);
+  useEffect(() => {
+    const o = outer.current;
+    const i = inner.current;
+    if (!o || !i) return;
+    const measure = () => {
+      const need = i.scrollHeight;
+      const room = o.clientHeight;
+      if (!need || !room) return;
+      setK((prev) => {
+        // need is the natural (unscaled) height: the scale that fits is simply room / need.
+        const next = Math.max(0.5, Math.min(1, room / need));
+        return Math.abs(next - prev) < 0.01 ? prev : next;
+      });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(o);
+    observer.observe(i);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <div ref={outer} className="h-full overflow-hidden">
+      <div
+        ref={inner}
+        style={
+          k < 1 ? { transform: `scale(${k})`, transformOrigin: 'top left', width: `${100 / k}%` } : undefined
+        }
+      >
+        {children}
+      </div>
     </div>
   );
 }
