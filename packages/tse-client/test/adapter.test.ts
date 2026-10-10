@@ -265,6 +265,32 @@ describe('picking the runoff in the official configuration', () => {
     // The 1st round still resolves to its own pleito in the same file.
     expect((await official(1, '2026-10-04', withRunoff()).getElectionConfig()).providerRoundId).toBe('3220');
   });
+
+  it('follows only the runoff in the pleito the TSE published on 10 Oct 2026', async () => {
+    // The real file: beside the runoff, the pleito of 25 Oct lists four supplementary mayoral
+    // elections (SP, PR) and three popular consultations (MT, PR), none with Brazil-level files.
+    const real = fixture('oficial-2026-2/ele-c.json');
+    const config = await official(2, '2026-10-25', real).getElectionConfig();
+    expect(config.providerRoundId).toBe('3221');
+    expect(config.offices.map((o) => `${o.slug}@${o.providerElectionCode}`)).toEqual([
+      'governador@6260',
+      'presidente@6258',
+    ]);
+    expect(config.offices[0]!.states).toEqual(['AM', 'RN', 'DF', 'ES', 'AC']);
+    expect(config.progressElectionCode).toBe('6258');
+    expect(config.providerElectionCodes).toEqual(['6260', '6258']);
+    // The 1st round in the same file is untouched.
+    const first = await official(1, '2026-10-04', real).getElectionConfig();
+    expect(first.providerElectionCodes).toEqual(['6257', '6259', '6261']);
+  });
+
+  it('waits when a pleito has nothing but supplementary elections for the round', async () => {
+    const file = JSON.parse(fixture('oficial-2026-2/ele-c.json'));
+    const runoff = file.pl.find((p: { cd: string }) => p.cd === '3221');
+    for (const e of runoff.e) if (e.t === '2') e.tp = '4';
+    const attempt = official(2, '2026-10-25', JSON.stringify(file)).getElectionConfig();
+    await expect(attempt).rejects.toBeInstanceOf(ProviderNotFoundError);
+  });
 });
 
 describe('tseTime', () => {

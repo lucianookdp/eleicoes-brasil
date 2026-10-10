@@ -45,9 +45,15 @@ exportação estática do Next servida por nginx. O worker aplica as migrações
 
 ## 2º turno (25/10)
 
-1. Assim que o TSE publicar o 2º turno no `ele-c.json` (um pleito de 25/10/2026 com `t: "2"`):
-   `ELECTION_ROUND=2026-2` no worker (`railway variable set … --skip-deploys` e depois
-   `railway up --service worker`). Antes disso o worker só espera ("waiting"), sem erro.
+1. O TSE publicou o 2º turno em 10/10/2026: pleito `3221`, com a eleição federal `6258`
+   (presidente) e a estadual `6260` (governador em AM, RN, DF, ES e AC). Para o coletor passar a
+   segui-lo: `ELECTION_ROUND=2026-2` no worker (`railway variable set … --skip-deploys` e depois
+   `railway up --service worker`). A partir daí o 1º turno deixa de ser reconferido.
+   - O mesmo pleito traz eleições suplementares de prefeito e consultas populares do mesmo dia.
+     O coletor segue só as eleições ordinárias do turno; as outras não têm arquivos do Brasil.
+   - Semanas antes da votação o TSE ainda não gerou todos os arquivos (em 10/10 faltava o
+     andamento de 7 estados, HTTP 404). O coletor não insiste: volta a pedir quando o estado mudar.
+     Mais de 30 respostas 404 em um minuto abrem o circuito e param a coleta por 5 minutos.
 2. O 1º turno fica guardado, encerrado; os links com `t=1` continuam funcionando, e as Bancadas
    sempre leem o 1º turno.
 3. O site abre no 2º turno a partir da meia-noite (Brasília) do dia 25, mesmo antes da apuração.
