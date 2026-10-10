@@ -469,9 +469,9 @@ test('"/" opens the round a link without "t" opens; TV mode on the title line, c
   const tv = page.getByRole('link', { name: 'Assistir no modo telão' });
   const projects = page.getByRole('contentinfo').getByText('Ver projetos');
   if (isMobile) {
-    // Phones reach the panel from "Mais", and the credit stays one quiet line.
+    // Phones reach the panel from "Mais"; the credit is the same button as on a computer.
     await expect(tv).toBeHidden();
-    await expect(projects).toBeHidden();
+    await expect(projects).toBeVisible();
     return;
   }
   const [h, b] = [(await title.boundingBox())!, (await tv.boundingBox())!];
@@ -479,4 +479,32 @@ test('"/" opens the round a link without "t" opens; TV mode on the title line, c
   // At the right end of the line, away from the title.
   expect(b.x - (h.x + h.width)).toBeGreaterThan(100);
   await expect(projects).toBeVisible();
+});
+
+test('phone panel: "Deitar a tela" puts the race beside the scenes, and back', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'the panel is the phone version of the TV mode');
+  await page.goto('/eleicao/telao/?e=demo&t=1');
+  await page.getByRole('button', { name: /^Iniciar/ }).click();
+  const race = page.getByRole('region', { name: 'Resultado' });
+  const scenes = page.getByRole('region', { name: 'Painel que muda sozinho' });
+  await expect(scenes).toBeVisible();
+  // In the panel's own layout (the quarter turn does not change it): same column, or side by side.
+  const columns = async () =>
+    (await race.evaluate((el: HTMLElement) => el.offsetLeft)) ===
+    (await scenes.evaluate((el: HTMLElement) => el.offsetLeft))
+      ? 1
+      : 2;
+  expect(await columns()).toBe(1);
+  await page.getByRole('button', { name: 'Deitar a tela' }).click();
+  await expect(page.getByRole('button', { name: 'Voltar a tela em pé' })).toBeVisible();
+  expect(await columns()).toBe(2);
+  // Still the whole screen, with nothing to scroll.
+  const box = (await scenes.boundingBox())!;
+  const view = page.viewportSize()!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(view.height + 1);
+  await page.getByRole('button', { name: 'Voltar a tela em pé' }).click();
+  expect(await columns()).toBe(1);
+  await page.getByRole('button', { name: 'Sair do painel' }).click();
+  await expect(page.getByRole('button', { name: 'Sair do painel' })).toHaveCount(0);
 });

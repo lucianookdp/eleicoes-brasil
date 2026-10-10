@@ -807,18 +807,18 @@ function SiteFooter({ version }: { version?: string }) {
             </Link>
           </p>
         </div>
-        {/* The author's credit. Phones: one quiet line. Bigger screens: a button that says what it
-            opens (the author's other projects). */}
+        {/* The author's credit: a button that says what it opens (the author's other projects), on
+            every screen. Tighter on phones, so it fits the narrowest one. */}
         <a
           href="https://lucianookdp.dev"
           target="_blank"
           rel="noopener"
-          className="group flex shrink-0 items-center gap-1 text-[12px] text-muted hover:text-ink md:gap-2.5 md:rounded-full md:border md:border-line md:bg-surface md:py-1.5 md:pl-4 md:pr-1.5 md:text-[13px] md:transition-colors md:hover:border-line-strong"
+          className="group flex shrink-0 items-center gap-2 self-start rounded-full border border-line bg-surface py-1.5 pl-3.5 pr-1.5 text-[12px] text-muted transition-colors hover:border-line-strong hover:text-ink md:gap-2.5 md:self-auto md:pl-4 md:text-[13px]"
         >
-          <span className="md:hidden">by</span>
-          <span className="hidden md:inline">Desenvolvido por</span>
-          <AuthorLogo className="font-medium text-ink-2 md:text-[14.5px] md:text-ink" />
-          <span className="hidden items-center gap-1 rounded-full bg-surface-2 px-3 py-1 text-[12.5px] font-medium text-ink-2 transition-colors group-hover:bg-ink group-hover:text-ground md:inline-flex">
+          <span className="min-[360px]:hidden">Por</span>
+          <span className="hidden min-[360px]:inline">Desenvolvido por</span>
+          <AuthorLogo className="text-[13.5px] font-medium text-ink md:text-[14.5px]" />
+          <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 text-[12px] font-medium text-ink-2 transition-colors group-hover:bg-ink group-hover:text-ground md:px-3 md:text-[12.5px]">
             Ver projetos <span aria-hidden>↗</span>
           </span>
         </a>

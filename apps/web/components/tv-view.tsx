@@ -13,6 +13,7 @@ import { useRound } from './shell';
 import { catalogFor, SCENE_SECONDS, TvScenes, useSceneChoice } from './tv-scenes';
 import { EmptyState, ErrorNotice, Skeleton } from './ui';
 
+const LYING_KEY = 'eleicoes:painel-deitado';
 const CLOCK = new Intl.DateTimeFormat('pt-BR', {
   hour: '2-digit',
   minute: '2-digit',
@@ -36,11 +37,28 @@ export function TvView() {
   // have no full screen for pages, so it is the page itself that covers everything; elsewhere the
   // browser's bars go too). Computers: the browser's full screen. Either way the screen stays awake.
   const [panel, setPanel] = useState(false);
+  // The panel laid out for a screen lying on its side (race beside the scenes), whichever way the
+  // phone itself is held: with the rotation locked, it is the panel that turns.
+  const [lying, setLying] = useState(false);
+  useEffect(() => {
+    try {
+      setLying(localStorage.getItem(LYING_KEY) === '1');
+    } catch {}
+  }, []);
+  const turn = () => {
+    setLying((on) => {
+      try {
+        localStorage.setItem(LYING_KEY, on ? '0' : '1');
+      } catch {}
+      return !on;
+    });
+  };
   const start = () => {
     setStarted(true);
     const el = box.current;
     if (!el) return;
-    const phone = window.matchMedia('(max-width: 767px)').matches;
+    // A phone held either way: narrow, or short when it lies on its side.
+    const phone = window.innerWidth <= 767 || Math.min(window.innerWidth, window.innerHeight) <= 500;
     if (phone) setPanel(true);
     if (document.fullscreenEnabled && el.requestFullscreen) el.requestFullscreen().catch(() => {});
     else if (!phone) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -105,6 +123,10 @@ export function TvView() {
   //   two:   other landscape screens (4:3 projectors, tablets): race | scenes, the map among them
   //   stack: upright screens: race on top, scenes (with the map) in the rest
   const screen = full && !panel;
+  // Phone panel on its side: the phone itself turned, or the panel turned by hand ("Deitar").
+  const upright = view.h >= view.w;
+  const flat = panel && (lying || !upright);
+  const rotated = panel && lying && upright;
   const layout = !screen
     ? 'page'
     : view.w >= 1280 && view.w / view.h >= 1.5
@@ -195,168 +217,214 @@ export function TvView() {
         ref={box}
         className={
           panel
-            ? 'fixed inset-0 z-[60] flex h-[100dvh] flex-col gap-3 overflow-hidden bg-ground px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-[max(10px,env(safe-area-inset-top))]'
+            ? 'fixed inset-0 z-[60] h-[100dvh] overflow-hidden bg-ground'
             : 'flex flex-col gap-[clamp(16px,2.2vw,40px)] rounded-2xl border border-line bg-ground p-4 sm:p-6 [&:fullscreen]:h-screen [&:fullscreen]:overflow-auto [&:fullscreen]:rounded-none [&:fullscreen]:border-0 [&:fullscreen]:p-[3vw]'
         }
       >
-        <header
-          className={`flex shrink-0 items-center justify-between gap-3 ${panel ? 'flex-nowrap' : 'flex-wrap'}`}
+        {/* The browser does not let the full-screen element itself be turned, so the layout (and
+            the quarter turn, when the panel lies on its side on an upright phone) lives one level in. */}
+        <div
+          className={
+            !panel
+              ? 'contents'
+              : rotated
+                ? 'absolute left-[100dvw] top-0 flex h-[100dvw] w-[100dvh] origin-top-left rotate-90 flex-col gap-2 py-2 pl-[max(12px,env(safe-area-inset-top))] pr-[max(12px,env(safe-area-inset-bottom))]'
+                : flat
+                  ? 'flex h-full flex-col gap-2 py-2 pl-[max(12px,env(safe-area-inset-left))] pr-[max(12px,env(safe-area-inset-right))]'
+                  : 'flex h-full flex-col gap-3 px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-[max(10px,env(safe-area-inset-top))]'
+          }
         >
-          <div className="flex items-center gap-3">
-            <Logo size={panel ? 24 : 34} />
-            <div className="leading-tight">
-              <p className="text-[clamp(16px,1.6vmax,28px)] font-semibold">Eleições Brasil</p>
-              <p className="text-[clamp(13px,1.1vmax,20px)] text-muted">
-                {headline ? `${headline.office.name} · ` : ''}
-                {round.round}º turno
-              </p>
-            </div>
-          </div>
-          <div
-            className={`flex shrink-0 items-center ${panel ? 'gap-2.5 text-[13px]' : 'gap-4 text-[clamp(14px,1.3vmax,24px)]'}`}
+          <header
+            className={`flex shrink-0 items-center justify-between gap-3 ${panel ? 'flex-nowrap' : 'flex-wrap'}`}
           >
-            {live ? (
-              <span className="flex items-center gap-2 font-semibold text-bad">
-                <span className="pulse-dot inline-block size-[0.6em] rounded-full bg-current" aria-hidden />
-                Ao vivo
-              </span>
-            ) : (
-              <span className="font-medium text-ink-2">
-                {data.round.status === 'final' ? (panel ? 'Encerrada' : 'Apuração encerrada') : 'Aguardando'}
-              </span>
-            )}
-            <time className="numeral text-muted">{CLOCK.format(now)}</time>
-            {panel && (
-              <button
-                type="button"
-                onClick={exit}
-                aria-label="Sair do painel"
-                className="-mr-1 flex size-9 items-center justify-center rounded-full border border-line text-ink-2"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  width={16}
-                  height={16}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2.2}
-                  aria-hidden
-                >
-                  <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
-                </svg>
-              </button>
-            )}
-          </div>
-        </header>
-
-        {!headline || shown.length === 0 ? (
-          <EmptyState title="Ainda não há votos apurados." />
-        ) : (
-          <div
-            className={
-              panel
-                ? 'flex min-h-0 flex-1 flex-col gap-3'
-                : layout === 'three'
-                  ? 'grid min-h-0 flex-1 grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)] gap-[clamp(16px,2.5vw,48px)]'
-                  : layout === 'two'
-                    ? 'grid min-h-0 flex-1 grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-[clamp(16px,2.5vw,48px)]'
-                    : layout === 'stack'
-                      ? 'flex min-h-0 flex-1 flex-col gap-[clamp(16px,2.5vw,48px)]'
-                      : // In the page, before starting: the race, the map of Brazil (fixed) and the
-                        // scenes side by side; medium screens: race and map on top, the scenes under.
-                        'grid items-center gap-[clamp(16px,2.5vw,48px)] lg:grid-cols-2 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)]'
-            }
-          >
-            <section
-              aria-label="Resultado"
-              className={`@container min-w-0 shrink-0 ${layout === 'three' || layout === 'two' ? 'self-center' : ''}`}
-            >
-              {winner && (
-                // The winner, in words, once the TSE marks it: a TV across the room has no other cue.
-                <div role="status" className={panel ? 'mb-2' : 'mb-[clamp(14px,2vw,36px)]'}>
-                  <p
-                    className={`flex items-center gap-[0.5em] font-semibold uppercase tracking-wide text-live ${panel ? 'text-[11px]' : 'text-[clamp(11px,2.3cqi,20px)]'}`}
-                  >
-                    <span className="size-[0.5em] rounded-full bg-live" aria-hidden />
-                    Resultado definido pelo TSE
-                  </p>
-                  <p
-                    className={`text-balance font-semibold leading-tight tracking-tight ${panel ? 'text-[19px]' : 'mt-[0.15em] text-[clamp(20px,6.4cqi,56px)]'}`}
-                  >
-                    {displayName(winner.ballotName)} venceu {round.round === 1 ? 'no 1º turno' : 'o 2º turno'}
-                  </p>
-                </div>
-              )}
-              {pair ? (
-                <Pair a={shown[0]!} b={shown[1]!} fallbackRound={round.slug} compact={panel} />
-              ) : (
-                <ul className={panel ? 'grid gap-2' : 'grid gap-[clamp(10px,1.4vw,24px)]'}>
-                  {shown.map((c) => (
-                    <Row key={c.key} c={c} fallbackRound={round.slug} compact={panel} />
-                  ))}
-                </ul>
-              )}
-              {/* Phone panel: one line (label, number and bar side by side) to leave room for the scenes. */}
-              <div className={panel ? 'mt-2 flex items-center gap-3' : 'mt-[clamp(16px,2.4vw,44px)]'}>
-                <p
-                  className={`flex items-baseline justify-between text-ink-2 ${panel ? 'shrink-0 gap-2 text-[13px]' : 'text-[clamp(14px,1.3vmax,24px)]'}`}
-                >
-                  <span>Urnas apuradas</span>
-                  <span
-                    className={`numeral font-semibold text-ink ${panel ? 'text-[16px]' : 'text-[clamp(18px,2vmax,36px)]'}`}
-                  >
-                    {fmtPct(counted, 2)}
-                  </span>
+            <div className="flex items-center gap-3">
+              <Logo size={panel ? 24 : 34} />
+              <div className="leading-tight">
+                <p className="text-[clamp(16px,1.6vmax,28px)] font-semibold">Eleições Brasil</p>
+                <p className="text-[clamp(13px,1.1vmax,20px)] text-muted">
+                  {headline ? `${headline.office.name} · ` : ''}
+                  {round.round}º turno
                 </p>
-                <div
-                  className={`h-[clamp(6px,0.6vw,12px)] overflow-hidden rounded-full bg-surface-2 ${panel ? 'flex-1' : 'mt-2'}`}
-                >
-                  <div className="bar h-full rounded-full bg-live" style={{ width: `${counted ?? 0}%` }} />
-                </div>
               </div>
-              {!panel && pair && gap != null && gap > 0 && (
-                <p className="mt-[clamp(10px,1.6vw,28px)] text-[clamp(14px,min(3.3cqi,3vh),28px)] text-ink-2">
-                  Diferença de <span className="numeral font-semibold text-ink">{fmtInt(gap)}</span> votos
-                  {gapPp != null && (
-                    <span className="text-muted"> · {fmtPct(gapPp).replace('%', ' p.p.')}</span>
-                  )}
-                </p>
+            </div>
+            <div
+              className={`flex shrink-0 items-center ${panel ? 'gap-2.5 text-[13px]' : 'gap-4 text-[clamp(14px,1.3vmax,24px)]'}`}
+            >
+              {live ? (
+                <span className="flex items-center gap-2 font-semibold text-bad">
+                  <span className="pulse-dot inline-block size-[0.6em] rounded-full bg-current" aria-hidden />
+                  Ao vivo
+                </span>
+              ) : (
+                <span className="font-medium text-ink-2">
+                  {data.round.status === 'final'
+                    ? panel
+                      ? 'Encerrada'
+                      : 'Apuração encerrada'
+                    : 'Aguardando'}
+                </span>
               )}
-              {myCity.city && !panel && <TvCity office={headline.office.slug} />}
-            </section>
-            {(layout === 'page' || layout === 'three') && !panel && (
-              <section
-                aria-label="Mapa do Brasil: mais votado em cada estado"
-                className={`min-w-0 rounded-2xl border border-line bg-surface p-3 ${layout === 'three' ? 'min-h-0' : ''}`}
-              >
-                <BrazilMap
-                  key={round.slug}
-                  states={states}
-                  only="leader"
-                  card={false}
-                  fit={layout === 'three'}
-                />
-              </section>
-            )}
-            <TvScenes
-              data={data}
-              states={states}
-              chosen={choice.chosen}
-              fill={panel || screen}
-              compact={panel}
-              withMap={panel || layout === 'two' || layout === 'stack'}
-              grow={layout === 'stack' ? 2.2 : screen ? 1.6 : 1}
-              className={layout === 'page' ? 'lg:col-span-2 xl:col-span-1' : ''}
-            />
-          </div>
-        )}
+              <time className="numeral text-muted">{CLOCK.format(now)}</time>
+              {panel && upright && (
+                <button
+                  type="button"
+                  onClick={turn}
+                  aria-pressed={lying}
+                  aria-label={lying ? 'Voltar a tela em pé' : 'Deitar a tela'}
+                  className="flex size-9 items-center justify-center rounded-full border border-line text-ink-2 aria-pressed:border-live aria-pressed:text-live"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width={17}
+                    height={17}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <rect x="3" y="10" width="13" height="8" rx="1.5" />
+                    <path d="M12 3a7 7 0 0 1 7 7M19 10l-2.2-2M19 10l2.2-2" />
+                  </svg>
+                </button>
+              )}
+              {panel && (
+                <button
+                  type="button"
+                  onClick={exit}
+                  aria-label="Sair do painel"
+                  className="-mr-1 flex size-9 items-center justify-center rounded-full border border-line text-ink-2"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width={16}
+                    height={16}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.2}
+                    aria-hidden
+                  >
+                    <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </header>
 
-        <footer
-          className={`flex-wrap justify-between gap-2 text-[clamp(12px,1vmax,18px)] text-muted ${panel ? 'hidden' : 'flex'}`}
-        >
-          <span>Dados oficiais do TSE</span>
-          <span className="font-medium text-ink-2">eleicoes.lucianookdp.dev</span>
-        </footer>
+          {!headline || shown.length === 0 ? (
+            <EmptyState title="Ainda não há votos apurados." />
+          ) : (
+            <div
+              className={
+                flat
+                  ? // On its side: the race at the left, the scenes at the right, both the full height.
+                    'flex min-h-0 flex-1 flex-row items-stretch gap-3'
+                  : panel
+                    ? 'flex min-h-0 flex-1 flex-col gap-3'
+                    : layout === 'three'
+                      ? 'grid min-h-0 flex-1 grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)] gap-[clamp(16px,2.5vw,48px)]'
+                      : layout === 'two'
+                        ? 'grid min-h-0 flex-1 grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-[clamp(16px,2.5vw,48px)]'
+                        : layout === 'stack'
+                          ? 'flex min-h-0 flex-1 flex-col gap-[clamp(16px,2.5vw,48px)]'
+                          : // In the page, before starting: the race, the map of Brazil (fixed) and the
+                            // scenes side by side; medium screens: race and map on top, the scenes under.
+                            'grid items-center gap-[clamp(16px,2.5vw,48px)] lg:grid-cols-2 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)]'
+              }
+            >
+              <section
+                aria-label="Resultado"
+                className={`@container min-w-0 shrink-0 ${layout === 'three' || layout === 'two' ? 'self-center' : ''} ${flat ? 'w-[42%] self-center' : ''}`}
+              >
+                {winner && (
+                  // The winner, in words, once the TSE marks it: a TV across the room has no other cue.
+                  <div role="status" className={panel ? 'mb-2' : 'mb-[clamp(14px,2vw,36px)]'}>
+                    <p
+                      className={`flex items-center gap-[0.5em] font-semibold uppercase tracking-wide text-live ${panel ? 'text-[11px]' : 'text-[clamp(11px,2.3cqi,20px)]'}`}
+                    >
+                      <span className="size-[0.5em] rounded-full bg-live" aria-hidden />
+                      Resultado definido pelo TSE
+                    </p>
+                    <p
+                      className={`text-balance font-semibold leading-tight tracking-tight ${panel ? 'text-[19px]' : 'mt-[0.15em] text-[clamp(20px,6.4cqi,56px)]'}`}
+                    >
+                      {displayName(winner.ballotName)} venceu{' '}
+                      {round.round === 1 ? 'no 1º turno' : 'o 2º turno'}
+                    </p>
+                  </div>
+                )}
+                {pair ? (
+                  <Pair a={shown[0]!} b={shown[1]!} fallbackRound={round.slug} compact={panel} />
+                ) : (
+                  <ul className={panel ? 'grid gap-2' : 'grid gap-[clamp(10px,1.4vw,24px)]'}>
+                    {shown.map((c) => (
+                      <Row key={c.key} c={c} fallbackRound={round.slug} compact={panel} />
+                    ))}
+                  </ul>
+                )}
+                {/* Phone panel: one line (label, number and bar side by side) to leave room for the scenes. */}
+                <div className={panel ? 'mt-2 flex items-center gap-3' : 'mt-[clamp(16px,2.4vw,44px)]'}>
+                  <p
+                    className={`flex items-baseline justify-between text-ink-2 ${panel ? 'shrink-0 gap-2 text-[13px]' : 'text-[clamp(14px,1.3vmax,24px)]'}`}
+                  >
+                    <span>Urnas apuradas</span>
+                    <span
+                      className={`numeral font-semibold text-ink ${panel ? 'text-[16px]' : 'text-[clamp(18px,2vmax,36px)]'}`}
+                    >
+                      {fmtPct(counted, 2)}
+                    </span>
+                  </p>
+                  <div
+                    className={`h-[clamp(6px,0.6vw,12px)] overflow-hidden rounded-full bg-surface-2 ${panel ? 'flex-1' : 'mt-2'}`}
+                  >
+                    <div className="bar h-full rounded-full bg-live" style={{ width: `${counted ?? 0}%` }} />
+                  </div>
+                </div>
+                {!panel && pair && gap != null && gap > 0 && (
+                  <p className="mt-[clamp(10px,1.6vw,28px)] text-[clamp(14px,min(3.3cqi,3vh),28px)] text-ink-2">
+                    Diferença de <span className="numeral font-semibold text-ink">{fmtInt(gap)}</span> votos
+                    {gapPp != null && (
+                      <span className="text-muted"> · {fmtPct(gapPp).replace('%', ' p.p.')}</span>
+                    )}
+                  </p>
+                )}
+                {myCity.city && !panel && <TvCity office={headline.office.slug} />}
+              </section>
+              {(layout === 'page' || layout === 'three') && !panel && (
+                <section
+                  aria-label="Mapa do Brasil: mais votado em cada estado"
+                  className={`min-w-0 rounded-2xl border border-line bg-surface p-3 ${layout === 'three' ? 'min-h-0' : ''}`}
+                >
+                  <BrazilMap
+                    key={round.slug}
+                    states={states}
+                    only="leader"
+                    card={false}
+                    fit={layout === 'three'}
+                  />
+                </section>
+              )}
+              <TvScenes
+                data={data}
+                states={states}
+                chosen={choice.chosen}
+                fill={panel || screen}
+                compact={panel}
+                withMap={panel || layout === 'two' || layout === 'stack'}
+                grow={layout === 'stack' ? 2.2 : screen ? 1.6 : 1}
+                className={layout === 'page' ? 'lg:col-span-2 xl:col-span-1' : ''}
+              />
+            </div>
+          )}
+
+          <footer
+            className={`flex-wrap justify-between gap-2 text-[clamp(12px,1vmax,18px)] text-muted ${panel ? 'hidden' : 'flex'}`}
+          >
+            <span>Dados oficiais do TSE</span>
+            <span className="font-medium text-ink-2">eleicoes.lucianookdp.dev</span>
+          </footer>
+        </div>
       </div>
     </div>
   );
