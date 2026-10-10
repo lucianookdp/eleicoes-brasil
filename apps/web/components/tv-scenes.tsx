@@ -16,7 +16,14 @@ export const SCENE_SECONDS = 12;
 
 /** One page on screen. A long list (governors, senators) is split into pages that each fit,
  * shown one after another, so the panel never grows taller than the map. */
-type Scene = { id: string; group: SceneId; title: string; page: number; pages: number; body: ReactNode };
+type Scene = {
+  id: string;
+  group: SceneId | 'mapa';
+  title: string;
+  page: number;
+  pages: number;
+  body: ReactNode;
+};
 
 /** States per page: governors in two columns, senators (two per state) a little fewer. */
 const PER_PAGE = { 1: 14, 2: 10 } as const;
@@ -31,7 +38,6 @@ const pagesOf = <T,>(list: T[], size: number) =>
  * the count: off unless picked.
  */
 export const CATALOG = [
-  { id: 'mapa', title: 'Mapa', rounds: [1, 2] },
   { id: 'placar', title: 'Estados', rounds: [1, 2] },
   { id: 'virada', title: 'Mudou desde o 1º turno', rounds: [2] },
   { id: 'apuracao', title: 'Apuração por estado', rounds: [1, 2] },
@@ -89,6 +95,7 @@ export function TvScenes({
   states,
   chosen,
   fill = false,
+  className = '',
 }: {
   data: OverviewDTO;
   states: StateRowDTO[];
@@ -98,6 +105,7 @@ export function TvScenes({
    * long lists come in smaller pages.
    */
   fill?: boolean;
+  className?: string;
 }) {
   const { round } = useRound();
   const governor = data.round.offices.find((o) => o.slug === 'governador');
@@ -130,7 +138,6 @@ export function TvScenes({
   // The pages of each scene; none: nothing to show right now (no one left to count, no senate race).
   const bodies: Record<SceneId, ReactNode[]> = {
     // The most voted only: how far the count went in each state has its own scene.
-    mapa: [<BrazilMap key={round.slug} states={states} only="leader" fit={fill} />],
     apuracao: states.some((s) => s.progress) ? [<CountByState key="apuracao" states={states} />] : [],
     virada:
       round.round === 2 && states.some((s) => s.leader) && firstStates
@@ -156,8 +163,18 @@ export function TvScenes({
   // Only asked from Polymarket when picked (it is the reader's browser that asks, never our API).
   bodies.polymarket = chosen.includes('polymarket') ? [<PolymarketScene key="polymarket" />] : [];
   const picked = catalogFor(round.round).filter((c) => chosen.includes(c.id) && bodies[c.id].length > 0);
+  // The map of Brazil sits fixed beside the race on big screens (TvView); on the phone's panel there
+  // is no room for it there, so it is the first scene.
+  const map: Scene = {
+    id: 'mapa-0',
+    group: 'mapa',
+    title: 'Mapa',
+    page: 0,
+    pages: 1,
+    body: <BrazilMap key={round.slug} states={states} only="leader" fit />,
+  };
   // Whatever was picked, the map is always there to fall back on.
-  const scenes: Scene[] = (picked.length > 0 ? picked : [CATALOG[0]]).flatMap((c) =>
+  const picks: Scene[] = picked.flatMap((c) =>
     bodies[c.id].map((body, page) => ({
       id: `${c.id}-${page}`,
       group: c.id,
@@ -167,10 +184,26 @@ export function TvScenes({
       body,
     })),
   );
+  // With nothing to show among the picks (none with data yet), the first scene that has some.
+  const fallback = catalogFor(round.round).find((c) => bodies[c.id].length > 0);
+  const listed =
+    picks.length > 0 || !fallback
+      ? picks
+      : [
+          {
+            id: `${fallback.id}-0`,
+            group: fallback.id,
+            title: fallback.title,
+            page: 0,
+            pages: 1,
+            body: bodies[fallback.id][0],
+          },
+        ];
+  const scenes: Scene[] = fill ? [map, ...listed] : listed;
   const groups = [...new Set(scenes.map((s) => s.group))];
 
-  const current = index % scenes.length;
-  const now = scenes[current]!;
+  const current = scenes.length > 0 ? index % scenes.length : 0;
+  const now = scenes[current];
   // biome-ignore lint/correctness/useExhaustiveDependencies: a click on a title restarts the countdown too
   useEffect(() => {
     if (paused || scenes.length < 2) return;
@@ -178,10 +211,13 @@ export function TvScenes({
     return () => clearTimeout(t);
   }, [paused, scenes.length, current]);
 
+  // Nothing to show yet (no pick has data): the race beside it carries the screen.
+  if (!now) return null;
+
   return (
     <section
       aria-label="Painel que muda sozinho"
-      className={`@container min-w-0 rounded-2xl border border-line bg-surface p-3 ${fill ? 'flex min-h-0 flex-1 flex-col' : ''}`}
+      className={`@container min-w-0 rounded-2xl border border-line bg-surface p-3 ${fill ? 'flex min-h-0 flex-1 flex-col' : ''} ${className}`}
     >
       <div className="flex items-center gap-2">
         <div className="scroll-x flex min-w-0 flex-1 gap-1" role="group" aria-label="Cenas">

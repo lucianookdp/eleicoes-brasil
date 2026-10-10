@@ -9,7 +9,8 @@ async function openDemo(page: Page) {
 
 test('opens Brazil with counting progress and the headline race', async ({ page }) => {
   await openDemo(page);
-  await expect(page.getByText('Eleição de demonstração, com candidatos e partidos fictícios')).toBeVisible();
+  // The demo says it is fictitious in its own name (no banner over every page).
+  await expect(page.getByRole('heading', { level: 1, name: /dados fictícios/ })).toBeVisible();
   await expect(page.locator('#apuracao')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Presidente' })).toBeVisible();
   // Never a horizontal scroll on the page, on any viewport.
@@ -410,12 +411,12 @@ test('telão: the right half goes through scenes, and a title jumps to one', asy
   await expect(panel.getByRole('button', { name: 'Pausar a troca automática' })).toBeVisible();
   // The reader picks what goes round; the choice stays in this browser.
   // Picked before starting, above the screen.
-  await page.getByRole('checkbox', { name: /^Mapa/ }).uncheck();
+  await page.getByRole('checkbox', { name: /^Comparecimento/ }).uncheck();
   const tabs = panel.getByRole('group', { name: 'Cenas' });
-  await expect(tabs.getByRole('button', { name: 'Mapa', exact: true })).toHaveCount(0);
+  await expect(tabs.getByRole('button', { name: 'Comparecimento', exact: true })).toHaveCount(0);
   await page.reload();
   await expect(tabs.getByRole('button').first()).toBeVisible();
-  await expect(tabs.getByRole('button', { name: 'Mapa', exact: true })).toHaveCount(0);
+  await expect(tabs.getByRole('button', { name: 'Comparecimento', exact: true })).toHaveCount(0);
 });
 
 test('Poderes: big buttons switch between governors and senators', async ({ page, isMobile }) => {
