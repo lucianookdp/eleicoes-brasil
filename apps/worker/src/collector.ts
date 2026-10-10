@@ -180,6 +180,12 @@ export class Collector {
           }
         } catch (err) {
           if (err instanceof ProviderUnavailableError && err.message.startsWith('circuit open')) throw err;
+          // A secondary election whose file is not generated yet (HTTP 404) is not a failure; the
+          // main one is, since nothing can be shown without it.
+          if (err instanceof ProviderNotFoundError && code !== config.progressElectionCode) {
+            log.debug({ code }, 'country progress not published yet');
+            continue;
+          }
           await fail(err, `country progress ${code}`);
         }
       }
@@ -318,6 +324,13 @@ export class Collector {
       }
       return true;
     } catch (err) {
+      // Not generated yet (weeks before the election the TSE has files for some states only).
+      // Asking again right away is a stream of 404s, which opens the circuit and stops the whole
+      // collection; the state is queued again as soon as its progress changes.
+      if (err instanceof ProviderNotFoundError) {
+        log.debug({ code, uf }, 'state progress not published yet');
+        return true;
+      }
       await this.recordFailure(log, err, `state progress ${code}/${uf}`, area.state(uf));
       return false;
     }

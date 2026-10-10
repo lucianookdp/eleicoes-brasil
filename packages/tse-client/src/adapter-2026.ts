@@ -79,6 +79,12 @@ const ELECTION_TYPE_SCOPE: Record<string, OfficeScope> = {
   '9': 'country',
 };
 
+/**
+ * EA11 `e.tp` of ordinary elections (state, municipal, federal). The same pleito also carries
+ * supplementary elections (2, 4, 9) and popular consultations (5, 6, 7) held on the same day.
+ */
+const ORDINARY_ELECTIONS = new Set(['1', '3', '8']);
+
 const STATUS: Record<string, CountingStatus> = { n: 'not-started', p: 'in-progress', f: 'finished' };
 
 const DEFAULT_DIRS: Record<string, string> = {
@@ -127,8 +133,19 @@ export class TSEAdapter2026 implements ElectionProvider {
     const dirs = new Map((file.arq ?? []).map((a) => [a.tp, a.dir]));
     const cycle = pleito.c ?? `ele${this.round.date.slice(0, 4)}`;
 
+    // Only this round's ordinary elections. On 25 Oct 2026 the runoff pleito also lists four
+    // supplementary mayoral elections and three consultations: other votes, without Brazil-level
+    // files, so following them would be a 404 for each one in every cycle.
+    const round = String(this.round.round);
+    const elections = pleito.e.filter((e) => e.t === round && ORDINARY_ELECTIONS.has(e.tp));
+    if (elections.length === 0) {
+      throw new ProviderNotFoundError(
+        `${url} (pleito ${pleito.cd} has no ordinary election for round ${round})`,
+      );
+    }
+
     const offices: Office[] = [];
-    for (const election of pleito.e) {
+    for (const election of elections) {
       for (const abr of election.abr) {
         for (const cp of abr.cp ?? []) {
           if (cp.tp === '3') continue; // popular consultation questions: out of scope
@@ -144,8 +161,9 @@ export class TSEAdapter2026 implements ElectionProvider {
     }
 
     const progressElection =
-      pleito.e.find((e) => e.tp === '8') ?? pleito.e.find((e) => e.tp === '1' || e.tp === '3') ?? pleito.e[0];
-    if (!progressElection) throw new ProviderPayloadError('pleito without elections', url, null);
+      elections.find((e) => e.tp === '8') ??
+      elections.find((e) => e.tp === '1' || e.tp === '3') ??
+      elections[0]!;
 
     const partial: Context = {
       cycle,
@@ -158,7 +176,7 @@ export class TSEAdapter2026 implements ElectionProvider {
         offices,
         cities: [],
         progressElectionCode: progressElection.cd,
-        providerElectionCodes: pleito.e.map((e) => e.cd),
+        providerElectionCodes: elections.map((e) => e.cd),
       },
     };
     partial.config.cities = await this.fetchCities(partial, progressElection.cd);

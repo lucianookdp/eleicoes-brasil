@@ -95,8 +95,13 @@ export const ELECTION_REGISTRY: RoundDefinition[] = [
     adapter: 'tse-2026',
     demo: false,
     sources: {
-      // Pleito code for the runoff is published in ele-c.json closer to the date.
-      PRODUCTION: { baseUrl: 'https://resultados.tse.jus.br', environment: 'oficial' },
+      // Published by the TSE on 10 Oct 2026: federal election 6258 and state election 6260 (AM,
+      // RN, DF, ES, AC), beside supplementary elections and consultations that are not followed.
+      PRODUCTION: {
+        baseUrl: 'https://resultados.tse.jus.br',
+        environment: 'oficial',
+        providerRoundId: '3221',
+      },
     },
   },
 ];
