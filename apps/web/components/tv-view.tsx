@@ -59,6 +59,7 @@ export function TvView() {
     };
   }, [panel]);
   const [now, setNow] = useState(() => new Date());
+  const view = useViewport();
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 15_000);
@@ -99,6 +100,24 @@ export function TvView() {
   const outcome = headline ? decision(headline) : null;
   const winner = outcome?.decided === 'elected' ? (outcome.elected ?? outcome.leaders[0]) : null;
   const counted = data.progress?.countedPct ?? null;
+  // Full screen on a TV or computer: everything is laid out to fill the screen it actually has.
+  //   three: wide screens (16:9 and wider): race | map of Brazil | scenes
+  //   two:   other landscape screens (4:3 projectors, tablets): race | scenes, the map among them
+  //   stack: upright screens: race on top, scenes (with the map) in the rest
+  const screen = full && !panel;
+  const layout = !screen
+    ? 'page'
+    : view.w >= 1280 && view.w / view.h >= 1.5
+      ? 'three'
+      : view.w > view.h
+        ? 'two'
+        : 'stack';
+  const gap =
+    shown.length >= 2 && (shown[0]!.votes ?? 0) > 0 ? (shown[0]!.votes ?? 0) - (shown[1]!.votes ?? 0) : null;
+  const gapPp =
+    shown.length >= 2 && shown[0]!.percent != null && shown[1]!.percent != null
+      ? shown[0]!.percent - shown[1]!.percent
+      : null;
   const live = data.round.status === 'live';
   const states = data.states.filter((s) => s.uf !== 'ZZ');
   // Races this round does not have (no senate race in a runoff, for example).
@@ -186,15 +205,15 @@ export function TvView() {
           <div className="flex items-center gap-3">
             <Logo size={panel ? 24 : 34} />
             <div className="leading-tight">
-              <p className="text-[clamp(16px,1.6vw,28px)] font-semibold">Eleições Brasil</p>
-              <p className="text-[clamp(13px,1.1vw,20px)] text-muted">
+              <p className="text-[clamp(16px,1.6vmax,28px)] font-semibold">Eleições Brasil</p>
+              <p className="text-[clamp(13px,1.1vmax,20px)] text-muted">
                 {headline ? `${headline.office.name} · ` : ''}
                 {round.round}º turno
               </p>
             </div>
           </div>
           <div
-            className={`flex shrink-0 items-center ${panel ? 'gap-2.5 text-[13px]' : 'gap-4 text-[clamp(14px,1.3vw,24px)]'}`}
+            className={`flex shrink-0 items-center ${panel ? 'gap-2.5 text-[13px]' : 'gap-4 text-[clamp(14px,1.3vmax,24px)]'}`}
           >
             {live ? (
               <span className="flex items-center gap-2 font-semibold text-bad">
@@ -237,12 +256,21 @@ export function TvView() {
             className={
               panel
                 ? 'flex min-h-0 flex-1 flex-col gap-3'
-                : // Big screens: the race, the map of Brazil (fixed) and the scenes going round, side by
-                  // side; medium screens: race and map on top, the scenes under them.
-                  'grid items-center gap-[clamp(16px,2.5vw,48px)] lg:grid-cols-2 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)]'
+                : layout === 'three'
+                  ? 'grid min-h-0 flex-1 grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)] gap-[clamp(16px,2.5vw,48px)]'
+                  : layout === 'two'
+                    ? 'grid min-h-0 flex-1 grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-[clamp(16px,2.5vw,48px)]'
+                    : layout === 'stack'
+                      ? 'flex min-h-0 flex-1 flex-col gap-[clamp(16px,2.5vw,48px)]'
+                      : // In the page, before starting: the race, the map of Brazil (fixed) and the
+                        // scenes side by side; medium screens: race and map on top, the scenes under.
+                        'grid items-center gap-[clamp(16px,2.5vw,48px)] lg:grid-cols-2 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)]'
             }
           >
-            <section aria-label="Resultado" className="@container min-w-0 shrink-0">
+            <section
+              aria-label="Resultado"
+              className={`@container min-w-0 shrink-0 ${layout === 'three' || layout === 'two' ? 'self-center' : ''}`}
+            >
               {winner && (
                 // The winner, in words, once the TSE marks it: a TV across the room has no other cue.
                 <div role="status" className={panel ? 'mb-2' : 'mb-[clamp(14px,2vw,36px)]'}>
@@ -271,11 +299,11 @@ export function TvView() {
               {/* Phone panel: one line (label, number and bar side by side) to leave room for the scenes. */}
               <div className={panel ? 'mt-2 flex items-center gap-3' : 'mt-[clamp(16px,2.4vw,44px)]'}>
                 <p
-                  className={`flex items-baseline justify-between text-ink-2 ${panel ? 'shrink-0 gap-2 text-[13px]' : 'text-[clamp(14px,1.3vw,24px)]'}`}
+                  className={`flex items-baseline justify-between text-ink-2 ${panel ? 'shrink-0 gap-2 text-[13px]' : 'text-[clamp(14px,1.3vmax,24px)]'}`}
                 >
                   <span>Urnas apuradas</span>
                   <span
-                    className={`numeral font-semibold text-ink ${panel ? 'text-[16px]' : 'text-[clamp(18px,2vw,36px)]'}`}
+                    className={`numeral font-semibold text-ink ${panel ? 'text-[16px]' : 'text-[clamp(18px,2vmax,36px)]'}`}
                   >
                     {fmtPct(counted, 2)}
                   </span>
@@ -286,28 +314,45 @@ export function TvView() {
                   <div className="bar h-full rounded-full bg-live" style={{ width: `${counted ?? 0}%` }} />
                 </div>
               </div>
+              {!panel && pair && gap != null && gap > 0 && (
+                <p className="mt-[clamp(10px,1.6vw,28px)] text-[clamp(14px,min(3.3cqi,3vh),28px)] text-ink-2">
+                  Diferença de <span className="numeral font-semibold text-ink">{fmtInt(gap)}</span> votos
+                  {gapPp != null && (
+                    <span className="text-muted"> · {fmtPct(gapPp).replace('%', ' p.p.')}</span>
+                  )}
+                </p>
+              )}
               {myCity.city && !panel && <TvCity office={headline.office.slug} />}
             </section>
-            {!panel && (
+            {(layout === 'page' || layout === 'three') && !panel && (
               <section
                 aria-label="Mapa do Brasil: mais votado em cada estado"
-                className="min-w-0 rounded-2xl border border-line bg-surface p-3"
+                className={`min-w-0 rounded-2xl border border-line bg-surface p-3 ${layout === 'three' ? 'min-h-0' : ''}`}
               >
-                <BrazilMap key={round.slug} states={states} only="leader" card={false} />
+                <BrazilMap
+                  key={round.slug}
+                  states={states}
+                  only="leader"
+                  card={false}
+                  fit={layout === 'three'}
+                />
               </section>
             )}
             <TvScenes
               data={data}
               states={states}
               chosen={choice.chosen}
-              fill={panel}
-              className="lg:col-span-2 xl:col-span-1"
+              fill={panel || screen}
+              compact={panel}
+              withMap={panel || layout === 'two' || layout === 'stack'}
+              grow={layout === 'stack' ? 2.2 : screen ? 1.6 : 1}
+              className={layout === 'page' ? 'lg:col-span-2 xl:col-span-1' : ''}
             />
           </div>
         )}
 
         <footer
-          className={`flex-wrap justify-between gap-2 text-[clamp(12px,1vw,18px)] text-muted ${panel ? 'hidden' : 'flex'}`}
+          className={`flex-wrap justify-between gap-2 text-[clamp(12px,1vmax,18px)] text-muted ${panel ? 'hidden' : 'flex'}`}
         >
           <span>Dados oficiais do TSE</span>
           <span className="font-medium text-ink-2">eleicoes.lucianookdp.dev</span>
@@ -318,6 +363,18 @@ export function TvView() {
 }
 
 /** Two finalists side by side, with one split bar. */
+/** The window's size, for laying the full screen out by the shape of the screen. */
+function useViewport() {
+  const [view, setView] = useState({ w: 1920, h: 1080 });
+  useEffect(() => {
+    const read = () => setView({ w: window.innerWidth, h: window.innerHeight });
+    read();
+    window.addEventListener('resize', read);
+    return () => window.removeEventListener('resize', read);
+  }, []);
+  return view;
+}
+
 function Pair({
   a,
   b,
@@ -346,10 +403,10 @@ function Pair({
               sizeClass={
                 compact
                   ? 'size-11 text-[14px]'
-                  : 'size-[clamp(64px,16cqi,150px)] text-[clamp(18px,4cqi,40px)]'
+                  : 'size-[clamp(64px,min(16cqi,15vh),150px)] text-[clamp(18px,4cqi,40px)]'
               }
             />
-            <p className="flex max-w-full items-center gap-2 text-[clamp(16px,4.2cqi,38px)] font-semibold">
+            <p className="flex max-w-full items-center gap-2 text-[clamp(16px,min(4.2cqi,4vh),38px)] font-semibold">
               <span
                 className="size-[0.45em] shrink-0 rounded-full"
                 style={{ background: c.color }}
@@ -357,7 +414,7 @@ function Pair({
               />
               <span className="truncate">{displayName(c.ballotName)}</span>
             </p>
-            <p className="numeral text-[clamp(34px,11cqi,136px)] font-bold leading-none tracking-tight">
+            <p className="numeral text-[clamp(34px,min(11cqi,11vh),136px)] font-bold leading-none tracking-tight">
               {fmtPct(c.percent)}
             </p>
             <p className="numeral text-[clamp(13px,2.6cqi,24px)] text-muted">{fmtInt(c.votes)} votos</p>
@@ -418,7 +475,7 @@ function TvCity({ office }: { office: string }) {
   if (!city) return null;
   return (
     <div className="mt-[clamp(14px,2vw,32px)] rounded-xl border border-line bg-surface px-[clamp(12px,1.4vw,24px)] py-[clamp(10px,1.1vw,20px)]">
-      <p className="flex items-center gap-1.5 text-[clamp(12px,1vw,18px)] text-muted">
+      <p className="flex items-center gap-1.5 text-[clamp(12px,1vmax,18px)] text-muted">
         <IconPin width="1em" height="1em" className="text-live" /> Minha cidade
         {result && ` · ${fmtPct(result.progress.countedPct, 1)} das urnas`}
       </p>

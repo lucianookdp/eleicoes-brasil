@@ -132,7 +132,12 @@ export function BrazilMap({
         <svg
           // A bit wider than the map itself, for the labels in the ocean.
           viewBox="0 0 652 639"
-          className={fit ? 'mx-auto block h-full w-full' : 'mx-auto block h-auto w-full max-w-[600px]'}
+          // Not taller than the screen has room for: on the home page the reader's city sits under it.
+          className={
+            fit
+              ? 'mx-auto block h-full w-full'
+              : 'mx-auto block h-auto w-full max-w-[600px] lg:max-h-[max(280px,calc(100dvh-26rem))]'
+          }
           role="group"
           aria-label="Mapa do Brasil por estado"
         >

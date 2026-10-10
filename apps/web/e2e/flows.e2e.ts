@@ -455,7 +455,7 @@ test('Painel ao vivo on a phone: covers the screen, fits with no scrolling, × c
   await expect(close).toHaveCount(0);
 });
 
-test('"/" opens the round a link without "t" opens; TV mode beside the title, credit as a button', async ({
+test('"/" opens the round a link without "t" opens; TV mode on the title line, credit as a button', async ({
   page,
   isMobile,
 }) => {
@@ -476,6 +476,7 @@ test('"/" opens the round a link without "t" opens; TV mode beside the title, cr
   }
   const [h, b] = [(await title.boundingBox())!, (await tv.boundingBox())!];
   expect(Math.abs(h.y + h.height / 2 - (b.y + b.height / 2))).toBeLessThan(6);
-  expect(b.x - (h.x + h.width)).toBeLessThan(60);
+  // At the right end of the line, away from the title.
+  expect(b.x - (h.x + h.width)).toBeGreaterThan(100);
   await expect(projects).toBeVisible();
 });

@@ -476,7 +476,7 @@ function RoundSwitch({ wide = false }: { wide?: boolean }) {
           <select
             value={round.electionSlug}
             onChange={(e) => go(e.target.value, 1)}
-            className="h-9 cursor-pointer appearance-none rounded-full border border-line bg-surface py-0 pl-3 pr-7 text-[13px] font-medium"
+            className="h-9 max-w-[7.5rem] cursor-pointer appearance-none text-ellipsis rounded-full border border-line bg-surface py-0 pl-3 pr-7 text-[13px] font-medium sm:max-w-none"
           >
             {elections.map((e) => (
               <option key={e.slug} value={e.slug}>
@@ -495,7 +495,7 @@ function RoundSwitch({ wide = false }: { wide?: boolean }) {
       <div
         role="radiogroup"
         aria-label="Turno"
-        className={`flex rounded-full border border-line bg-surface p-0.5 ${wide ? 'flex-1' : ''}`}
+        className={`flex min-w-0 rounded-full border border-line bg-surface p-0.5 ${wide ? 'flex-1' : ''}`}
       >
         {rounds.map((r) => (
           <button
@@ -504,11 +504,14 @@ function RoundSwitch({ wide = false }: { wide?: boolean }) {
             role="radio"
             aria-checked={r.slug === round.slug}
             onClick={() => r.slug !== round.slug && go(r.electionSlug, r.round)}
-            className={`h-9 whitespace-nowrap rounded-full px-3.5 text-[14px] text-ink-2 aria-checked:bg-surface-2 aria-checked:font-semibold aria-checked:text-ink ${wide ? 'flex-1' : ''}`}
+            className={`h-9 whitespace-nowrap rounded-full text-[14px] text-ink-2 aria-checked:bg-surface-2 aria-checked:font-semibold aria-checked:text-ink ${wide ? 'flex-1' : ''} ${wide && others.length > 0 ? 'px-2' : 'px-3.5'}`}
           >
             {r.round}º turno
-            {/* Phones and tablets only: on computers the bar's room goes to the sections. */}
-            {wide && <span className="ml-1.5 text-[12.5px] font-normal text-muted">{date(r.date)}</span>}
+            {/* Phones and tablets only (on computers the bar's room goes to the sections), and only
+                when the election picker is not beside it: together they do not fit a phone. */}
+            {wide && others.length === 0 && (
+              <span className="ml-1.5 text-[12.5px] font-normal text-muted">{date(r.date)}</span>
+            )}
           </button>
         ))}
       </div>
