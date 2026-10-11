@@ -1,184 +1,105 @@
 # Eleições Brasil
 
-Apuração das eleições brasileiras em tempo real, com os dados oficiais do TSE. Rápido no
-celular, neutro e sem previsões.
-
-**Acesse: [eleicoes.lucianookdp.dev](https://eleicoes.lucianookdp.dev)**
-
 [![CI](https://github.com/lucianookdp/eleicoes-brasil/actions/workflows/ci.yml/badge.svg)](https://github.com/lucianookdp/eleicoes-brasil/actions/workflows/ci.yml)
-[![Site no ar](https://github.com/lucianookdp/eleicoes-brasil/actions/workflows/health.yml/badge.svg)](https://github.com/lucianookdp/eleicoes-brasil/actions/workflows/health.yml)
 [![Todos os direitos reservados](https://img.shields.io/badge/licen%C3%A7a-todos%20os%20direitos%20reservados-lightgrey)](LICENSE)
 
-<p>
-  <img src="docs/screenshots/home-desktop.png" alt="Página inicial no computador: confronto do 2º turno, comparecimento e mapa por estado" width="100%">
-</p>
-<p>
-  <img src="docs/screenshots/home-mobile.png" alt="Página inicial no celular" width="32%">
-  <img src="docs/screenshots/states-mobile.png" alt="Lista de estados com filtro por mais votado" width="32%">
-  <img src="docs/screenshots/polymarket-mobile.png" alt="Página do Polymarket" width="32%">
-</p>
+**[eleicoes.lucianookdp.dev](https://eleicoes.lucianookdp.dev)** · [Português](#português) · [English](#english)
 
-## Funcionalidades
+## Português
 
-### Apuração ao vivo
-- **Atualização automática:** cada nova parcial do TSE chega à tela em segundos, sem recarregar
-  a página (Server-Sent Events). Um indicador mostra se está "Ao vivo", "Dados atrasados" ou
-  "Encerrada".
-- **Confronto principal:** os dois primeiros colocados lado a lado, com percentual, votos e
-  diferença. O "Eleito" e o "Vai ter 2º turno" só aparecem quando o próprio TSE informa.
-- **Quanto já foi apurado:** urnas apuradas no Brasil e por região, comparecimento, abstenção,
-  brancos e nulos.
-- **Mapa do Brasil:** cada estado pintado pelo mais votado ou pelo percentual apurado, com as
-  siglas, e toque para ver os detalhes.
-- **Evolução e liderança:** gráfico do percentual de cada candidato ao longo da noite e da
-  vantagem do 1º sobre o 2º colocado.
-- **Atualizações recentes:** o que acabou de mudar, por estado.
-- **1º e 2º turno:** troca de turno em um toque, mantendo a página em que você está.
+Apuração das eleições brasileiras em tempo real, com os dados oficiais do TSE. Rápido no celular,
+neutro e sem previsões.
 
-### Estados e municípios
-- Resultados de **todos os cargos** em cada estado (Presidente, Governador, Senador, deputados)
-  e em **cada município**, além dos votos no exterior.
-- **Filtro por mais votado:** veja só os estados ou municípios onde cada candidato teve mais
-  votos (ou está à frente, durante a apuração).
-- **Mudou desde o 1º turno:** no 2º turno, os estados e municípios onde o mais votado é outro,
-  com quem liderava no 1º turno. A comparação é feita pelo número do candidato, nunca pelo nome.
-- Ordenação por nome, mais ou menos apurados, votos apurados ou atualizados agora.
+**O que tem**
 
-### Poderes: governadores, senadores e STF
-- Quem venceu ou foi para o 2º turno em cada estado, para governador e senador, com filtro por
-  situação: definidos, que vão ao 2º turno ou ainda em apuração.
-- **STF:** os ministros, quem indicou cada um, filtro por presidente, aposentadoria obrigatória,
-  linha do tempo das posses, composição das duas turmas e o que o tribunal faz, com os artigos
-  da Constituição.
+- Resultado ao vivo, sem recarregar a página: presidente, governadores, senadores e deputados, no
+  Brasil, em cada estado, em cada município e no exterior.
+- Mapa por estado, 1º e 2º turno, página de cada candidato, busca, favoritos e comparação entre
+  estados.
+- Modo telão para TV e painel ao vivo para o celular.
+- Bancadas eleitas na Câmara e no Senado, e a composição do STF.
+- Transparência da apuração: o que a coleta registrou de anormal, e de onde vem cada número.
+- Página separada com o mercado de apostas Polymarket, fora da apuração.
 
-### Bancadas
-- **Câmara e Senado eleitos:** hemiciclo com as cadeiras de cada partido e quantos votos são
-  necessários para cada tipo de decisão no Congresso.
+**Princípios**
 
-### Ferramentas
-- **Busca:** estados, municípios, candidatos, partidos e cargos em um só lugar.
-- **Minha cidade:** escolha uma vez e veja a disputa da sua cidade no topo da página inicial.
-- **Favoritos:** salve estados e cidades para acompanhar.
-- **Comparar estados:** até oito estados lado a lado; a comparação fica no link para compartilhar.
-- **Linha do tempo:** como estava a apuração em qualquer horário da noite.
-- **Compartilhar:** imagem clara e leve do resultado (Brasil, estado ou município), pronta para o
-  WhatsApp e redes sociais, e o texto com os números.
-- **Modo telão:** o resultado em letras grandes e o mapa, em tela cheia, para TV, projetor ou
-  transmissão; mostra também a cidade escolhida em "Minha cidade" e mantém a tela acesa.
+- Só dados oficiais do Tribunal Superior Eleitoral (TSE), sem alteração. Sem pesquisa nem projeção.
+- "Eleito" e "2º turno" só aparecem quando o próprio TSE informa.
+- Só o nosso coletor consulta o TSE, dentro dos limites que ele define; os leitores leem a nossa cópia.
+- Projeto independente, sem vínculo com a Justiça Eleitoral. Sem contas, anúncios ou rastreamento.
 
-### Mercado de apostas
-- Página separada com os preços do **Polymarket** para o 2º turno: chance de cada candidato (com
-  a foto que o próprio Polymarket usa), gráfico histórico, margem de vitória e resultado por
-  estado, ao vivo, atualizados a cada 30 segundos.
-  Fica fora da apuração e não interfere nela: é o navegador de quem lê que consulta o Polymarket.
-
-### Transparência
-- **Bastidores:** o ritmo da apuração e o funcionamento da coleta, ao vivo.
-- **Como funciona** e **Sobre os dados:** de onde vêm os números, como ler os horários e o que é
-  calculado pelo site.
-- Cada resultado mostra o horário de divulgação do TSE e o de recebimento aqui.
-
-### Para todos
-- Feito primeiro para o celular, de 320 px a telas grandes.
-- Tema claro e escuro, seguindo o sistema, com botão para trocar.
-- Sem contas, anúncios ou rastreamento. Favoritos e preferências ficam só no seu navegador.
-
-## Princípios
-
-- **Só dados oficiais.** Todos os números da apuração vêm dos arquivos públicos do Tribunal
-  Superior Eleitoral (TSE), sem alteração.
-- **Neutro.** Sem opinião, análise partidária, pesquisa ou projeção na apuração.
-- **Leve com o TSE.** Só o nosso sistema consulta o tribunal, dentro dos limites de acesso que
-  ele define; os leitores leem a nossa cópia.
-- **Projeto independente,** sem vínculo com a Justiça Eleitoral. Resultados parciais podem
-  mudar até o fim da apuração.
-
-## Como funciona
+**Como funciona**
 
 ```mermaid
 flowchart LR
-  TSE["TSE<br/>arquivos públicos"] -->|"requisições condicionais<br/>(ETag / 304)"| W["worker<br/>coleta e valida"]
-  W --> DB[("PostgreSQL<br/>estado atual + histórico")]
-  DB -->|"NOTIFY"| API["API<br/>REST + SSE"]
-  API --> CDN["CDN"]
-  CDN --> WEB["site estático<br/>GitHub Pages"]
+  TSE["TSE"] --> W["worker<br/>coleta e valida"]
+  W --> DB[("PostgreSQL")]
+  DB -->|NOTIFY| API["API<br/>REST + SSE"]
+  API --> CDN --> WEB["site estático"]
 ```
 
-- O **worker** consulta o TSE em dois ritmos (Brasil e estados com mais frequência, municípios
-  em segundo plano), baixa só o que mudou e valida cada arquivo antes de gravar. Dados
-  impossíveis são sinalizados e nunca apagam o que já estava certo.
-- O **PostgreSQL** guarda o estado atual e cada atualização, o que permite a linha do tempo.
-- A **API** responde com cache em memória, comprimido uma vez por atualização, e avisa os
-  navegadores por Server-Sent Events. Na frente dela, uma CDN absorve os picos de acesso.
-- O **site** é estático (Next.js exportado) e funciona mesmo se a API cair: mostra os últimos
-  dados recebidos e avisa.
+Site em Next.js (exportação estática, GitHub Pages), API em Fastify, coleta em Node.js, PostgreSQL
+com Drizzle, tudo em TypeScript, testado com Vitest e Playwright. Detalhes em
+[docs/architecture.md](docs/architecture.md), [docs/tse-integration.md](docs/tse-integration.md) e
+[docs/deployment.md](docs/deployment.md).
 
-Mais detalhes em [docs/architecture.md](docs/architecture.md) e
-[docs/tse-integration.md](docs/tse-integration.md).
-
-## Tecnologias
-
-| Parte | Tecnologias |
-| --- | --- |
-| Site | Next.js 16 (exportação estática), React, TanStack Query, Tailwind CSS |
-| API | Fastify, Server-Sent Events, Zod |
-| Coleta | Node.js, cliente HTTP com limite de taxa e requisições condicionais |
-| Banco | PostgreSQL, Drizzle |
-| Qualidade | TypeScript, Biome, Vitest, Playwright (fluxos e larguras de 320 a 1440 px, nos dois temas) |
-| Infra | GitHub Pages, Railway (API, worker e Postgres), CDN, GitHub Actions |
-
-## Rodar localmente
-
-Instruções para o autor e para colaboradores autorizados (veja [Licença](#licença)). Requer
-Node.js 22+ e pnpm.
+**Rodar localmente** (Node.js 22+ e pnpm)
 
 ```bash
 pnpm install
 docker compose up -d postgres
-pnpm dev:demo
+pnpm dev:demo   # http://localhost:3000, com uma eleição fictícia
 ```
 
-Abre em http://localhost:3000 com uma eleição fictícia que é apurada em poucos minutos, para
-ver tudo funcionando sem depender do TSE. Sem Docker, veja a seção "Postgres local sem Docker"
-em [docs/deployment.md](docs/deployment.md).
+**Créditos e licença**
+
+Dados: TSE. Mapa: Victor Cazanave ([svg-maps](https://github.com/VictorCazanave/svg-maps), CC BY
+4.0). Bandeiras e fotos do STF: Wikimedia Commons. Apostas: dados públicos do
+[Polymarket](https://polymarket.com).
+
+Todos os direitos reservados. O código está público apenas para consulta; copiar, reutilizar ou
+publicar exige autorização por escrito. Veja [LICENSE](LICENSE).
+
+## English
+
+Brazilian election results in real time, from the official data of the Superior Electoral Court
+(TSE). Fast on phones, neutral, and with no forecasts.
+
+**What it has**
+
+- Live results with no page reload: president, governors, senators and deputies, for Brazil, each
+  state, each municipality and votes abroad.
+- Map by state, both rounds, a page for each candidate, search, favourites and state comparison.
+- TV mode for big screens and a live panel for phones.
+- Seats won in the Chamber and the Senate, and the composition of the Supreme Court (STF).
+- Counting transparency: what the collector recorded as abnormal, and where each number comes from.
+- A separate page with the Polymarket betting market, apart from the count.
+
+**Principles**
+
+- Only official TSE data, unaltered. No polls and no projections.
+- "Elected" and "runoff" appear only when the TSE itself says so.
+- Only our collector queries the TSE, within the limits it sets; readers read our copy.
+- Independent project, not affiliated with the Electoral Court. No accounts, ads or tracking.
+
+**How it works**
+
+A worker collects and validates the TSE's public files into PostgreSQL; the API (REST plus
+Server-Sent Events) serves them through a CDN to a static site. Next.js (static export on GitHub
+Pages), Fastify, Node.js, PostgreSQL with Drizzle, all in TypeScript, tested with Vitest and
+Playwright. The documentation in [docs/](docs) is in Portuguese.
+
+**Run locally** (Node.js 22+ and pnpm)
 
 ```bash
-pnpm lint        # Biome
-pnpm typecheck   # TypeScript em todos os pacotes
-pnpm test        # testes unitários e de integração (precisam do Postgres)
-pnpm --filter @eleicoes/web test:e2e   # Playwright, com o modo demo rodando
+pnpm install
+docker compose up -d postgres
+pnpm dev:demo   # http://localhost:3000, with a fictitious election
 ```
 
-## Estrutura
+**Licence**
 
-```
-apps/
-  web/       site (Next.js)
-  api/       API pública (Fastify)
-  worker/    coleta do TSE
-packages/
-  tse-client/       leitura e validação dos arquivos do TSE
-  election-core/    tipos e regras compartilhadas
-  database/         esquema e migrações (Drizzle)
-  config/           variáveis de ambiente e versões
-docs/        arquitetura, integração com o TSE, deploy, nova eleição
-```
+All rights reserved. The code is public for reading only; copying, reusing or publishing it
+requires prior written permission. See [LICENSE](LICENSE).
 
-- [Deploy e noite da eleição](docs/deployment.md)
-- [Como preparar uma nova eleição](docs/adding-new-election.md)
-
-## Créditos
-
-- Dados: Tribunal Superior Eleitoral (TSE).
-- Mapa: "Map of Brazil", de Victor Cazanave ([svg-maps](https://github.com/VictorCazanave/svg-maps)), CC BY 4.0.
-- Bandeiras dos estados: símbolos oficiais (domínio público), via Wikimedia Commons.
-- Fotos dos ministros do STF: Wikimedia Commons (autores e licenças na própria página).
-- Mercado de apostas: dados públicos do [Polymarket](https://polymarket.com).
-
-## Licença
-
-Todos os direitos reservados. O código está público apenas para consulta: copiar, reutilizar ou
-publicar este projeto, no todo ou em parte, exige autorização prévia por escrito. Veja
-[LICENSE](LICENSE).
-
-Feito por [lucianookdp](https://lucianookdp.dev)
+Feito por / made by [lucianookdp](https://lucianookdp.dev)
