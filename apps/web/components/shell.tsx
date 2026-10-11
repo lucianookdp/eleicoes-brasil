@@ -102,7 +102,12 @@ export function ElectionShell({
           Pular para o conteúdo
         </a>
         <Header onSearch={() => setSearchOpen(true)} />
-        <main id="conteudo" className="mx-auto w-full max-w-[1320px] px-4 pb-28 pt-5 sm:px-6 xl:pb-12">
+        {/* At least one screen tall: while the data loads the page is a short skeleton, and a footer
+            in view would jump away when the content arrives (the biggest layout shift there was). */}
+        <main
+          id="conteudo"
+          className="mx-auto min-h-dvh w-full max-w-[1320px] px-4 pb-28 pt-5 sm:px-6 xl:pb-12"
+        >
           {children}
         </main>
         <Footer />
@@ -126,7 +131,9 @@ const NAV = [
 
 function useActive() {
   const pathname = usePathname().replace(/\/$/, '');
-  return (path: string) => SECTION_ROUTES[path]?.replace(/\/$/, '') === pathname;
+  // The site's own address ("/") is the results page of the election that matters now.
+  return (path: string) =>
+    SECTION_ROUTES[path]?.replace(/\/$/, '') === pathname || (path === '' && pathname === '');
 }
 
 type MoreItem = {
@@ -899,7 +906,7 @@ export function BasicShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </header>
-      <main id="conteudo" className="mx-auto w-full max-w-[1320px] px-4 pb-16 pt-5 sm:px-6">
+      <main id="conteudo" className="mx-auto min-h-dvh w-full max-w-[1320px] px-4 pb-16 pt-5 sm:px-6">
         {children}
       </main>
       <SiteFooter />

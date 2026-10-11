@@ -40,6 +40,10 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
   });
   const queries = new Queries(sql);
   const cache = new ResponseCache(env.CACHE_TTL_SECONDS * 1000);
+  // For the one costly answer (a candidate's votes city by city: seconds of the database for a
+  // deputy of a big state). Kept 10 minutes instead of seconds, and dropped like every other by
+  // the round's next update, so it is never older than the data.
+  const slowCache = new ResponseCache(Math.max(env.CACHE_TTL_SECONDS, 600) * 1000);
   const hub = new RealtimeHub();
 
   await app.register(helmet, {
@@ -109,8 +113,14 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
     );
   };
   /** Sends a cached, pre-compressed body with its ETag (304 when the client already has it). */
-  const send = async (reply: FastifyReply, round: string, key: string, load: () => Promise<unknown>) => {
-    const { body: entry, stale } = await cache.get(round, key, load);
+  const send = async (
+    reply: FastifyReply,
+    round: string,
+    key: string,
+    load: () => Promise<unknown>,
+    store = cache,
+  ) => {
+    const { body: entry, stale } = await store.get(round, key, load);
     if (stale) {
       // The database failed and this is the last good body: a CDN must not keep it (under a
       // versioned URL, for an hour), or readers would miss the update once the database is back.
@@ -269,8 +279,12 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
     const p = candidateParams.parse(req.params);
     const q = candidateQuery.parse(req.query);
     live(reply);
-    return send(reply, p.id, `candidate-areas:${p.office}:${p.number}:${q.uf ?? ''}`, () =>
-      queries.candidateAreas(p.id, p.office, p.number, q.uf ?? null),
+    return send(
+      reply,
+      p.id,
+      `candidate-areas:${p.office}:${p.number}:${q.uf ?? ''}`,
+      () => queries.candidateAreas(p.id, p.office, p.number, q.uf ?? null),
+      slowCache,
     );
   });
 
@@ -454,6 +468,7 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
       );
       cache.invalidate(event.electionId);
       cache.invalidate('*');
+      slowCache.invalidate(event.electionId);
       queries.forgetRound(event.electionId);
       hub.broadcast(event, versions.get(event.electionId)!);
     } catch (err) {

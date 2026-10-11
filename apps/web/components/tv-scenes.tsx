@@ -332,10 +332,13 @@ function Scoreboard({ states }: { states: StateRowDTO[] }) {
           <li
             key={s.uf}
             className={`rounded-md px-1 py-1 text-center ${s.leader ? 'text-white' : 'text-muted'}`}
-            style={{ background: s.leader?.color ?? 'var(--surface-2)' }}
+            // A little darker than the candidate's colour, so the small white text reads (contrast).
+            style={{
+              background: s.leader ? `color-mix(in srgb, ${s.leader.color} 82%, black)` : 'var(--surface-2)',
+            }}
           >
             <span className="block text-[clamp(11px,2.4cqi,17px)] font-semibold">{s.uf}</span>
-            <span className="numeral block text-[clamp(9px,1.9cqi,13px)] opacity-90">
+            <span className="numeral block text-[clamp(9px,1.9cqi,13px)]">
               {s.leader ? fmtPct(s.leader.percent, 0) : '—'}
             </span>
           </li>

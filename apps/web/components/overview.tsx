@@ -600,7 +600,7 @@ function GovernorRunoffs({ data }: { data: OverviewDTO }) {
                     <StateFlag uf={r.areaKey} size={18} />
                     <span className="truncate">{r.areaName}</span>
                   </span>
-                  <span className="shrink-0 text-[12px] text-muted">
+                  <span className="shrink-0 text-[12px] text-ink-2">
                     {started ? `${fmtPct(counted, 1)} das urnas` : 'Aguardando votos'}
                   </span>
                 </p>
@@ -616,9 +616,9 @@ function GovernorRunoffs({ data }: { data: OverviewDTO }) {
                               aria-hidden
                             />
                             <span className="truncate font-medium">{displayName(cand.ballotName)}</span>
-                            <span className="shrink-0 text-[12px] text-muted">{cand.party.abbreviation}</span>
+                            <span className="shrink-0 text-[12px] text-ink-2">{cand.party.abbreviation}</span>
                             {/^eleit/i.test(cand.status ?? '') && (
-                              <span className="shrink-0 rounded bg-live-soft px-1.5 py-0.5 text-[11.5px] font-medium text-live">
+                              <span className="shrink-0 rounded bg-surface px-1.5 py-0.5 text-[11.5px] font-medium text-live">
                                 {cand.status}
                               </span>
                             )}

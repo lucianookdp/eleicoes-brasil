@@ -85,7 +85,7 @@ export function StatesView() {
                 {o.color && (
                   <span className="size-2.5 rounded-full" style={{ background: o.color }} aria-hidden />
                 )}
-                {o.label} <span className="numeral text-muted">{o.n}</span>
+                {o.label} <span className="numeral text-ink-2">{o.n}</span>
               </button>
             ))}
           </div>

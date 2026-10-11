@@ -132,7 +132,7 @@ function PowersSwitch({
             <span className="block truncate text-[16px] font-semibold text-ink-2 group-aria-checked:text-ink">
               {o.label}
             </span>
-            <span className="block truncate text-[12.5px] text-muted">{o.hint}</span>
+            <span className="block truncate text-[12.5px] text-ink-2">{o.hint}</span>
           </span>
         </button>
       ))}

@@ -88,14 +88,27 @@ const csp = [
 // Applies the saved or system theme before first paint (no flash).
 const themeScript = `try{var t=localStorage.getItem('eleicoes:theme');if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.dataset.theme=t}catch(e){}`;
 
+/**
+ * Asks the API for the first data (which elections exist; the overview, when the address names
+ * the round) as soon as the HTML arrives, while the scripts are still downloading. The app picks
+ * the answers up once (lib/api.ts, takeEarly) instead of asking after it boots: on a slow phone
+ * that is the difference of a full round trip or two before the first number. Any failure here
+ * just means the app asks by itself, as before.
+ */
+const earlyScript = `try{(function(){var a=${JSON.stringify(api)},w=window,g=function(u){var p=fetch(a+u).then(function(r){if(!r.ok)throw 0;return r.json()});p.catch(function(){});return p};w.__early={'/api/elections':g('/api/elections')};var q=new URLSearchParams(location.search),e=q.get('e'),t=q.get('t');if(/^[a-z0-9-]{1,30}$/.test(e||'')&&/^[12]$/.test(t||'')&&/^\\/(eleicao\\/)?$/.test(location.pathname)){var u='/api/elections/'+e+'-'+t+'/overview';w.__early[u]=g(u)}})()}catch(e){}`;
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR" className={`${archivo.variable} ${mono.variable}`} suppressHydrationWarning>
       <head>
         <meta httpEquiv="Content-Security-Policy" content={csp} />
+        {/* Every number comes from the API: open that connection (DNS, TLS) right away. */}
+        <link rel="preconnect" href={api} crossOrigin="anonymous" />
         <meta name="referrer" content="strict-origin-when-cross-origin" />
         {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static theme bootstrap, no user input */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static first-data bootstrap, built from constants */}
+        <script dangerouslySetInnerHTML={{ __html: earlyScript }} />
       </head>
       <body>
         <Providers>{children}</Providers>

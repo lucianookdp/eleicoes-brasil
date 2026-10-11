@@ -27,7 +27,7 @@ export function AppShell({ children }: { children: ReactNode }) {
  * works) render fully; election pages depend on the URL and the API, so they show a skeleton.
  */
 function StaticFallback({ children }: { children: ReactNode }) {
-  const onElectionPage = usePathname().startsWith('/eleicao');
+  const onElectionPage = isElectionPage(usePathname());
   return (
     <BasicShell>
       {onElectionPage ? (
@@ -42,9 +42,12 @@ function StaticFallback({ children }: { children: ReactNode }) {
   );
 }
 
+/** Pages that need the election to render: everything under /eleicao, and the home page itself. */
+const isElectionPage = (pathname: string) => pathname === '/' || pathname.startsWith('/eleicao');
+
 function Inner({ children }: { children: ReactNode }) {
   const params = useSearchParams();
-  const onElectionPage = usePathname().startsWith('/eleicao');
+  const onElectionPage = isElectionPage(usePathname());
   const elections = useQuery({
     queryKey: ['elections'],
     queryFn: () => api<ElectionSummary[]>('/api/elections'),

@@ -256,7 +256,13 @@ export function HeadToHead({ result }: { result: ResultDTO }) {
       <p className="text-[13px] text-ink-2">
         {result.votesPublishable ? `${fmtInt(c.votes)} votos` : 'não divulgado'}
       </p>
-      {firstPct(c) != null && <p className="text-[12.5px] text-muted">1º turno: {fmtPct(firstPct(c))}</p>}
+      {/* The line is there from the start in a runoff (empty while the 1st round loads), so the
+          bar under it does not jump down when the number arrives. */}
+      {(firstPct(c) != null || (round.round === 2 && first === undefined)) && (
+        <p className="min-h-[1.5em] text-[12.5px] text-muted">
+          {firstPct(c) != null ? `1º turno: ${fmtPct(firstPct(c))}` : ''}
+        </p>
+      )}
     </div>
   );
   return (

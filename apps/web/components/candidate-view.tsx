@@ -150,7 +150,7 @@ export function CandidateView({ office, number, uf }: { office: string; number: 
                   {' · '}
                   <Link
                     href={`${candidatePath(otherRound, { office: data.office.slug, number: c.number, uf: data.uf })}`}
-                    className="text-info hover:underline"
+                    className="text-info underline underline-offset-2"
                   >
                     ver
                   </Link>
@@ -161,7 +161,7 @@ export function CandidateView({ office, number, uf }: { office: string; number: 
           <p className="mt-3 text-[13px] text-muted">
             Votos de {fmtPct(data.progress.countedPct)} das urnas
             {state ? ` de ${data.areaName}` : ''}.{' '}
-            <Link href={race} className="text-info hover:underline">
+            <Link href={race} className="text-info underline underline-offset-2">
               Ver a disputa completa
             </Link>
           </p>

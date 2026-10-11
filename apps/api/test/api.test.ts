@@ -462,6 +462,31 @@ suite('API (integration)', () => {
       ],
     });
 
+    // The city breakdown is the costly answer: it outlives the short cache (here, a second app with
+    // a 50 ms one) and is still dropped by the round's next update.
+    const quick = await buildApp({
+      sql,
+      env: apiEnvSchema.parse({ DATABASE_URL: url, CACHE_TTL_SECONDS: 0.05 }),
+      logger: false,
+    });
+    const areasOf15 = async () =>
+      (await quick.app.inject('/api/elections/cand-1/candidates/governador/15/areas?uf=sp')).json().rows[0]
+        .votes;
+    const votesOf15 = async () =>
+      (await quick.app.inject('/api/elections/cand-1/candidates/governador/15?uf=sp')).json().candidate.votes;
+    expect([await areasOf15(), await votesOf15()]).toEqual([800, 900]);
+    await sql`update area_results set result = jsonb_set(result, '{candidates,0,votes}', '801')
+      where round_id = ${r1.id} and office_id = ${g1.id} and area_key = 'sp-00011'`;
+    await sql`update area_results set result = jsonb_set(result, '{candidates,0,votes}', '901')
+      where round_id = ${r1.id} and office_id = ${g1.id} and area_key = 'sp'`;
+    await new Promise((r) => setTimeout(r, 120));
+    expect([await areasOf15(), await votesOf15()]).toEqual([800, 901]);
+    quick.onEvent(
+      JSON.stringify({ type: 'result.updated', electionId: 'cand-1', timestamp: new Date().toISOString() }),
+    );
+    expect([await areasOf15(), await votesOf15()]).toEqual([801, 901]);
+    await quick.app.close();
+
     // Not found: no such number, a state race without its state, a state where it is not disputed.
     for (const path of [
       'candidates/presidente/99',
