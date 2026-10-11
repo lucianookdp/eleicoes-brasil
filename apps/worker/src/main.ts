@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { Collector } from './collector';
 import { holdCollectorLock } from './lock';
 import { createLogger } from './logger';
+import { dayInBrasilia, nextWait } from './pace';
 import { runReplay } from './replay';
 import { Store } from './store';
 
@@ -127,11 +128,17 @@ while (!stopping) {
   const started = Date.now();
   let wait = env.TSE_POLL_INTERVAL * 1000;
   try {
-    // Source not published yet: check once a minute (repeated 404s can get an IP blocked).
-    if ((await collector.runCycle()) === 'waiting') wait = 60_000;
-    // A closed count (e.g. the 1st round while waiting for the runoff): a look every 5 minutes is
-    // plenty, and it keeps our requests to the TSE near zero between rounds.
-    else if (collector.settled()) wait = Math.max(wait, 5 * 60_000);
+    // Outside a count in progress (not published, published but not begun, closed) there is
+    // nothing to chase: far fewer requests to the TSE. See nextWait.
+    wait = nextWait({
+      intervalMs: wait,
+      cycle: await collector.runCycle(),
+      settled: collector.settled(),
+      notStarted: collector.notStarted(),
+      official: env.APP_MODE === 'PRODUCTION' && !round.demo,
+      roundDate: round.date,
+      today: dayInBrasilia(),
+    });
   } catch (err) {
     // runCycle handles its own errors; this only catches database outages.
     log.error({ err }, 'cycle crashed; retrying after the poll interval');
