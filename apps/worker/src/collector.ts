@@ -109,6 +109,11 @@ export class Collector {
     return this.finishedAt !== null && Date.now() - this.finishedAt >= 30 * 60_000;
   }
 
+  /** Published by the TSE but not begun: every area at zero, as in the days before the vote. */
+  notStarted() {
+    return this.store.lastProgress('br')?.status === 'not-started';
+  }
+
   // ------------------------------------------------------------------ headline cycle
 
   /** Returns the cycle status; "waiting" means the source has not published this round yet. */

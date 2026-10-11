@@ -49,6 +49,8 @@ exportação estática do Next servida por nginx. O worker aplica as migrações
    (presidente) e a estadual `6260` (governador em AM, RN, DF, ES e AC). Para o coletor passar a
    segui-lo: `ELECTION_ROUND=2026-2` no worker (`railway variable set … --skip-deploys` e depois
    `railway up --service worker`). A partir daí o 1º turno deixa de ser reconferido.
+   - Até a véspera, com tudo zerado, o coletor consulta o TSE uma vez por minuto; a partir da
+     meia-noite (Brasília) do dia da eleição volta ao intervalo configurado (`TSE_POLL_INTERVAL`).
    - O mesmo pleito traz eleições suplementares de prefeito e consultas populares do mesmo dia.
      O coletor segue só as eleições ordinárias do turno; as outras não têm arquivos do Brasil.
    - Semanas antes da votação o TSE ainda não gerou todos os arquivos (em 10/10 faltava o
