@@ -508,3 +508,80 @@ test('phone panel: "Deitar a tela" puts the race beside the scenes, and back', a
   await page.getByRole('button', { name: 'Sair do painel' }).click();
   await expect(page.getByRole('button', { name: 'Sair do painel' })).toHaveCount(0);
 });
+
+test('a candidate has a page of their own: from a result list, with the votes and where they came from', async ({
+  page,
+}) => {
+  await page.goto('/eleicao/?e=demo&t=1');
+  // The most voted for president, by name, in the race on the home page.
+  const link = page
+    .locator('section[aria-labelledby="corrida"]')
+    .getByRole('listitem')
+    .first()
+    .getByRole('link');
+  const name = (await link.innerText()).trim();
+  await link.click();
+  await expect(page).toHaveURL(/\/eleicao\/candidato\/\?e=demo&t=1&cargo=presidente&n=\d+/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(name);
+  const card = page.getByRole('region', { name: 'Candidato' });
+  await expect(card.getByText('dos votos válidos')).toBeVisible();
+  await expect(card.getByText(/mais votado entre \d+ candidatos/)).toBeVisible();
+  // A national race: the votes state by state, each one a link to the state.
+  const origin = page.getByRole('region', { name: 'De onde vieram os votos' });
+  await expect(origin.getByRole('listitem').first()).toBeVisible();
+  expect(await origin.getByRole('listitem').count()).toBeGreaterThanOrEqual(27);
+  await expect(origin.getByRole('link').first()).toHaveAttribute(
+    'href',
+    /\/eleicao\/estado\/\?e=demo&t=1&uf=[a-z]{2}/,
+  );
+  await expect(page.getByRole('link', { name: 'Ver a disputa completa' })).toBeVisible();
+
+  // A state race: the cities with most votes.
+  await page.goto('/eleicao/estado/?e=demo&t=1&uf=sp&cargo=governador');
+  // Any candidate of the list (their names are links to their pages).
+  await page.locator('main a[href*="/eleicao/candidato/"]').first().click();
+  await expect(page).toHaveURL(/cargo=governador&n=\d+/);
+  await expect(page).toHaveURL(/uf=sp/);
+  await expect(
+    page.getByRole('region', { name: 'De onde vieram os votos' }).getByRole('link').first(),
+  ).toHaveAttribute('href', /\/eleicao\/municipio\/\?e=demo&t=1&uf=sp&c=\d{5}/);
+
+  // A number nobody has: said so, with a way back.
+  await page.goto('/eleicao/candidato/?e=demo&t=1&cargo=presidente&n=77');
+  await expect(page.getByText('Candidato não encontrado neste turno.')).toBeVisible();
+});
+
+test('states table: filters by region and count stage, sorts by the most voted, and clears', async ({
+  page,
+}) => {
+  await page.goto('/eleicao/estados/?e=demo&t=1');
+  const table = page.getByRole('group', { name: 'Lista de estados' });
+  await expect(page.getByRole('combobox', { name: 'Ordenar por' })).toBeVisible();
+  // The option that only said how busy the last 5 minutes were is gone.
+  await expect(page.getByRole('combobox', { name: 'Ordenar por' }).locator('option')).not.toContainText([
+    'Mais urnas em 5 min',
+  ]);
+  await page.getByRole('combobox', { name: 'Região' }).selectOption('Sul');
+  await expect(page.getByText('3 de 28')).toBeVisible();
+  for (const name of ['Paraná', 'Santa Catarina', 'Rio Grande do Sul']) {
+    await expect(table.getByRole('link', { name }).first()).toBeVisible();
+  }
+  await expect(table.getByRole('link', { name: 'Bahia' })).toHaveCount(0);
+  // A stage nothing is in: said so, and one click brings everything back.
+  await page.getByRole('combobox', { name: 'Apuração' }).selectOption('waiting');
+  await expect(page.getByText('Nenhum estado com esses filtros.')).toBeVisible();
+  await page.getByRole('button', { name: 'Limpar filtros' }).click();
+  await expect(table.getByRole('link', { name: 'Bahia' }).first()).toBeVisible();
+  await page.getByRole('combobox', { name: 'Ordenar por' }).selectOption('lead-desc');
+  await expect(table.getByRole('link', { name: 'Bahia' }).first()).toBeVisible();
+
+  // The home page's "Estados" tab has the candidate among its filters.
+  await page.goto('/eleicao/?e=demo&t=1');
+  await page.getByRole('tab', { name: 'Estados' }).click();
+  const who = page.getByRole('combobox', { name: 'Mais votado' });
+  await expect(who).toBeVisible();
+  const option = who.locator('option').nth(1);
+  const count = Number(/\((\d+)\)/.exec((await option.textContent())!)![1]);
+  await who.selectOption((await option.getAttribute('value'))!);
+  await expect(page.getByText(`${count} de 28`)).toBeVisible();
+});

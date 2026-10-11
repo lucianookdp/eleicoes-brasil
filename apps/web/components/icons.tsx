@@ -82,6 +82,12 @@ export const IconInfo = (p: SVGProps<SVGSVGElement>) => (
     <path d="M12 11v5M12 8h.01" />
   </Icon>
 );
+export const IconGlobe = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+  </Icon>
+);
 export const IconHelp = (p: SVGProps<SVGSVGElement>) => (
   <Icon {...p}>
     <circle cx="12" cy="12" r="9" />

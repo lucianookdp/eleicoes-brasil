@@ -3,7 +3,9 @@ import {
   type ActivityEventDTO,
   assignColors,
   type BenchesDTO,
+  type CandidateAreasDTO,
   type CandidateDTO,
+  type CandidatePageDTO,
   type CityDetailDTO,
   type CityRowDTO,
   type CompactCandidate,
@@ -81,11 +83,30 @@ interface ResultRow {
 }
 
 const PROPORTIONAL_DEFAULT_LIMIT = 60;
+
+/** At most `max` of a heavy query at once; the others wait their turn. */
+class Limiter {
+  private active = 0;
+  private waiting: (() => void)[] = [];
+  constructor(private readonly max: number) {}
+  async run<T>(work: () => Promise<T>): Promise<T> {
+    if (this.active >= this.max) await new Promise<void>((go) => this.waiting.push(go));
+    this.active++;
+    try {
+      return await work();
+    } finally {
+      this.active--;
+      this.waiting.shift()?.();
+    }
+  }
+}
 const toIso = (v: string | Date | null) => (v == null ? null : new Date(v).toISOString());
 
 export class Queries {
   /** Candidate colours per (round, office, home area). */
   private colorCache = new Map<string, Map<string, string>>();
+  /** Queries that read every city of a state in full: never more than two at once. */
+  private heavy = new Limiter(2);
 
   constructor(private readonly sql: Sql) {}
 
@@ -440,6 +461,145 @@ export class Queries {
     return row
       ? this.toResultDTO(round, office, row, await this.areaName(a.key, round.provider), limit)
       : null;
+  }
+
+  // ---------------------------------------------------------------- one candidate
+
+  /** The race a candidate runs in and its home area: Brazil for the president, the state otherwise. */
+  private async raceOf(slug: string, officeSlug: string, uf: string | null) {
+    const round = await this.round(slug);
+    const office = round.offices.find((o) => o.slug === officeSlug);
+    if (!office || office.scope === 'city')
+      throw new NotFoundError(`no office "${officeSlug}" in this round`);
+    const national = office.scope === 'country';
+    if (!national && (!uf || !this.officesFor(round.offices, 'state', uf).includes(office))) {
+      throw new NotFoundError(`office "${officeSlug}" is not disputed in "${uf ?? ''}"`);
+    }
+    return { round, office, uf: national ? null : uf, home: national ? 'br' : uf!.toLowerCase() };
+  }
+
+  async candidate(
+    slug: string,
+    officeSlug: string,
+    number: string,
+    state: string | null,
+  ): Promise<CandidatePageDTO> {
+    const { round, office, uf, home } = await this.raceOf(slug, officeSlug, state);
+    const [row] = await this.resultRows(round.id, [office.id], [home]);
+    const result = row
+      ? await this.toResultDTO(
+          round,
+          office,
+          row,
+          await this.areaName(home, round.provider),
+          Number.MAX_SAFE_INTEGER,
+        )
+      : null;
+    const at = result?.candidates.findIndex((c) => c.number === number) ?? -1;
+    if (!result || at < 0) throw new NotFoundError(`no candidate ${number} for "${officeSlug}" here`);
+
+    // The same number in the same race in the other round (a finalist's 1st round, or the runoff).
+    let otherRound: CandidatePageDTO['otherRound'] = null;
+    const other = await this.round(`${round.electionSlug}-${round.round === 1 ? 2 : 1}`).catch(() => null);
+    const otherOffice = other?.offices.find((o) => o.slug === office.slug);
+    if (other && otherOffice) {
+      const [was] = await this.resultRows(other.id, [otherOffice.id], [home]);
+      const c = was?.result.candidates.find((x) => x.number === number);
+      if (c) otherRound = { round: other.round, votes: c.votes, percent: c.percent, status: c.status };
+    }
+    return {
+      office: result.office,
+      areaKey: result.areaKey,
+      areaName: result.areaName,
+      uf,
+      candidate: result.candidates[at]!,
+      rank: at + 1,
+      candidatesTotal: result.candidatesTotal,
+      seats: result.seats,
+      final: result.final,
+      mathematicallyDecided: result.mathematicallyDecided,
+      votesPublishable: result.votesPublishable,
+      progress: result.progress,
+      updatedAt: result.updatedAt,
+      provenance: result.provenance,
+      otherRound,
+    };
+  }
+
+  /**
+   * Where the votes came from. National race: every state (28 small files, ranked here). Any other:
+   * the 20 cities with most votes, read from each city's own result in the database; for deputies
+   * those are big documents (every candidate of the state), so only two of these run at a time.
+   */
+  async candidateAreas(
+    slug: string,
+    officeSlug: string,
+    number: string,
+    state: string | null,
+  ): Promise<CandidateAreasDTO> {
+    const { round, office, uf } = await this.raceOf(slug, officeSlug, state);
+    if (!uf) {
+      const keys = [...DOMESTIC_STATES.map((st) => st.code.toLowerCase()), 'zz'];
+      const rows = (await this.resultRows(round.id, [office.id], keys)).flatMap((row) => {
+        const ranked = rankForDisplay(row.result.candidates);
+        const at = ranked.findIndex((c) => c.number === number);
+        const c = ranked[at];
+        if (!c || c.votes <= 0) return [];
+        const code = row.areaKey.toUpperCase();
+        return [
+          {
+            uf: code,
+            cityCode: null,
+            name: stateName(code),
+            isCapital: false,
+            votes: c.votes,
+            percent: row.result.votesPublishable ? c.percent : null,
+            rank: at + 1,
+          },
+        ];
+      });
+      rows.sort((a, b) => b.votes - a.votes);
+      return { kind: 'state', total: rows.length, rows };
+    }
+    const cities = await this.heavy.run(
+      () => this.sql<
+        {
+          code: string;
+          name: string;
+          isCapital: boolean;
+          votes: string;
+          percent: number | null;
+          total: number;
+        }[]
+      >`
+        select c.provider_id as code, c.name, c.is_capital as "isCapital", pick.votes, pick.percent,
+               count(*) over ()::int as total
+        from area_results r
+        join cities c on c.provider = ${round.provider} and c.state_code = ${uf}
+          and r.area_key = lower(c.state_code) || '-' || c.provider_id
+        cross join lateral (
+          select (x->>'votes')::bigint as votes, (x->>'percent')::float8 as percent
+          from jsonb_array_elements(r.result->'candidates') x
+          where x->>'number' = ${number} limit 1
+        ) pick
+        where r.round_id = ${round.id} and r.office_id = ${office.id} and r.area_type = 'city'
+          and r.state_code = ${uf} and pick.votes > 0
+        order by pick.votes desc, c.search_name
+        limit 20`,
+    );
+    return {
+      kind: 'city',
+      total: cities[0]?.total ?? 0,
+      rows: cities.map((c) => ({
+        uf,
+        cityCode: c.code,
+        name: titleCase(c.name),
+        isCapital: c.isCapital,
+        votes: Number(c.votes),
+        percent: c.percent,
+        rank: null,
+      })),
+    };
   }
 
   // ---------------------------------------------------------------- pages
@@ -1197,6 +1357,7 @@ export class Queries {
         path: where,
         params: { cargo: c.officeSlug },
         photo: c.key,
+        candidate: { office: c.officeSlug, number: c.number, uf: c.uf },
       });
     }
     for (const p of partyRows) {

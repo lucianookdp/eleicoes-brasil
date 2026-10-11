@@ -254,6 +254,26 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
     return send(reply, p.id, `office-states:${p.office}`, () => queries.officeStates(p.id, p.office));
   });
 
+  // One candidate: identified by office, ballot number and (for state races) the state.
+  const candidateParams = roundParams.extend({ office: slug, number: z.string().regex(/^\d{1,5}$/) });
+  const candidateQuery = z.object({ uf: uf.optional() });
+  app.get('/api/elections/:id/candidates/:office/:number', async (req, reply) => {
+    const p = candidateParams.parse(req.params);
+    const q = candidateQuery.parse(req.query);
+    live(reply);
+    return send(reply, p.id, `candidate:${p.office}:${p.number}:${q.uf ?? ''}`, () =>
+      queries.candidate(p.id, p.office, p.number, q.uf ?? null),
+    );
+  });
+  app.get('/api/elections/:id/candidates/:office/:number/areas', async (req, reply) => {
+    const p = candidateParams.parse(req.params);
+    const q = candidateQuery.parse(req.query);
+    live(reply);
+    return send(reply, p.id, `candidate-areas:${p.office}:${p.number}:${q.uf ?? ''}`, () =>
+      queries.candidateAreas(p.id, p.office, p.number, q.uf ?? null),
+    );
+  });
+
   app.get('/api/elections/:id/benches', async (req, reply) => {
     const p = roundParams.parse(req.params);
     live(reply);

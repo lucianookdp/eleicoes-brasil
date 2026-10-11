@@ -78,7 +78,9 @@ export default function PolymarketPage() {
           />
           <div>
             <h1 className="text-[24px] font-semibold leading-tight tracking-tight">Polymarket</h1>
-            <p className="text-[14px] text-ink-2">Eleição presidencial do Brasil 2026 · 2º turno</p>
+            <p className="text-[14px] text-ink-2">
+              Mercado de apostas · Eleição presidencial do Brasil 2026 · 2º turno
+            </p>
             {data && (
               <p className="mt-1 flex items-center gap-1.5 text-[12.5px]" role="status">
                 <span className="flex items-center gap-1.5 font-medium text-bad">
@@ -121,7 +123,7 @@ export default function PolymarketPage() {
         <>
           {/* Computers: the two markets side by side, using the width; phones: one under the other. */}
           <div
-            className={`lg:grid lg:items-start lg:gap-6 ${data.margin.length > 0 ? 'lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]' : ''}`}
+            className={`lg:grid lg:items-stretch lg:gap-6 ${data.margin.length > 0 ? 'lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]' : ''}`}
           >
             <Market
               kicker="Eleição presidencial do Brasil"
@@ -185,14 +187,48 @@ export default function PolymarketPage() {
             </section>
           )}
 
-          {/* What it is and why it matters, short and at the end: the markets come first. */}
-          <section aria-labelledby="o-que-e" className="mt-8 max-w-2xl">
-            <h2 id="o-que-e" className="text-[15px] font-semibold">
+          {/* What it is, said plainly: a betting market, not a poll and not the result. At the end,
+              the markets come first; the page's subtitle already says "mercado de apostas". */}
+          <section
+            aria-labelledby="o-que-e"
+            className="mt-6 rounded-2xl border border-line bg-surface p-4 sm:p-5"
+          >
+            <h2 id="o-que-e" className="text-[19px] font-semibold">
               O que é o Polymarket
             </h2>
-            <p className="mt-1 text-[14px] leading-relaxed text-ink-2">
-              Um mercado de apostas em que o preço de cada opção indica a chance que os apostadores dão a ela.
-              Muda na hora, a cada notícia ou pesquisa.
+            <p className="mt-1 max-w-3xl text-[15.5px] leading-relaxed text-ink-2">
+              É um <strong className="font-semibold text-ink">site de apostas</strong>. Pessoas do mundo todo
+              apostam dinheiro de verdade em quem elas acham que vai vencer a eleição.
+            </p>
+            <ul className="mt-4 grid gap-3 md:grid-cols-3">
+              {[
+                {
+                  title: 'Não é resultado nem pesquisa',
+                  text: 'Os números desta página não vêm do TSE nem de institutos de pesquisa. Mostram só para onde está indo o dinheiro dos apostadores.',
+                },
+                {
+                  title: 'Como ler a porcentagem',
+                  text: '88% quer dizer que os apostadores acham aquele resultado muito provável hoje. Na prática: uma aposta “Sim” a 88 centavos de dólar paga US$ 1 se ele acontecer.',
+                },
+                {
+                  title: 'Muda o tempo todo',
+                  text: 'O preço sobe e desce na hora, a cada notícia, debate ou pesquisa. E os apostadores também erram.',
+                },
+              ].map((item, i) => (
+                <li key={item.title} className="rounded-xl bg-surface-2 p-3.5">
+                  <p className="flex items-center gap-2 text-[14.5px] font-semibold">
+                    <span className="numeral flex size-6 shrink-0 items-center justify-center rounded-full bg-surface text-[12.5px] text-ink-2">
+                      {i + 1}
+                    </span>
+                    {item.title}
+                  </p>
+                  <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-2">{item.text}</p>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-[13px] text-muted">
+              O Eleições Brasil só mostra esses números: não recebe apostas e não tem vínculo com o
+              Polymarket. O resultado oficial da eleição é o do TSE, na página de resultados.
             </p>
           </section>
           <p className="mt-4 text-[12.5px] text-muted">
@@ -233,7 +269,7 @@ function Market({
   photos?: boolean;
 }) {
   return (
-    <section className="mt-6 rounded-2xl border border-line bg-surface p-4 sm:p-5">
+    <section className="mt-6 flex flex-col rounded-2xl border border-line bg-surface p-4 sm:p-5">
       <p className="text-[12.5px] text-muted">{kicker}</p>
       <h2 className="mt-0.5 text-[19px] font-semibold">{title}</h2>
       <p className="flex flex-wrap items-center justify-between gap-2 text-[13px] text-muted">
@@ -248,11 +284,12 @@ function Market({
         </a>
       </p>
       {chart && <Chart outcomes={outcomes} />}
-      <ul className="mt-3 divide-y divide-line border-t border-line">
+      {/* Beside a taller card, the rows share the height left: no empty band under the list. */}
+      <ul className="mt-3 flex flex-1 flex-col divide-y divide-line border-t border-line">
         {outcomes.map((o, i) => (
           <li
             key={o.name}
-            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 py-3 sm:grid-cols-[minmax(0,1fr)_5rem_auto]"
+            className="grid flex-1 grid-cols-[minmax(0,1fr)_auto] content-center items-center gap-x-3 gap-y-1.5 py-3 sm:grid-cols-[minmax(0,1fr)_5rem_auto]"
           >
             <span className="flex min-w-0 items-center gap-2">
               {photos && o.image ? (
