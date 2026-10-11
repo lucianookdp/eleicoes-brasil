@@ -80,10 +80,10 @@ const LABELS: Record<
 };
 
 /**
- * Votes abroad have no shape on a map of Brazil: a circle of their own at the left, under the Amazon
- * and clear of every state (map units).
+ * Votes abroad have no shape on a map of Brazil: a circle of their own in the ocean at the right,
+ * clear of every state and of the labels there (map units). The left corner is the details card's.
  */
-const ABROAD = { id: 'zz', cx: 128, cy: 398, r: 44 };
+const ABROAD = { id: 'zz', cx: 588, cy: 560, r: 42 };
 
 export function BrazilMap({
   states,
@@ -281,7 +281,7 @@ function StateCard({ state, pinned }: { state: StateRowDTO | undefined; pinned: 
     <div
       // A hover card sits over the map on larger screens: it must not take the pointer, or the
       // state under it loses hover, the card hides, the state gets hover again… (flicker).
-      className={`mt-2 rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-[13.5px] sm:absolute sm:bottom-0 sm:right-0 sm:mt-0 sm:w-56 ${pinned ? '' : 'pointer-events-none'}`}
+      className={`mt-2 rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-[13.5px] sm:absolute sm:bottom-0 sm:left-0 sm:mt-0 sm:w-56 ${pinned ? '' : 'pointer-events-none'}`}
       aria-live="polite"
     >
       <p className="flex items-center gap-2 font-semibold">
