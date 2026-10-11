@@ -6,6 +6,7 @@ import type { ElectionSummary, RoundSummary } from '@eleicoes/election-core';
  *   /eleicao/?e=2026&t=1                       overview
  *   /eleicao/estado/?e=2026&t=1&uf=sp          state
  *   /eleicao/municipio/?e=2026&t=1&uf=sp&c=71072
+ *   /eleicao/candidato/?e=2026&t=1&cargo=governador&n=15&uf=sp   one candidate
  * Components describe places with election-relative paths ("/states/sp") and `electionHref`
  * turns them into URLs, so the mapping lives only here.
  */
@@ -70,7 +71,13 @@ export function electionHref(
   let route = SECTIONS[path];
   if (!route) {
     const m = /^\/states\/([a-z]{2})(?:\/cities\/(\d{5}))?$/.exec(path);
-    if (m) {
+    const who = /^(?:\/states\/([a-z]{2}))?\/candidates\/([a-z0-9-]+)\/(\d{1,5})$/.exec(path);
+    if (who) {
+      if (who[1]) params.set('uf', who[1]);
+      params.set('cargo', who[2]!);
+      params.set('n', who[3]!);
+      route = '/eleicao/candidato/';
+    } else if (m) {
       params.set('uf', m[1]!);
       if (m[2]) params.set('c', m[2]);
       route = m[2] ? '/eleicao/municipio/' : '/eleicao/estado/';
@@ -78,6 +85,20 @@ export function electionHref(
   }
   for (const [k, v] of Object.entries(extra ?? {})) params.set(k, v);
   return `${route}?${params}`;
+}
+
+/**
+ * A candidate's own page. The person is the ballot number in that office (and state, for every
+ * race but the national one): "/states/sp/candidates/governador/15", "/candidates/presidente/13".
+ */
+export function candidatePath(
+  round: Pick<RoundSummary, 'electionSlug' | 'round'>,
+  who: { office: string; number: string; uf: string | null },
+) {
+  return electionHref(
+    round,
+    `${who.uf ? `/states/${who.uf.toLowerCase()}` : ''}/candidates/${who.office}/${who.number}`,
+  );
 }
 
 /** Section routes, for highlighting the current tab. */

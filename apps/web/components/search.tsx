@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { type ComponentType, type SVGProps, useEffect, useId, useRef, useState } from 'react';
 import { API_URL } from '@/lib/api';
 import { useSearch } from '@/lib/queries';
+import { candidatePath } from '@/lib/rounds';
 import { IconClose, IconFlag, IconOverview, IconPerson, IconPin, IconSearch, IconStates } from './icons';
 import { useRound } from './shell';
 import { StateFlag } from './ui';
@@ -77,6 +78,12 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
     onClose();
     router.push(href(path, params));
   };
+  // A candidate opens their own page; everything else, its place in the election.
+  const openHit = (h: SearchHitDTO) => {
+    if (!h.candidate) return open(h.path, h.params);
+    onClose();
+    router.push(candidatePath(round, h.candidate));
+  };
 
   return (
     <div
@@ -110,7 +117,7 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
                 } else if (e.key === 'ArrowUp') {
                   e.preventDefault();
                   setIndex((i) => Math.max(i - 1, 0));
-                } else if (e.key === 'Enter' && hits[index]) open(hits[index].path, hits[index].params);
+                } else if (e.key === 'Enter' && hits[index]) openHit(hits[index]);
               }}
               placeholder="Cidade, estado ou candidato"
               className="h-full min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:hidden"
@@ -188,7 +195,7 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
                   tabIndex={-1}
                   aria-selected={i === index}
                   onMouseEnter={() => setIndex(i)}
-                  onClick={() => open(h.path, h.params)}
+                  onClick={() => openHit(h)}
                   onKeyDown={() => {}}
                   className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl px-3 py-2 aria-selected:bg-surface-2"
                 >

@@ -4,7 +4,7 @@ import { hasValidVotes, type OverviewDTO, type ResultDTO, type StateRowDTO } fro
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { displayName, fmtCompact, fmtPct } from '@/lib/format';
 import { usePolymarket } from '@/lib/polymarket';
-import { useEvents, useOfficeStates, useOverview } from '@/lib/queries';
+import { useEvents, useOfficeStates } from '@/lib/queries';
 import { ActivityFeed } from './activity';
 import { BrazilMap } from './brazil-map';
 import { StatusPill } from './results';
@@ -33,13 +33,12 @@ const pagesOf = <T,>(list: T[], size: number) =>
   Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, (i + 1) * size));
 
 /**
- * Every scene the reader can pick, in this order, and the rounds it belongs to: the 1st round has
- * senators; the runoff shows where the most voted changed since the 1st round. Polymarket is not
+ * Every scene the reader can pick, in this order, and the rounds it belongs to (the 1st round has
+ * senators; in the runoff "Governadores" are the states with a governor runoff). Polymarket is not
  * the count: off unless picked.
  */
 export const CATALOG = [
   { id: 'placar', title: 'Estados', rounds: [1, 2] },
-  { id: 'virada', title: 'Mudou desde o 1º turno', rounds: [2] },
   { id: 'apuracao', title: 'Apuração por estado', rounds: [1, 2] },
   { id: 'falta', title: 'Falta apurar', rounds: [1, 2] },
   { id: 'governadores', title: 'Governadores', rounds: [1, 2] },
@@ -119,10 +118,6 @@ export function TvScenes({
   const governors = useOfficeStates(round.slug, governor?.slug).data;
   const senators = useOfficeStates(round.slug, senator?.slug).data;
   const events = useEvents(round.slug, 12).data;
-  // Runoff: the 1st round's most voted in each state, to show where it changed.
-  // (In the 1st round this is the same query as the page's own: nothing more is asked.)
-  const first = useOverview(round.round === 2 ? `${round.electionSlug}-1` : round.slug).data;
-  const firstStates = first?.states;
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -145,10 +140,6 @@ export function TvScenes({
   const bodies: Record<SceneId, ReactNode[]> = {
     // The most voted only: how far the count went in each state has its own scene.
     apuracao: states.some((s) => s.progress) ? [<CountByState key="apuracao" states={states} />] : [],
-    virada:
-      round.round === 2 && states.some((s) => s.leader) && firstStates
-        ? [<Changed key="virada" states={states} before={firstStates} />]
-        : [],
     placar: states.some((s) => s.leader) ? [<Scoreboard key="placar" states={states} />] : [],
     falta: left.length > 0 ? [<Remaining key="falta" rows={left} />] : [],
     governadores: office(round.round === 2 ? 'Governadores no 2º turno' : 'Governadores', governors?.results),
@@ -534,60 +525,6 @@ function CountByState({ states }: { states: StateRowDTO[] }) {
           );
         })}
       </ul>
-    </div>
-  );
-}
-
-/**
- * Runoff: the states where the most voted is not the 1st round's one. Matched by ballot number,
- * never by name.
- */
-function Changed({ states, before }: { states: StateRowDTO[]; before: StateRowDTO[] }) {
-  const was = new Map(before.map((s) => [s.uf, s.leader]));
-  const changed = states.filter((s) => {
-    const b = was.get(s.uf);
-    return s.leader && b && s.leader.number !== b.number;
-  });
-  return (
-    <div>
-      <p className={kicker}>Mudou desde o 1º turno · mais votado em cada estado</p>
-      {changed.length === 0 ? (
-        <p className="mt-3 text-[clamp(14px,3.4cqi,22px)]">
-          Até agora, o mais votado em cada estado é o mesmo do 1º turno.
-        </p>
-      ) : (
-        <ul className="mt-2 divide-y divide-line">
-          {changed.map((s) => {
-            const b = was.get(s.uf)!;
-            return (
-              <li
-                key={s.uf}
-                className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 py-[clamp(5px,1.2cqi,10px)]"
-              >
-                <StateFlag uf={s.uf} size={24} />
-                <span className="min-w-0">
-                  <span className="block truncate text-[clamp(13px,3.2cqi,22px)] font-semibold">
-                    {s.name}
-                  </span>
-                  <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-[clamp(11px,2.5cqi,17px)] text-ink-2">
-                    <span className="size-[0.6em] rounded-full" style={{ background: b.color }} aria-hidden />
-                    <span className="truncate">{displayName(b.name)}</span>
-                    <span aria-hidden className="text-muted">
-                      →
-                    </span>
-                    <span
-                      className="size-[0.6em] rounded-full"
-                      style={{ background: s.leader!.color }}
-                      aria-hidden
-                    />
-                    <span className="truncate font-medium text-ink">{displayName(s.leader!.name)}</span>
-                  </span>
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
     </div>
   );
 }

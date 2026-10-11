@@ -335,6 +335,53 @@ export interface SearchHitDTO {
   params?: Record<string, string>;
   /** Candidate key, for the official photo (candidates only). */
   photo?: string;
+  /** Candidates only: what identifies their own page (office, ballot number, state). */
+  candidate?: { office: string; number: string; uf: string | null };
+}
+
+/**
+ * One candidate's own page: who they are and how they did in the race's home area (Brazil for the
+ * president, the state for every other office). A person is identified by office, state and ballot
+ * number, never by name.
+ */
+export interface CandidatePageDTO {
+  office: OfficeInfo;
+  areaKey: string;
+  areaName: string;
+  /** State of the race; null for a national one. */
+  uf: string | null;
+  candidate: CandidateDTO;
+  /** Position among every candidate of the race (1: most voted) and how many they are. */
+  rank: number;
+  candidatesTotal: number;
+  seats: number | null;
+  final: boolean;
+  mathematicallyDecided: 'elected' | 'runoff' | null;
+  votesPublishable: boolean;
+  progress: ProgressDTO;
+  updatedAt: string;
+  provenance: ProvenanceDTO | null;
+  /** The same ballot number in the same race in the election's other round, when there is one. */
+  otherRound: { round: number; votes: number; percent: number | null; status: string | null } | null;
+}
+
+/** Where a candidate's votes came from: every state for a national race, the top cities otherwise. */
+export interface CandidateAreasDTO {
+  kind: 'state' | 'city';
+  /** Areas where the candidate had votes (the rows may be only the first ones). */
+  total: number;
+  rows: {
+    uf: string;
+    /** Municipality code (cities only). */
+    cityCode: string | null;
+    name: string;
+    isCapital: boolean;
+    votes: number;
+    /** Share of the valid votes of that area. */
+    percent: number | null;
+    /** Position in that area (states only). */
+    rank: number | null;
+  }[];
 }
 
 export interface CompareDTO {

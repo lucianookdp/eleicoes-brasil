@@ -278,6 +278,212 @@ suite('API (integration)', () => {
     expect(all.items[0].before).toBeUndefined();
   });
 
+  it('one candidate: who they are, their position, the other round and where the votes came from', async () => {
+    const [e] = await db
+      .insert(elections)
+      .values({ slug: 'cand', name: 'Eleição de teste', year: 2026, kind: 'general', demo: true })
+      .returning();
+    const round = async (n: number) =>
+      (
+        await db
+          .insert(electionRounds)
+          .values({ electionId: e!.id, slug: `cand-${n}`, round: n, date: '2026-10-04', status: 'final' })
+          .returning()
+      )[0]!;
+    const office = async (roundId: string, code: string, slug: string, scope: 'country' | 'state') =>
+      (
+        await db
+          .insert(offices)
+          .values({
+            roundId,
+            providerId: code,
+            providerElectionCode: code,
+            slug,
+            name: slug === 'presidente' ? 'Presidente' : 'Governador',
+            kind: 'majoritarian',
+            scope,
+            states: scope === 'state' ? ['SP'] : null,
+          })
+          .returning()
+      )[0]!;
+    const [r1, r2] = [await round(1), await round(2)];
+    const p1 = await office(r1.id, '1', 'presidente', 'country');
+    const g1 = await office(r1.id, '3', 'governador', 'state');
+    const p2 = await office(r2.id, '1', 'presidente', 'country');
+    await db.insert(citiesTable).values([
+      { stateCode: 'SP', providerId: '00011', name: 'GRANDE', searchName: 'grande', isCapital: true },
+      { stateCode: 'SP', providerId: '00012', name: 'PEQUENA', searchName: 'pequena' },
+      { stateCode: 'SP', providerId: '00013', name: 'SEM VOTO', searchName: 'sem voto' },
+    ]);
+    // [ballot number, name, votes, percent, status]
+    type Line = [string, string, number, number, string | null];
+    const row = (
+      roundId: string,
+      officeId: string,
+      areaKey: string,
+      areaType: 'country' | 'state' | 'city',
+      stateCode: string | null,
+      lines: Line[],
+    ) => ({
+      roundId,
+      officeId,
+      areaKey,
+      areaType,
+      stateCode,
+      countedPct: 100,
+      result: {
+        progress: { ...emptyProgress(), status: 'finished' as const, sectionsCountedPct: 100 },
+        votes: {
+          total: 0,
+          valid: 0,
+          nominal: 0,
+          legend: null,
+          blank: 0,
+          null: 0,
+          annulled: 0,
+          annulledSubJudice: 0,
+        },
+        candidates: lines.map(([number, name, votes, percent, status]) => ({
+          key: number,
+          number,
+          name,
+          ballotName: name,
+          party: { number, abbreviation: 'P', name: 'P' },
+          coalition: null,
+          runningMates: [],
+          votes,
+          percent,
+          elected: null,
+          status,
+          voteDestination: 'Válido',
+        })),
+        parties: [],
+        seats: 1,
+        final: true,
+        mathematicallyDecided: null,
+        votesPublishable: true,
+        noElectedReasons: [],
+      },
+      provenance: {
+        provider: 'TSE',
+        adapter: 'tse-2026@2026-v1',
+        sourceFile: '/x.json',
+        sourceId: '1',
+        retrievedAt: new Date().toISOString(),
+        sourceGeneratedAt: null,
+        etag: null,
+        checksum: 'x',
+      },
+      checksum: 'x',
+      updatedAt: new Date().toISOString(),
+    });
+    await db.insert(areaResults).values([
+      // President, 1st round: Brazil and two states (ANA wins one, loses the other).
+      row(r1.id, p1.id, 'br', 'country', null, [
+        ['91', 'ANA EXEMPLO', 400, 40, '2º turno'],
+        ['92', 'BRUNO MODELO', 500, 50, '2º turno'],
+        ['93', 'CARLA TESTE', 100, 10, 'Não eleito'],
+      ]),
+      row(r1.id, p1.id, 'sp', 'state', null, [
+        ['91', 'ANA EXEMPLO', 300, 60, null],
+        ['92', 'BRUNO MODELO', 200, 40, null],
+      ]),
+      row(r1.id, p1.id, 'rj', 'state', null, [
+        ['91', 'ANA EXEMPLO', 100, 20, null],
+        ['92', 'BRUNO MODELO', 300, 60, null],
+        ['93', 'CARLA TESTE', 100, 20, null],
+      ]),
+      // President, runoff.
+      row(r2.id, p2.id, 'br', 'country', null, [
+        ['91', 'ANA EXEMPLO', 520, 52, 'Eleito'],
+        ['92', 'BRUNO MODELO', 480, 48, 'Não eleito'],
+      ]),
+      // Governor of SP: the state and its cities (no votes for 15 in one of them).
+      row(r1.id, g1.id, 'sp', 'state', 'SP', [
+        ['15', 'DAVI AMOSTRA', 900, 45, 'Não eleito'],
+        ['25', 'ELISA PROVA', 1100, 55, 'Eleito'],
+      ]),
+      row(r1.id, g1.id, 'sp-00011', 'city', 'SP', [
+        ['15', 'DAVI AMOSTRA', 800, 47, null],
+        ['25', 'ELISA PROVA', 900, 53, null],
+      ]),
+      row(r1.id, g1.id, 'sp-00012', 'city', 'SP', [
+        ['15', 'DAVI AMOSTRA', 100, 33.3, null],
+        ['25', 'ELISA PROVA', 200, 66.7, null],
+      ]),
+      row(r1.id, g1.id, 'sp-00013', 'city', 'SP', [['25', 'ELISA PROVA', 5, 100, null]]),
+    ]);
+
+    // A finalist, seen in the 1st round: position, and how the runoff went.
+    const ana = (await built.app.inject('/api/elections/cand-1/candidates/presidente/91')).json();
+    expect(ana).toMatchObject({
+      office: { slug: 'presidente' },
+      areaKey: 'br',
+      uf: null,
+      candidate: { number: '91', ballotName: 'ANA EXEMPLO', votes: 400, percent: 40, status: '2º turno' },
+      rank: 2,
+      candidatesTotal: 3,
+      otherRound: { round: 2, votes: 520, percent: 52, status: 'Eleito' },
+    });
+    // A national race: every state with votes, most votes first, with the position there.
+    const states = (await built.app.inject('/api/elections/cand-1/candidates/presidente/91/areas')).json();
+    expect(states).toMatchObject({
+      kind: 'state',
+      total: 2,
+      rows: [
+        { uf: 'SP', name: 'São Paulo', votes: 300, percent: 60, rank: 1 },
+        { uf: 'RJ', name: 'Rio de Janeiro', votes: 100, percent: 20, rank: 2 },
+      ],
+    });
+    // Someone who did not go to the runoff: no other round.
+    const carla = (await built.app.inject('/api/elections/cand-1/candidates/presidente/93')).json();
+    expect(carla).toMatchObject({ rank: 3, otherRound: null });
+
+    // A state race needs the state; its votes come by city, the cities without votes left out.
+    const davi = (await built.app.inject('/api/elections/cand-1/candidates/governador/15?uf=sp')).json();
+    expect(davi).toMatchObject({ areaKey: 'sp', areaName: 'São Paulo', uf: 'SP', rank: 2, otherRound: null });
+    const cities = (
+      await built.app.inject('/api/elections/cand-1/candidates/governador/15/areas?uf=sp')
+    ).json();
+    expect(cities).toEqual({
+      kind: 'city',
+      total: 2,
+      rows: [
+        { uf: 'SP', cityCode: '00011', name: 'Grande', isCapital: true, votes: 800, percent: 47, rank: null },
+        {
+          uf: 'SP',
+          cityCode: '00012',
+          name: 'Pequena',
+          isCapital: false,
+          votes: 100,
+          percent: 33.3,
+          rank: null,
+        },
+      ],
+    });
+
+    // Not found: no such number, a state race without its state, a state where it is not disputed.
+    for (const path of [
+      'candidates/presidente/99',
+      'candidates/governador/15',
+      'candidates/governador/15?uf=rj',
+      'candidates/senador/15?uf=sp',
+      'candidates/governador/15/areas',
+    ]) {
+      expect((await built.app.inject(`/api/elections/cand-1/${path}`)).statusCode, path).toBe(404);
+    }
+    expect((await built.app.inject('/api/elections/cand-1/candidates/presidente/abc')).statusCode).toBe(400);
+
+    // The search says what identifies each candidate's page.
+    await sql`insert into candidates (round_id, office_id, state_code, provider_id, number, name, ballot_name,
+        search_name, party_number, party_abbreviation)
+      values (${r1.id}, ${g1.id}, 'SP', '15', '15', 'DAVI AMOSTRA', 'DAVI AMOSTRA', 'davi amostra', '15', 'P')`;
+    const hits = (await built.app.inject('/api/elections/cand-1/search?q=davi')).json();
+    expect(hits).toMatchObject([
+      { kind: 'candidate', candidate: { office: 'governador', number: '15', uf: 'SP' } },
+    ]);
+  });
+
   it('validates parameters (400) and unknown rounds (404)', async () => {
     expect((await built.app.inject('/api/elections/test-1/states/xx')).statusCode).toBe(400);
     expect((await built.app.inject('/api/elections/test-1/states/sp/cities/123')).statusCode).toBe(400);

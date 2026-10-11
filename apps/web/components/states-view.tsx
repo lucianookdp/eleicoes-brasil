@@ -8,25 +8,19 @@ import { useRound } from './shell';
 import { StatesTable } from './states-table';
 import { ErrorNotice, Panel, Segmented, Skeleton } from './ui';
 
-/** Filter value for "most voted changed since the 1st round" (the others are ballot numbers). */
-const CHANGED = 'changed';
+/** Filter value for "this state has a governor runoff" (the others are ballot numbers). */
+const GOVERNOR = 'governor';
 
 export function StatesView() {
-  const { round, elections } = useRound();
+  const { round } = useRound();
   const { data, error, refetch } = useOverview(round.slug);
-  // In a runoff, the 1st round's leaders too (one cached request; the same one when there is none).
-  const first =
-    round.round === 2
-      ? elections.find((e) => e.slug === round.electionSlug)?.rounds.find((r) => r.round === 1)
-      : undefined;
-  const before = useOverview(first?.slug ?? round.slug).data;
   const [view, setView] = useState<'list' | 'map'>('list');
   const [leader, setLeader] = useState<string | null>(null);
   if (!data)
     return error ? <ErrorNotice error={error} retry={() => refetch()} /> : <Skeleton className="h-96" />;
   const states = data.states.filter((s) => s.uf !== 'ZZ');
   const hasHeadline = data.round.offices.some((o) => o.scope === 'country');
-  // Who won where: the two candidates (by ballot number) that lead the most states.
+  // Who won where: every candidate (by ballot number) that leads some state, most states first.
   const wins = new Map<string, { number: string; name: string; color: string; n: number }>();
   for (const s of data.states) {
     if (!s.leader) continue;
@@ -34,19 +28,14 @@ export function StatesView() {
     w.n++;
     wins.set(s.leader.number, w);
   }
-  const top = [...wins.values()].sort((a, b) => b.n - a.n).slice(0, 2);
-  // Runoff: states whose most voted is someone else than in the 1st round.
-  const firstLeader = new Map(
-    first && before ? before.states.map((s) => [s.uf, s.leader?.number ?? null] as const) : [],
-  );
-  const changed = first
-    ? data.states.filter(
-        (s) => s.leader && firstLeader.get(s.uf) && firstLeader.get(s.uf) !== s.leader.number,
-      )
-    : [];
+  const top = [...wins.values()].sort((a, b) => b.n - a.n);
+  // Runoff: the states that also choose their governor on this day (the TSE lists them).
+  const governorIn =
+    round.round === 2 ? (data.round.offices.find((o) => o.slug === 'governador')?.states ?? []) : [];
+  const governor = data.states.filter((s) => governorIn.includes(s.uf));
   const listed =
-    leader === CHANGED
-      ? changed
+    leader === GOVERNOR
+      ? governor
       : leader
         ? data.states.filter((s) => s.leader?.number === leader)
         : data.states;
@@ -76,14 +65,14 @@ export function StatesView() {
         <fieldset className="mb-4">
           <legend className="mb-1.5 text-[13px] text-muted">
             {/* While counting, "most votes so far": who leads can still change. */}
-            Mais votado {round.status === 'final' ? '' : 'até agora '}em cada estado
+            Filtrar pelo mais votado {round.status === 'final' ? '' : 'até agora '}em cada estado
           </legend>
           <div className="flex flex-wrap gap-1.5">
             {[
               { value: null, label: 'Todos', color: null, n: data.states.length },
               ...top.map((t) => ({ value: t.number, label: displayName(t.name), color: t.color, n: t.n })),
-              ...(first && before
-                ? [{ value: CHANGED, label: 'Mudou desde o 1º turno', color: null, n: changed.length }]
+              ...(governor.length > 0
+                ? [{ value: GOVERNOR, label: 'Governador no 2º turno', color: null, n: governor.length }]
                 : []),
             ].map((o) => (
               <button
@@ -100,11 +89,10 @@ export function StatesView() {
               </button>
             ))}
           </div>
-          {leader === CHANGED && (
+          {leader === GOVERNOR && (
             <p className="mt-2 text-[13px] text-muted">
-              {changed.length === 0
-                ? 'Em todos os estados, o mais votado é o mesmo do 1º turno.'
-                : `Estados onde o mais votado ${round.status === 'final' ? 'foi' : 'está sendo'} outro candidato, diferente do 1º turno.`}
+              Estados que, além do presidente, escolhem o governador neste 2º turno. Toque em um deles para
+              ver a disputa.
             </p>
           )}
         </fieldset>

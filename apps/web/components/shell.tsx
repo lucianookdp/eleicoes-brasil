@@ -14,6 +14,7 @@ import {
   IconClose,
   IconCompare,
   IconData,
+  IconGlobe,
   IconHelp,
   IconHistory,
   type IconInfo,
@@ -187,6 +188,18 @@ function useMoreItems() {
   // Sharing the site comes last, after these (see MoreContent).
   const links: MoreItem[] = [
     { to: href('/tv'), path: '/tv', label: 'Modo telão', phoneLabel: 'Painel ao vivo', icon: IconTv },
+    // Brazilians abroad vote for president only: a general election has that page.
+    ...(round.kind === 'general'
+      ? [
+          {
+            to: href('/states/zz'),
+            path: '/states/zz',
+            label: 'Votos no exterior',
+            short: 'Exterior',
+            icon: IconGlobe,
+          },
+        ]
+      : []),
     {
       to: href('/operations'),
       path: '/operations',
@@ -785,40 +798,54 @@ function Footer() {
 
 /** Quiet footer: the source and the two help pages; the author's credit as one small line. */
 function SiteFooter({ version }: { version?: string }) {
+  const links = (
+    <>
+      <Link href="/como-funciona" className="text-ink-2 underline underline-offset-2 hover:text-ink">
+        Como funciona
+      </Link>
+      {' · '}
+      <Link href="/sobre" className="text-ink-2 underline underline-offset-2 hover:text-ink">
+        Sobre os dados
+      </Link>
+    </>
+  );
   return (
     <footer className="mt-6 border-t border-line pb-24 xl:pb-0">
-      <div className="mx-auto flex max-w-[1320px] flex-col gap-4 px-4 py-6 sm:px-6 md:flex-row md:items-center md:justify-between">
+      <div className="mx-auto flex max-w-[1320px] flex-col gap-3 px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between md:gap-4 md:py-6">
         <div className="max-w-2xl text-[13px] text-muted">
-          <p className="flex items-center gap-2 font-medium text-ink-2">
-            <Logo size={18} /> Eleições Brasil
+          {/* Phones: the name at the left, the version at the right, on one line. */}
+          <p className="flex items-center justify-between gap-2 font-medium text-ink-2 md:justify-start">
+            <span className="flex items-center gap-2">
+              <Logo size={18} /> Eleições Brasil
+            </span>
             <span className="font-mono text-[11.5px] font-normal text-muted">
               {version ? `v${version}` : ''}
             </span>
           </p>
-          <p className="mt-1.5 leading-relaxed">
+          {/* Phones: the essential in two short lines; computers have room for the whole sentence. */}
+          <p className="mt-1 text-[12.5px] leading-snug md:hidden">
+            Dados oficiais do TSE. Site independente, sem vínculo com a Justiça Eleitoral.
+          </p>
+          <p className="mt-1.5 text-[12.5px] md:hidden">{links}</p>
+          <p className="mt-1.5 hidden leading-relaxed md:block">
             Dados oficiais do Tribunal Superior Eleitoral (TSE). Site independente, sem vínculo com a Justiça
-            Eleitoral. Horários de Brasília.{' '}
-            <Link href="/como-funciona" className="text-ink-2 underline underline-offset-2 hover:text-ink">
-              Como funciona
-            </Link>
-            {' · '}
-            <Link href="/sobre" className="text-ink-2 underline underline-offset-2 hover:text-ink">
-              Sobre os dados
-            </Link>
+            Eleitoral. Horários de Brasília. {links}
           </p>
         </div>
         {/* The author's credit: a button that says what it opens (the author's other projects), on
-            every screen. Tighter on phones, so it fits the narrowest one. */}
+            every screen. On phones it takes the whole line, the name at one end and the action at the other. */}
         <a
           href="https://lucianookdp.dev"
           target="_blank"
           rel="noopener"
-          className="group flex shrink-0 items-center gap-2 self-start rounded-full border border-line bg-surface py-1.5 pl-3.5 pr-1.5 text-[12px] text-muted transition-colors hover:border-line-strong hover:text-ink md:gap-2.5 md:self-auto md:pl-4 md:text-[13px]"
+          className="group flex shrink-0 items-center justify-between gap-2 rounded-full border border-line bg-surface py-1.5 pl-3.5 pr-1.5 text-[12px] text-muted transition-colors hover:border-line-strong hover:text-ink md:justify-start md:gap-2.5 md:pl-4 md:text-[13px]"
         >
-          <span className="min-[360px]:hidden">Por</span>
-          <span className="hidden min-[360px]:inline">Desenvolvido por</span>
-          <AuthorLogo className="text-[13.5px] font-medium text-ink md:text-[14.5px]" />
-          <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 text-[12px] font-medium text-ink-2 transition-colors group-hover:bg-ink group-hover:text-ground md:px-3 md:text-[12.5px]">
+          <span className="flex min-w-0 items-center gap-2 md:gap-2.5">
+            <span className="min-[360px]:hidden">Por</span>
+            <span className="hidden min-[360px]:inline">Desenvolvido por</span>
+            <AuthorLogo className="text-[13.5px] font-medium text-ink md:text-[14.5px]" />
+          </span>
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 text-[12px] font-medium text-ink-2 transition-colors group-hover:bg-ink group-hover:text-ground md:px-3 md:text-[12.5px]">
             Ver projetos <span aria-hidden>↗</span>
           </span>
         </a>

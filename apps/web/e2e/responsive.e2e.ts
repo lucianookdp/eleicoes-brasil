@@ -10,6 +10,8 @@ const PAGES = [
   '/eleicao/estado/?uf=sp',
   '/eleicao/estado/?uf=zz',
   '/eleicao/municipio/?uf=sp&c=34020',
+  // One candidate's own page (a finalist: there in both rounds).
+  '/eleicao/candidato/?cargo=presidente&n=92',
   '/eleicao/cargos/',
   '/eleicao/bancadas/',
   '/eleicao/historico/',

@@ -3,6 +3,8 @@
 import type {
   ActivityEventDTO,
   BenchesDTO,
+  CandidateAreasDTO,
+  CandidatePageDTO,
   CityDetailDTO,
   CityRowDTO,
   CompareDTO,
@@ -123,6 +125,34 @@ export const useOfficeStates = (round: string, office: string | undefined) =>
     queryFn: () => api<OfficeStatesDTO>(`${base(round)}/offices/${office}/states`),
     enabled: !!office,
     placeholderData: keepPreviousData,
+  });
+
+const candidateUrl = (round: string, office: string, number: string, uf: string | null, rest = '') =>
+  `${base(round)}/candidates/${office}/${number}${rest}${uf ? `?uf=${uf.toLowerCase()}` : ''}`;
+
+/** One candidate: who they are and how they did in their race. */
+export const useCandidate = (round: string, office: string, number: string, uf: string | null) =>
+  useQuery({
+    queryKey: [round, 'candidate', office, number, uf],
+    queryFn: () => api<CandidatePageDTO>(candidateUrl(round, office, number, uf)),
+    retry: (n, err) => (err as { status?: number }).status !== 404 && n < 2,
+  });
+
+/** Where that candidate's votes came from (states, or the cities with most votes). */
+export const useCandidateAreas = (
+  round: string,
+  office: string,
+  number: string,
+  uf: string | null,
+  enabled = true,
+) =>
+  useQuery({
+    queryKey: [round, 'candidate-areas', office, number, uf],
+    queryFn: () => api<CandidateAreasDTO>(candidateUrl(round, office, number, uf, '/areas')),
+    enabled,
+    retry: (n, err) => (err as { status?: number }).status !== 404 && n < 2,
+    // Reads every city of the state: not asked again on each small update of the count.
+    staleTime: 60_000,
   });
 
 export const useSearch = (round: string, q: string) =>

@@ -2,12 +2,14 @@
 
 import type { CandidateDTO, OfficeInfo, ResultDTO } from '@eleicoes/election-core';
 import { formatClock, hasValidVotes, percent } from '@eleicoes/election-core';
+import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import type { ApiError } from '@/lib/api';
 import { API_URL } from '@/lib/api';
 import { displayName, fmtCompact, fmtInt, fmtPct, fmtPp, fmtSigned, initials, shownTime } from '@/lib/format';
 import { useResult } from '@/lib/queries';
+import { candidatePath } from '@/lib/rounds';
 import { ShareButton } from './share-button';
 import { useRound } from './shell';
 import { EmptyState, ErrorNotice, Segmented, Skeleton } from './ui';
@@ -120,7 +122,17 @@ function Avatar({
   );
 }
 
+/** The candidate's own page, from any result they appear in (a city's result leads to the same page). */
+function useCandidateHref(result: ResultDTO) {
+  const { round } = useRound();
+  // City offices (a district council) have no page of their own.
+  if (result.office.scope === 'city') return () => null;
+  const uf = result.office.scope === 'country' ? null : result.areaKey.slice(0, 2);
+  return (c: CandidateDTO) => candidatePath(round, { office: result.office.slug, number: c.number, uf });
+}
+
 export function CandidateRow({ c, result, rank }: { c: CandidateDTO; result: ResultDTO; rank: number }) {
+  const page = useCandidateHref(result)(c);
   const pp = fmtPp(c.deltaPp);
   const delta = fmtSigned(c.deltaVotes);
   const mates = c.runningMates.filter((m) => m.name);
@@ -134,7 +146,13 @@ export function CandidateRow({ c, result, rank }: { c: CandidateDTO; result: Res
       <div className="min-w-0">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-medium">
           <span className="sr-only">{rank}º. </span>
-          <span className="min-w-0 truncate">{displayName(c.ballotName)}</span>
+          {page ? (
+            <Link href={page} className="min-w-0 truncate hover:underline">
+              {displayName(c.ballotName)}
+            </Link>
+          ) : (
+            <span className="min-w-0 truncate">{displayName(c.ballotName)}</span>
+          )}
           <StatusPill c={c} result={result} rank={rank} />
           {!hasValidVotes(c) && (
             <span
@@ -196,6 +214,7 @@ export function isHeadToHead(result: ResultDTO, round: number) {
  */
 export function HeadToHead({ result }: { result: ResultDTO }) {
   const { round } = useRound();
+  const page = useCandidateHref(result);
   const [x, y] = result.candidates.filter(hasValidVotes) as [CandidateDTO, CandidateDTO];
   // Same place and office in the 1st round, matched by ballot number (the candidacy is the same).
   const firstRound = `${round.electionSlug}-1`;
@@ -222,7 +241,13 @@ export function HeadToHead({ result }: { result: ResultDTO }) {
       <FacePhoto c={c} fallbackRound={firstRound} />
       <p className="flex w-full items-center justify-center gap-1.5 text-[16px] font-semibold">
         <span className="size-2.5 shrink-0 rounded-full" style={{ background: c.color }} aria-hidden />
-        <span className="truncate">{displayName(c.ballotName)}</span>
+        {page(c) ? (
+          <Link href={page(c)!} className="truncate hover:underline">
+            {displayName(c.ballotName)}
+          </Link>
+        ) : (
+          <span className="truncate">{displayName(c.ballotName)}</span>
+        )}
       </p>
       <p className="-mt-2 text-[12.5px] text-muted">
         {c.number} · {c.party.abbreviation}

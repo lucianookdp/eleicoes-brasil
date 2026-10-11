@@ -231,6 +231,7 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
               {activeTab === 'estados' && (
                 <div className="max-h-[70vh] overflow-y-auto pr-1 lg:max-h-[calc(100vh-14rem)]">
                   <StatesTable
+                    leaderFilter
                     states={data.states}
                     leaderLabel={headlineOffice ? 'Mais votado' : undefined}
                     compact

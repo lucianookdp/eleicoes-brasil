@@ -1,11 +1,12 @@
 'use client';
 
-import type { StateDetailDTO } from '@eleicoes/election-core';
+import type { ResultDTO, StateDetailDTO } from '@eleicoes/election-core';
 import { formatClock, hasValidVotes } from '@eleicoes/election-core';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { displayName, fmtInt, fmtPct } from '@/lib/format';
+import { displayName, fmtInt, fmtPct, fmtPp } from '@/lib/format';
 import { useCities, useOverview, useResult, useSeries, useStateDetail } from '@/lib/queries';
+import { candidatePath } from '@/lib/rounds';
 import { CountingHero } from './counting';
 import { EvolutionChart } from './evolution-chart';
 import { IconSearch } from './icons';
@@ -89,6 +90,8 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
         )}
       </section>
 
+      {abroad && result.data && <AbroadVsBrazil abroad={result.data} cities={data.cityCount} />}
+
       {/* Results first (what readers came for); the counting details follow. */}
       <section className="mt-10">
         <CountingHero
@@ -128,9 +131,7 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
   const colorOf = (number: string) => candidates.find((c) => c.number === number)?.color ?? 'var(--muted)';
   const picked = sort.startsWith('candidate:') ? sort.slice('candidate:'.length) : undefined;
   // "Only where X won": the two leading candidates nationally (in a runoff, the two finalists).
-  // A ballot number, or "changed" (runoff: most voted differs from the 1st round).
   const [leader, setLeader] = useState<string | null>(null);
-  const changed = leader === 'changed';
   const leaderName = candidates.find((c) => c.number === leader)?.ballotName;
   const pickedName = candidates.find((c) => c.number === picked)?.ballotName;
   const { data, isFetching, isFetchingNextPage, hasNextPage, fetchNextPage } = useCities(
@@ -140,8 +141,7 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
       q: debounced,
       sort: picked ? 'candidate' : sort,
       candidate: picked,
-      leader: leader && !changed ? leader : undefined,
-      changed,
+      leader: leader ?? undefined,
     },
   );
   const items = data?.pages.flatMap((p) => p.items) ?? [];
@@ -164,9 +164,6 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
               ...candidates
                 .slice(0, 2)
                 .map((c) => ({ number: c.number, label: displayName(c.ballotName), color: c.color })),
-              ...(round.round === 2
-                ? [{ number: 'changed', label: 'Mudou desde o 1º turno', color: null }]
-                : []),
             ].map((o) => (
               <button
                 key={o.label}
@@ -185,10 +182,8 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
           {leader && data && (
             <p className="mt-1.5 text-[13px] text-ink-2">
               {fmtInt(found)}{' '}
-              {abroad ? (found === 1 ? 'cidade' : 'cidades') : found === 1 ? 'município' : 'municípios'}{' '}
-              {changed
-                ? 'onde o mais votado é outro, diferente do 1º turno'
-                : `onde ${displayName(leaderName ?? '')} teve mais votos`}
+              {abroad ? (found === 1 ? 'cidade' : 'cidades') : found === 1 ? 'município' : 'municípios'} onde{' '}
+              {displayName(leaderName ?? '')} teve mais votos
             </p>
           )}
         </fieldset>
@@ -233,13 +228,7 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
         </label>
       </div>
       {data && items.length === 0 && (
-        <EmptyState
-          title={
-            changed && !debounced
-              ? 'Em todos os municípios, o mais votado é o mesmo do 1º turno.'
-              : `Nenhum município encontrado para “${debounced}”.`
-          }
-        />
+        <EmptyState title={`Nenhum município encontrado para “${debounced}”.`} />
       )}
       <ul
         className={`grid gap-x-6 sm:grid-cols-2 xl:grid-cols-3 ${isFetching && !isFetchingNextPage ? 'opacity-70' : ''}`}
@@ -326,6 +315,95 @@ function Cities({ uf, total, abroad }: { uf: string; total: number; abroad: bool
           {isFetchingNextPage ? 'Carregando…' : `Mostrar mais (${fmtInt(items.length)} de ${fmtInt(found)})`}
         </button>
       )}
+    </section>
+  );
+}
+
+/**
+ * Votes abroad next to the country's: how many voters that is, and each candidate's share there
+ * and in Brazil as a whole. Only the TSE's own numbers, side by side.
+ */
+function AbroadVsBrazil({ abroad, cities }: { abroad: ResultDTO; cities: number }) {
+  const { round } = useRound();
+  const country = useOverview(round.slug).data;
+  const national = country?.headline;
+  if (!country || !national || !abroad.votesPublishable) return null;
+  const rows = abroad.candidates.filter(hasValidVotes).slice(0, 6);
+  if (rows.length === 0) return null;
+  const here = abroad.progress.electorateTotal;
+  const all = country.progress?.electorateTotal;
+  const facts = [
+    {
+      label: 'Eleitores no exterior',
+      value: fmtInt(here),
+      detail: here && all ? `${fmtPct((100 * here) / all, 2)} do eleitorado do país` : null,
+    },
+    { label: 'Cidades com votação', value: fmtInt(cities), detail: 'em outros países' },
+    { label: 'Urnas', value: fmtInt(abroad.progress.sectionsTotal), detail: null },
+  ];
+  return (
+    <section aria-labelledby="exterior-brasil" className="mt-10">
+      <SectionTitle id="exterior-brasil" title="O voto no exterior e no Brasil" />
+      <Panel className="p-4 sm:p-5">
+        <dl className="grid gap-px overflow-hidden rounded-lg bg-line sm:grid-cols-3">
+          {facts.map((f) => (
+            <div key={f.label} className="bg-surface-2 px-3.5 py-3">
+              <dt className="text-[12.5px] text-muted">{f.label}</dt>
+              <dd className="numeral text-[22px] leading-tight">{f.value}</dd>
+              {f.detail && <dd className="text-[12.5px] text-muted">{f.detail}</dd>}
+            </div>
+          ))}
+        </dl>
+        <div className="scroll-x mt-4">
+          <table className="w-full text-[14.5px]">
+            <caption className="sr-only">
+              Porcentagem dos votos válidos de cada candidato no exterior e no Brasil inteiro
+            </caption>
+            <thead className="text-left text-[12.5px] text-muted">
+              <tr className="border-b border-line">
+                <th className="py-2 pr-3 font-normal">Candidato</th>
+                <th className="py-2 pr-3 text-right font-normal">Exterior</th>
+                <th className="py-2 pr-3 text-right font-normal">Brasil</th>
+                <th className="py-2 text-right font-normal">Diferença</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((c) => {
+                const home = national.candidates.find((n) => n.number === c.number);
+                const diff = c.percent != null && home?.percent != null ? c.percent - home.percent : null;
+                return (
+                  <tr key={c.key} className="border-b border-line/70 last:border-0">
+                    <td className="py-2.5 pr-3">
+                      <Link
+                        href={candidatePath(round, {
+                          office: abroad.office.slug,
+                          number: c.number,
+                          uf: null,
+                        })}
+                        className="flex items-center gap-2 font-medium hover:underline"
+                      >
+                        <span
+                          className="size-2.5 shrink-0 rounded-full"
+                          style={{ background: c.color }}
+                          aria-hidden
+                        />
+                        <span className="truncate">{displayName(c.ballotName)}</span>
+                      </Link>
+                    </td>
+                    <td className="numeral py-2.5 pr-3 text-right">{fmtPct(c.percent)}</td>
+                    <td className="numeral py-2.5 pr-3 text-right text-ink-2">{fmtPct(home?.percent)}</td>
+                    <td className="numeral py-2.5 text-right text-ink-2">{fmtPp(diff) ?? '—'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-2 text-[12.5px] text-muted">
+          Porcentagens dos votos válidos. “Diferença” é quanto o candidato teve a mais ou a menos no exterior
+          do que no país inteiro, em pontos percentuais.
+        </p>
+      </Panel>
     </section>
   );
 }
