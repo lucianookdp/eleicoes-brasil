@@ -37,11 +37,12 @@
   --line-strong: #c8cdd5;
   --ink: #111317;
   --ink-2: #3c414a;
-  --muted: #6a707a;
-  --live: #0c8a4e;
-  --live-soft: rgb(12 138 78 / 0.1);
-  --warn: #a8690f;
-  --warn-soft: rgb(168 105 15 / 0.1);
+  /* Dark enough for small text on the second surface too (4.5:1). */
+  --muted: #646a74;
+  --live: #097542;
+  --live-soft: rgb(9 117 66 / 0.1);
+  --warn: #99600d;
+  --warn-soft: rgb(153 96 13 / 0.1);
   --bad: #c3342c;
   --bad-soft: rgb(195 52 44 / 0.1);
   --info: #1f5fc8;

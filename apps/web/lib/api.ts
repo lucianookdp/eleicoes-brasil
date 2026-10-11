@@ -26,7 +26,28 @@ function withVersion(path: string) {
   return `${path}${path.includes('?') ? '&' : '?'}v=${dataVersion.v}`;
 }
 
+/**
+ * The answer the page asked for before the scripts loaded (the inline script in app/layout.tsx),
+ * handed out once: the next request for the same path is a normal one.
+ */
+function takeEarly<T>(path: string): Promise<T> | null {
+  if (typeof window === 'undefined') return null;
+  const early = (window as { __early?: Record<string, Promise<unknown> | undefined> }).__early;
+  const answer = early?.[path];
+  if (!early || !answer) return null;
+  early[path] = undefined;
+  return answer as Promise<T>;
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const early = init ? null : takeEarly<T>(path);
+  if (early) {
+    try {
+      return await early;
+    } catch {
+      // The early request failed (offline for a moment, the API restarting): ask again now.
+    }
+  }
   const res = await fetch(`${API_URL}${withVersion(path)}`, init);
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;

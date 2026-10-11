@@ -60,6 +60,18 @@ worker ──NOTIFY──► PostgreSQL ──LISTEN──► API ──SSE─�
 - O navegador espera 0,25–1,25 s aleatórios e então busca de novo só o que está na tela, com
   `?v=<versão>` na URL. Assim milhares de leitores não chegam no mesmo milissegundo e todos pedem
   a mesma URL, que um CDN pode responder.
+- A API guarda cada resposta por 10 s (`CACHE_TTL_SECONDS`) e a descarta a cada atualização da
+  rodada. A única resposta cara, os votos de um candidato município por município (segundos de
+  banco para um deputado de um estado grande), fica 10 minutos, com o mesmo descarte.
+
+## Primeira carga
+
+- O endereço do site (`/`) já é a página de resultados da eleição do momento, sem redirecionar.
+- Um script pequeno no HTML (`app/layout.tsx`) pede à API a lista de eleições (e o resumo, quando
+  o endereço traz `e` e `t`) enquanto os scripts ainda estão baixando; o app usa essas respostas
+  uma vez (`takeEarly` em `lib/api.ts`). Se o pedido antecipado falhar, o app pede de novo.
+- O conteúdo ocupa pelo menos uma tela de altura: o rodapé nunca aparece na primeira tela para
+  depois pular quando os dados chegam.
 - Sem conexão ao vivo, a tela revalida a cada 60 s; offline, avisa e mantém os últimos dados.
 
 ## Muitos leitores

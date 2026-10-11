@@ -1,35 +1,12 @@
 'use client';
 
-import type { ElectionSummary } from '@eleicoes/election-core';
-import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { api } from '@/lib/api';
-import { defaultElection, electionHref, pickRound } from '@/lib/rounds';
+import { OverviewView } from '@/components/overview';
 
-/** Opens the election that matters now: live, else the latest with data, else the demo. */
+/**
+ * The site's address shows the results of the election that matters now, in the round a link
+ * without "t" opens (the shell picks both). It used to load, ask the API which election that is
+ * and only then go to /eleicao/: one more trip before the first number on a slow connection.
+ */
 export default function Home() {
-  const router = useRouter();
-  const { data, error } = useQuery({
-    queryKey: ['elections'],
-    queryFn: () => api<ElectionSummary[]>('/api/elections'),
-  });
-  const election = data && defaultElection(data);
-  useEffect(() => {
-    if (!election) return;
-    // The same choice as a link without "t": never a second rule that could disagree with it.
-    const round = pickRound([election], election.slug) ?? election.rounds[0]!;
-    router.replace(electionHref(round));
-  }, [election, router]);
-  return (
-    <div className="max-w-xl py-16">
-      <p className="text-ink-2">
-        {error
-          ? 'Não foi possível carregar a apuração agora. Tente de novo em alguns instantes.'
-          : data && !election
-            ? 'Nenhuma eleição disponível no momento.'
-            : 'Carregando a apuração…'}
-      </p>
-    </div>
-  );
+  return <OverviewView initial={null} />;
 }

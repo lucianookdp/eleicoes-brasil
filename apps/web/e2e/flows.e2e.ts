@@ -459,11 +459,20 @@ test('"/" opens the round a link without "t" opens; TV mode on the title line, c
   page,
   isMobile,
 }) => {
+  // The site's address is the results page itself (no redirect), in the same round as a link
+  // to the election without "t".
   await page.goto('/');
-  await expect(page).toHaveURL(/\/eleicao\/\?e=[\w-]+&t=\d/);
-  const opened = new URL(page.url()).searchParams;
-  await page.goto(`/eleicao/?e=${opened.get('e')}`);
-  await expect(page.getByText(new RegExp(`^${opened.get('t')}º turno ·`))).toBeVisible();
+  const subtitle = page.getByText(/^\dº turno · /);
+  await expect(subtitle).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
+  const shown = (await subtitle.innerText()).slice(0, 8);
+  const election = await page.evaluate(() =>
+    new URL(document.querySelector<HTMLAnchorElement>('a[href*="/eleicao/estados/"]')!.href).searchParams.get(
+      'e',
+    ),
+  );
+  await page.goto(`/eleicao/?e=${election}`);
+  await expect(page.getByText(/^\dº turno · /)).toHaveText(new RegExp(`^${shown}`));
 
   const title = page.getByRole('heading', { level: 1 });
   const tv = page.getByRole('link', { name: 'Assistir no modo telão' });
