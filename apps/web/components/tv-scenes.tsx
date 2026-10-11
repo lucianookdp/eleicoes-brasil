@@ -168,7 +168,15 @@ export function TvScenes({
     title: 'Mapa',
     page: 0,
     pages: 1,
-    body: <BrazilMap key={round.slug} states={states} only="leader" fit />,
+    body: (
+      <BrazilMap
+        key={round.slug}
+        states={states}
+        abroad={data.states.find((st) => st.uf === 'ZZ')}
+        only="leader"
+        fit
+      />
+    ),
   };
   // Whatever was picked, the map is always there to fall back on.
   const picks: Scene[] = picked.flatMap((c) =>

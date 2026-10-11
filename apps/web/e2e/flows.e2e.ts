@@ -607,3 +607,24 @@ test('states table: filters by region and count stage, sorts by the most voted, 
   await who.selectOption((await option.getAttribute('value'))!);
   await expect(page.getByText(`${count} de 28`)).toBeVisible();
 });
+
+test('map: the votes abroad are a tile of their own, with the details and the way to their page', async ({
+  page,
+  isMobile,
+}) => {
+  await page.goto('/eleicao/estados/?e=demo&t=1');
+  if (isMobile) await page.getByRole('radio', { name: 'Mapa' }).click();
+  const tile = page.getByRole('link', { name: /^Votos no exterior: / });
+  await expect(tile).toBeVisible();
+  // The same way a state answers: a tap shows the card with its link, a click opens it.
+  if (isMobile) {
+    await tile.tap();
+    await page.getByRole('link', { name: 'Abrir os votos no exterior' }).click();
+  } else {
+    await tile.hover();
+    await expect(page.getByText('Votos no exterior', { exact: true })).toBeVisible();
+    await tile.click();
+  }
+  await expect(page).toHaveURL(/\/eleicao\/estado\/\?e=demo&t=1&uf=zz/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Exterior' })).toBeVisible();
+});
