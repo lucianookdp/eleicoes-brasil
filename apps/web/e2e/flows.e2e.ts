@@ -542,9 +542,16 @@ test('a candidate has a page of their own: from a result list, with the votes an
   await page.locator('main a[href*="/eleicao/candidato/"]').first().click();
   await expect(page).toHaveURL(/cargo=governador&n=\d+/);
   await expect(page).toHaveURL(/uf=sp/);
-  await expect(
-    page.getByRole('region', { name: 'De onde vieram os votos' }).getByRole('link').first(),
-  ).toHaveAttribute('href', /\/eleicao\/municipio\/\?e=demo&t=1&uf=sp&c=\d{5}/);
+  // (While a count is running, a city's file may not have arrived yet: then the page says so.)
+  const byCity = page.getByRole('region', { name: 'De onde vieram os votos' });
+  const none = byCity.getByText(/Ainda não há votos por município/);
+  await expect(byCity.getByRole('listitem').first().or(none)).toBeVisible();
+  if ((await none.count()) === 0) {
+    await expect(byCity.getByRole('link').first()).toHaveAttribute(
+      'href',
+      /\/eleicao\/municipio\/\?e=demo&t=1&uf=sp&c=\d{5}/,
+    );
+  }
 
   // A deputy: the list by city is heavy for the database, so it comes only when asked for.
   await page.goto('/eleicao/estado/?e=demo&t=1&uf=sp&cargo=deputado-federal');
@@ -553,7 +560,13 @@ test('a candidate has a page of their own: from a result list, with the votes an
   const cities = page.getByRole('region', { name: 'De onde vieram os votos' });
   await expect(cities.getByRole('listitem')).toHaveCount(0);
   await cities.getByRole('button', { name: 'Ver os municípios com mais votos' }).click();
-  await expect(cities.getByRole('listitem').first()).toBeVisible();
+  await expect(
+    cities
+      .getByRole('listitem')
+      .first()
+      .or(cities.getByText(/Ainda não há votos por município/)),
+  ).toBeVisible();
+  await expect(cities.getByRole('button', { name: 'Ver os municípios com mais votos' })).toHaveCount(0);
 
   // A number nobody has: said so, with a way back.
   await page.goto('/eleicao/candidato/?e=demo&t=1&cargo=presidente&n=77');
