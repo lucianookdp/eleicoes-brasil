@@ -399,6 +399,7 @@ export function TvView() {
                   <BrazilMap
                     key={round.slug}
                     states={states}
+                    abroad={data.states.find((st) => st.uf === 'ZZ')}
                     only="leader"
                     card={false}
                     fit={layout === 'three'}

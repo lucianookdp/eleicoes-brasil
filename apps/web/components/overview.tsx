@@ -226,7 +226,12 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
               ]}
             >
               {activeTab === 'mapa' && (
-                <BrazilMap key={round.slug} states={states} allowLeader={!!headlineOffice} />
+                <BrazilMap
+                  key={round.slug}
+                  states={states}
+                  abroad={headlineOffice ? data.states.find((st) => st.uf === 'ZZ') : undefined}
+                  allowLeader={!!headlineOffice}
+                />
               )}
               {activeTab === 'estados' && (
                 <div className="max-h-[70vh] overflow-y-auto pr-1 lg:max-h-[calc(100vh-14rem)]">
@@ -569,7 +574,7 @@ function GovernorRunoffs({ data }: { data: OverviewDTO }) {
   if (round.round !== 2 || !office || !states?.results.length) return null;
   return (
     <section aria-labelledby="governadores-2t" className="rounded-xl border border-line bg-surface p-4">
-      <div className="mb-1 flex items-baseline justify-between gap-3">
+      <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 id="governadores-2t" className="text-[15px] font-semibold">
           Governadores no 2º turno
         </h2>
@@ -577,25 +582,67 @@ function GovernorRunoffs({ data }: { data: OverviewDTO }) {
           Ver todos
         </Link>
       </div>
-      <ul className="divide-y divide-line">
+      {/* Each state as the dispute it is: the two finalists, their shares and the bar between them. */}
+      <ul className="grid gap-3 sm:grid-cols-2">
         {states.results.map((r) => {
-          const [lead] = r.candidates.filter(hasValidVotes);
-          const won = lead && /^eleit/i.test(lead.status ?? '');
+          const [a, b] = r.candidates.filter(hasValidVotes);
+          const shown = r.votesPublishable;
+          const started = shown && (a?.votes ?? 0) + (b?.votes ?? 0) > 0;
+          const counted = r.progress.countedPct;
           return (
-            <li key={r.areaKey}>
+            <li key={r.areaKey} className="min-w-0">
               <Link
                 href={href(`/states/${r.areaKey}`, { cargo: office.slug })}
-                className="grid min-h-11 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 py-1.5 text-[14px]"
+                className="block h-full min-w-0 rounded-lg bg-surface-2 p-3 hover:bg-surface-2/70"
               >
-                <StateFlag uf={r.areaKey} size={18} />
-                <span className="min-w-0 truncate">
-                  <span className="text-muted">{r.areaKey.toUpperCase()} · </span>
-                  {lead && r.votesPublishable ? displayName(lead.ballotName) : 'Aguardando votos'}
-                  {won && <span className="ml-1.5 text-[12px] font-medium text-live">{lead.status}</span>}
-                </span>
-                <span className="numeral text-muted">
-                  {lead && r.votesPublishable ? fmtPct(lead.percent, 1) : ''}
-                </span>
+                <p className="flex items-center justify-between gap-2 text-[13.5px]">
+                  <span className="flex min-w-0 items-center gap-2 font-semibold">
+                    <StateFlag uf={r.areaKey} size={18} />
+                    <span className="truncate">{r.areaName}</span>
+                  </span>
+                  <span className="shrink-0 text-[12px] text-muted">
+                    {started ? `${fmtPct(counted, 1)} das urnas` : 'Aguardando votos'}
+                  </span>
+                </p>
+                <ul className="mt-2 grid gap-1">
+                  {[a, b].map(
+                    (cand) =>
+                      cand && (
+                        <li key={cand.key} className="flex items-baseline justify-between gap-2 text-[14px]">
+                          <span className="flex min-w-0 items-center gap-1.5">
+                            <span
+                              className="size-2.5 shrink-0 rounded-full"
+                              style={{ background: cand.color }}
+                              aria-hidden
+                            />
+                            <span className="truncate font-medium">{displayName(cand.ballotName)}</span>
+                            <span className="shrink-0 text-[12px] text-muted">{cand.party.abbreviation}</span>
+                            {/^eleit/i.test(cand.status ?? '') && (
+                              <span className="shrink-0 rounded bg-live-soft px-1.5 py-0.5 text-[11.5px] font-medium text-live">
+                                {cand.status}
+                              </span>
+                            )}
+                          </span>
+                          <span className="numeral shrink-0 font-semibold">
+                            {shown ? fmtPct(cand.percent, 1) : '—'}
+                          </span>
+                        </li>
+                      ),
+                  )}
+                </ul>
+                {a && b && (
+                  <div className="mt-2 flex h-1.5 gap-[2px] overflow-hidden rounded-full bg-line" aria-hidden>
+                    {started && (
+                      <>
+                        <span
+                          className="bar h-full"
+                          style={{ width: `${a.percent ?? 0}%`, background: a.color }}
+                        />
+                        <span className="bar h-full flex-1" style={{ background: b.color }} />
+                      </>
+                    )}
+                  </div>
+                )}
               </Link>
             </li>
           );

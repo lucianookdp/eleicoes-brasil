@@ -5,7 +5,7 @@ import { formatClock } from '@eleicoes/election-core';
 import brazil from '@svg-maps/brazil';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { type KeyboardEvent, type PointerEvent, useState } from 'react';
 import { displayName, fmtCompact, fmtPct } from '@/lib/format';
 import { useRound } from './shell';
 import { Segmented, StateFlag } from './ui';
@@ -79,8 +79,15 @@ const LABELS: Record<
   df: { at: [409, 310], from: [409, 327], to: [409, 317] },
 };
 
+/**
+ * Votes abroad have no shape on a map of Brazil: a circle of their own in the ocean at the right,
+ * clear of every state and of the labels there (map units). The left corner is the details card's.
+ */
+const ABROAD = { id: 'zz', cx: 588, cy: 560, r: 42 };
+
 export function BrazilMap({
   states,
+  abroad,
   allowLeader = true,
   highlight,
   only,
@@ -88,6 +95,8 @@ export function BrazilMap({
   card = true,
 }: {
   states: StateRowDTO[];
+  /** All the votes cast abroad, as one more area beside the map (president only). */
+  abroad?: StateRowDTO;
   allowLeader?: boolean;
   /** Fill the parent's height (the full-screen panel), without the hover card. */
   fit?: boolean;
@@ -104,8 +113,36 @@ export function BrazilMap({
   const [mode, setMode] = useState<Mode>(only ?? (allowLeader ? 'leader' : 'progress'));
   const [active, setActive] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string | null>(null);
-  const byUf = new Map(states.map((s) => [s.uf.toLowerCase(), s]));
+  const byUf = new Map([...states, ...(abroad ? [abroad] : [])].map((s) => [s.uf.toLowerCase(), s]));
   const shown = byUf.get(active ?? pinned ?? '');
+  // The same behaviour for a state's shape and for the tile of the votes abroad.
+  const area = (id: string) => ({
+    role: 'link',
+    tabIndex: 0,
+    fill: fill(byUf.get(id), mode),
+    fillOpacity: highlight && !highlight.has(id) ? 0.22 : 1,
+    stroke: active === id || pinned === id ? 'var(--ink)' : 'var(--ground)',
+    strokeWidth: active === id || pinned === id ? 1.6 : 0.8,
+    className:
+      'cursor-pointer outline-none transition-[fill] duration-700 focus-visible:stroke-[var(--info)] focus-visible:[stroke-width:2.5]',
+    onPointerEnter: (e: PointerEvent<SVGElement>) => e.pointerType === 'mouse' && setActive(id),
+    onPointerLeave: (e: PointerEvent<SVGElement>) => e.pointerType === 'mouse' && setActive(null),
+    onFocus: () => setActive(id),
+    onBlur: () => setActive(null),
+    onPointerUp: (e: PointerEvent<SVGElement>) => {
+      if (e.pointerType === 'mouse' || pinned === id) router.push(href(`/states/${id}`));
+      else setPinned(id);
+    },
+    onKeyDown: (e: KeyboardEvent<SVGElement>) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        router.push(href(`/states/${id}`));
+      }
+    },
+  });
+  const describe = (name: string, st: StateRowDTO | undefined) =>
+    `${name}: ${st?.progress?.countedPct == null ? 'sem dados' : `${fmtPct(st.progress.countedPct)} apurado`}${st?.leader && mode === 'leader' ? `, mais votado ${displayName(st.leader.name)}` : ''}`;
+  const abroadOnColour = mode === 'leader' ? !!abroad?.leader : (abroad?.progress?.countedPct ?? 0) >= 50;
   const leaders = [
     ...new Map(states.filter((s) => s.leader).map((s) => [s.leader!.name, s.leader!])).values(),
   ];
@@ -141,39 +178,47 @@ export function BrazilMap({
           role="group"
           aria-label="Mapa do Brasil por estado"
         >
-          {MAP.locations.map((loc) => {
-            const s = byUf.get(loc.id);
-            const pct = s?.progress?.countedPct;
-            return (
-              <path
-                key={loc.id}
-                d={loc.path}
-                role="link"
-                tabIndex={0}
-                aria-label={`${loc.name}: ${pct == null ? 'sem dados' : `${fmtPct(pct)} apurado`}${s?.leader && mode === 'leader' ? `, mais votado ${displayName(s.leader.name)}` : ''}`}
-                fill={fill(s, mode)}
-                fillOpacity={highlight && !highlight.has(loc.id) ? 0.22 : 1}
-                stroke={active === loc.id || pinned === loc.id ? 'var(--ink)' : 'var(--ground)'}
-                strokeWidth={active === loc.id || pinned === loc.id ? 1.6 : 0.8}
-                className="cursor-pointer outline-none transition-[fill] duration-700 focus-visible:stroke-[var(--info)] focus-visible:[stroke-width:2.5]"
-                onPointerEnter={(e) => e.pointerType === 'mouse' && setActive(loc.id)}
-                onPointerLeave={(e) => e.pointerType === 'mouse' && setActive(null)}
-                onFocus={() => setActive(loc.id)}
-                onBlur={() => setActive(null)}
-                onPointerUp={(e) => {
-                  if (e.pointerType === 'mouse') router.push(href(`/states/${loc.id}`));
-                  else if (pinned === loc.id) router.push(href(`/states/${loc.id}`));
-                  else setPinned(loc.id);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    router.push(href(`/states/${loc.id}`));
-                  }
-                }}
+          {MAP.locations.map((loc) => (
+            <path
+              key={loc.id}
+              d={loc.path}
+              aria-label={describe(loc.name, byUf.get(loc.id))}
+              {...area(loc.id)}
+            />
+          ))}
+          {abroad && (
+            <>
+              <circle
+                cx={ABROAD.cx}
+                cy={ABROAD.cy}
+                r={ABROAD.r}
+                aria-label={describe('Votos no exterior', abroad)}
+                {...area(ABROAD.id)}
               />
-            );
-          })}
+              <g
+                aria-hidden
+                className="pointer-events-none select-none"
+                transform={`translate(${ABROAD.cx} ${ABROAD.cy})`}
+              >
+                {/* Named in words, the way each state carries its abbreviation: no drawing. */}
+                <text
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={14}
+                  fontWeight={600}
+                  letterSpacing="0.02em"
+                  fill={abroadOnColour ? '#fff' : 'var(--ink)'}
+                  stroke={abroadOnColour ? 'rgb(0 0 0 / .3)' : 'var(--ground)'}
+                  strokeWidth={2.5}
+                  strokeOpacity={0.55}
+                  paintOrder="stroke"
+                  opacity={0.9}
+                >
+                  Exterior
+                </text>
+              </g>
+            </>
+          )}
           <g aria-hidden className="pointer-events-none select-none" fontSize={12} fontWeight={600}>
             {Object.entries(LABELS).map(([id, { at, from, to, sea }]) => {
               // White on a candidate's colour or the darker half of the progress scale (both
@@ -227,7 +272,7 @@ function StateCard({ state, pinned }: { state: StateRowDTO | undefined; pinned: 
   if (!state) {
     return (
       <p className="mt-2 text-center text-[12.5px] text-muted">
-        Toque ou passe o mouse sobre um estado para ver os detalhes.
+        Toque ou passe o mouse sobre um estado (ou o exterior) para ver os detalhes.
       </p>
     );
   }
@@ -241,7 +286,7 @@ function StateCard({ state, pinned }: { state: StateRowDTO | undefined; pinned: 
     >
       <p className="flex items-center gap-2 font-semibold">
         <StateFlag uf={state.uf} size={20} />
-        {state.name}
+        {state.uf === 'ZZ' ? 'Votos no exterior' : state.name}
       </p>
       <p className="numeral text-[20px] leading-tight">
         {p && p.status !== 'not-started' ? `${fmtPct(p.countedPct)}` : '—'}
@@ -266,7 +311,7 @@ function StateCard({ state, pinned }: { state: StateRowDTO | undefined; pinned: 
           href={href(`/states/${state.uf.toLowerCase()}`)}
           className="mt-2 inline-flex min-h-9 items-center font-medium text-info underline underline-offset-2"
         >
-          Abrir {state.name}
+          Abrir {state.uf === 'ZZ' ? 'os votos no exterior' : state.name}
         </Link>
       )}
     </div>

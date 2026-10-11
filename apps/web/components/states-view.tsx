@@ -101,7 +101,13 @@ export function StatesView() {
         <Panel
           className={`p-3 sm:p-4 lg:sticky lg:top-20 lg:col-span-5 lg:block ${view === 'map' ? '' : 'hidden'}`}
         >
-          <BrazilMap key={round.slug} states={states} allowLeader={hasHeadline} highlight={highlight} />
+          <BrazilMap
+            key={round.slug}
+            states={states}
+            abroad={hasHeadline ? data.states.find((st) => st.uf === 'ZZ') : undefined}
+            allowLeader={hasHeadline}
+            highlight={highlight}
+          />
         </Panel>
         <div className={`lg:col-span-7 lg:block ${view === 'list' ? '' : 'hidden'}`}>
           <StatesTable states={listed} leaderLabel={hasHeadline ? 'Mais votado' : undefined} />
