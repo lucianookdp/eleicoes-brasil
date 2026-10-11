@@ -3,6 +3,7 @@
 import type { CandidateAreasDTO } from '@eleicoes/election-core';
 import { hasValidVotes } from '@eleicoes/election-core';
 import Link from 'next/link';
+import { useState } from 'react';
 import { displayName, fmtInt, fmtPct } from '@/lib/format';
 import { useCandidate, useCandidateAreas } from '@/lib/queries';
 import { candidatePath } from '@/lib/rounds';
@@ -23,7 +24,12 @@ const MATE: Record<string, string> = {
 export function CandidateView({ office, number, uf }: { office: string; number: string; uf: string | null }) {
   const { round, elections, href } = useRound();
   const { data, error, refetch } = useCandidate(round.slug, office, number, uf);
-  const areas = useCandidateAreas(round.slug, office, number, uf);
+  // Deputies: the list by city reads every city's full result (in a big state, seconds of the
+  // database for one page), so it is fetched when the reader asks for it, not by every visit or
+  // crawler. Governors, senators and the president are light: shown at once.
+  const [asked, setAsked] = useState(false);
+  const light = data ? data.office.kind === 'majoritarian' : false;
+  const areas = useCandidateAreas(round.slug, office, number, uf, !!data && (light || asked));
 
   if (!data) {
     if ((error as { status?: number } | null)?.status === 404) {
@@ -169,10 +175,26 @@ export function CandidateView({ office, number, uf }: { office: string; number: 
           </h2>
           {areas.data ? (
             <Areas areas={areas.data} total={c.votes} color={c.color} />
+          ) : !light && !asked ? (
+            <div className="mt-2">
+              <p className="text-[14px] text-ink-2">
+                Veja em quais municípios {state ? `de ${data.areaName} ` : ''}o candidato teve mais votos.
+              </p>
+              <button
+                type="button"
+                onClick={() => setAsked(true)}
+                className="mt-3 inline-flex h-11 items-center rounded-full bg-ink px-5 text-[14.5px] font-semibold text-ground hover:opacity-90"
+              >
+                Ver os municípios com mais votos
+              </button>
+            </div>
           ) : areas.error ? (
             <ErrorNotice error={areas.error} retry={() => areas.refetch()} />
           ) : (
-            <Skeleton className="mt-3 h-64" />
+            <>
+              {!light && <p className="mt-2 text-[13px] text-muted">Somando os votos de cada município…</p>}
+              <Skeleton className="mt-3 h-64" />
+            </>
           )}
         </section>
       </Panel>

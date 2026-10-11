@@ -139,10 +139,17 @@ export const useCandidate = (round: string, office: string, number: string, uf: 
   });
 
 /** Where that candidate's votes came from (states, or the cities with most votes). */
-export const useCandidateAreas = (round: string, office: string, number: string, uf: string | null) =>
+export const useCandidateAreas = (
+  round: string,
+  office: string,
+  number: string,
+  uf: string | null,
+  enabled = true,
+) =>
   useQuery({
     queryKey: [round, 'candidate-areas', office, number, uf],
     queryFn: () => api<CandidateAreasDTO>(candidateUrl(round, office, number, uf, '/areas')),
+    enabled,
     retry: (n, err) => (err as { status?: number }).status !== 404 && n < 2,
     // Reads every city of the state: not asked again on each small update of the count.
     staleTime: 60_000,
