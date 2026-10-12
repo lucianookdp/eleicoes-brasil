@@ -637,3 +637,18 @@ test('map: the votes abroad are a tile of their own, with the details and the wa
   await expect(page).toHaveURL(/\/eleicao\/estado\/\?e=demo&t=1&uf=zz/);
   await expect(page.getByRole('heading', { level: 1, name: 'Exterior' })).toBeVisible();
 });
+
+test('votes abroad: when each place votes, in Brasília time, earliest first', async ({ page }) => {
+  await page.goto('/eleicao/estado/?e=demo&t=2&uf=zz');
+  const hours = page.getByRole('region', { name: 'Quando cada lugar vota' });
+  await expect(hours).toBeVisible();
+  // The demo votes in Lisbon, Miami and Vancouver: three places, three opening times, in that order.
+  const rows = hours.getByRole('listitem');
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0)).toContainText('Portugal');
+  await expect(rows.nth(1)).toContainText('Estados Unidos');
+  await expect(rows.nth(2)).toContainText('Canadá');
+  // Europe is back on winter time that morning: 8h in Lisbon is 5h in Brasília.
+  await expect(rows.nth(0)).toContainText('dom. 5h – dom. 14h');
+  await expect(rows.nth(2)).toContainText('dom. 12h – dom. 21h');
+});

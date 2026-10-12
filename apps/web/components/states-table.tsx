@@ -1,7 +1,6 @@
 'use client';
 
 import type { StateRowDTO } from '@eleicoes/election-core';
-import { formatClock } from '@eleicoes/election-core';
 import Link from 'next/link';
 import { useState } from 'react';
 import { displayName, fmtCompact, fmtInt, fmtPct } from '@/lib/format';
@@ -183,12 +182,11 @@ export function StatesTable({
             <thead className="text-left text-[12.5px] text-muted">
               <tr className="border-b border-line">
                 <th className="py-2 pr-2 font-normal">UF</th>
-                <th className="py-2 pr-4 font-normal">Estado</th>
-                <th className="w-[22%] py-2 pr-4 font-normal">Apurado</th>
-                <th className="py-2 pr-4 text-right font-normal">Urnas</th>
-                <th className="py-2 pr-4 text-right font-normal">Votos</th>
-                {leaderLabel && <th className="py-2 pr-4 font-normal">{leaderLabel}</th>}
-                <th className="py-2 text-right font-normal">Atualizado</th>
+                <th className="py-2 pr-3 font-normal">Estado</th>
+                <th className="w-[21%] py-2 pr-3 font-normal">Apurado</th>
+                <th className="py-2 pr-3 text-right font-normal md:hidden xl:table-cell">Urnas</th>
+                <th className="py-2 pr-3 text-right font-normal md:hidden xl:table-cell">Votos</th>
+                {leaderLabel && <th className="py-2 pr-3 font-normal">{leaderLabel}</th>}
               </tr>
             </thead>
             <tbody>
@@ -202,7 +200,7 @@ export function StatesTable({
                         {s.uf}
                       </span>
                     </td>
-                    <td className="py-2 pr-4">
+                    <td className="whitespace-nowrap py-2 pr-3">
                       <Link
                         href={href(`/states/${s.uf.toLowerCase()}`)}
                         className="font-medium hover:underline"
@@ -210,25 +208,25 @@ export function StatesTable({
                         {s.name}
                       </Link>
                     </td>
-                    <td className="py-2 pr-4">
+                    <td className="py-2 pr-3">
                       <div className="flex items-center gap-2">
                         <ProgressBar
                           value={p?.countedPct ?? null}
                           label={`${s.name}: urnas apuradas`}
-                          className="flex-1"
+                          className="min-w-[4rem] flex-1"
                         />
                         <span className="w-16 text-right">
                           {p && p.status !== 'not-started' ? fmtPct(p.countedPct) : '—'}
                         </span>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap py-2 pr-4 text-right text-ink-2">
+                    <td className="whitespace-nowrap py-2 pr-3 text-right text-ink-2 md:hidden xl:table-cell">
                       {fmtInt(p?.sectionsCounted)}
                       <span className="text-muted"> / {fmtInt(p?.sectionsTotal)}</span>
                     </td>
-                    <td className="py-2 pr-4 text-right">{fmtCompact(p?.turnout)}</td>
+                    <td className="py-2 pr-3 text-right md:hidden xl:table-cell">{fmtCompact(p?.turnout)}</td>
                     {leaderLabel && (
-                      <td className="py-2 pr-4">
+                      <td className="py-2 pr-3">
                         {s.leader ? (
                           <span className="flex items-center gap-1.5">
                             <span
@@ -244,9 +242,6 @@ export function StatesTable({
                         )}
                       </td>
                     )}
-                    <td className="py-2 text-right font-mono text-[13px] text-ink-2">
-                      {p?.totalizedAt ? formatClock(p.totalizedAt) : '—'}
-                    </td>
                   </tr>
                 );
               })}

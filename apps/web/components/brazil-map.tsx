@@ -269,14 +269,38 @@ export function BrazilMap({
 
 function StateCard({ state, pinned }: { state: StateRowDTO | undefined; pinned: boolean }) {
   const { href } = useRound();
-  if (!state) {
-    return (
-      <p className="mt-2 text-center text-[12.5px] text-muted">
-        Toque ou passe o mouse sobre um estado (ou o exterior) para ver os detalhes.
-      </p>
-    );
-  }
+  // Always there on bigger screens, where the card floats over the map: when the hint left the
+  // page as a state was pointed at, the box got shorter and the map jumped. (On a phone the card
+  // takes the hint's place under the map.)
+  const hint = (
+    <p
+      aria-hidden={state ? true : undefined}
+      className={`mt-2 text-center text-[12.5px] text-muted ${state ? 'hidden sm:invisible sm:block' : ''}`}
+    >
+      Toque ou passe o mouse sobre um estado (ou o exterior) para ver os detalhes.
+    </p>
+  );
+  if (!state) return hint;
   const p = state.progress;
+  return (
+    <>
+      {hint}
+      <StateCardBody state={state} pinned={pinned} p={p} href={href} />
+    </>
+  );
+}
+
+function StateCardBody({
+  state,
+  pinned,
+  p,
+  href,
+}: {
+  state: StateRowDTO;
+  pinned: boolean;
+  p: StateRowDTO['progress'];
+  href: (path?: string) => string;
+}) {
   return (
     <div
       // A hover card sits over the map on larger screens: it must not take the pointer, or the

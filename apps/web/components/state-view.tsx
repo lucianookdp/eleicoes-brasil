@@ -4,8 +4,9 @@ import type { ResultDTO, StateDetailDTO } from '@eleicoes/election-core';
 import { formatClock, hasValidVotes } from '@eleicoes/election-core';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { displayName, fmtInt, fmtPct, fmtPp } from '@/lib/format';
-import { useCities, useOverview, useResult, useSeries, useStateDetail } from '@/lib/queries';
+import { sameName, votingSchedule } from '@/lib/abroad';
+import { displayName, fmtCompact, fmtInt, fmtPct, fmtPp } from '@/lib/format';
+import { useAbroadCities, useCities, useOverview, useResult, useSeries, useStateDetail } from '@/lib/queries';
 import { candidatePath } from '@/lib/rounds';
 import { CountingHero } from './counting';
 import { EvolutionChart } from './evolution-chart';
@@ -90,6 +91,7 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
         )}
       </section>
 
+      {abroad && <AbroadHours />}
       {abroad && result.data && <AbroadVsBrazil abroad={result.data} cities={data.cityCount} />}
 
       {/* Results first (what readers came for); the counting details follow. */}
@@ -402,6 +404,98 @@ function AbroadVsBrazil({ abroad, cities }: { abroad: ResultDTO; cities: number 
         <p className="mt-2 text-[12.5px] text-muted">
           Porcentagens dos votos válidos. “Diferença” é quanto o candidato teve a mais ou a menos no exterior
           do que no país inteiro, em pontos percentuais.
+        </p>
+      </Panel>
+    </section>
+  );
+}
+
+const BRASILIA_DAY = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', timeZone: 'America/Sao_Paulo' });
+const BRASILIA_TIME = new Intl.DateTimeFormat('pt-BR', {
+  hour: 'numeric',
+  minute: '2-digit',
+  hourCycle: 'h23',
+  timeZone: 'America/Sao_Paulo',
+});
+/** "sáb. 16h", "dom. 3h30": the weekday matters, the first polls open on the eve in Brasília. */
+function brasilia(at: Date) {
+  const [h, m] = BRASILIA_TIME.format(at).split(':');
+  return `${BRASILIA_DAY.format(at).replace('.', '')}. ${Number(h)}h${m === '00' ? '' : m}`;
+}
+
+/**
+ * When Brazilians abroad vote: 8h to 17h in each place's own time, shown here in Brasília time and
+ * in the order the polls open round the world (New Zealand first, the west coast of North America
+ * last). The time zones are ours (lib/abroad.ts); the cities and electorates are the TSE's.
+ */
+function AbroadHours() {
+  const { round } = useRound();
+  const cities = useAbroadCities(round.slug, true).data;
+  // Which places are voting right now: re-read every minute, on election day it changes.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  if (!cities || cities.length === 0) return null;
+  const { slots, unknown } = votingSchedule(
+    cities.map((c) => ({ name: c.name, voters: c.progress?.electorateTotal })),
+    round.date,
+  );
+  if (slots.length === 0) return null;
+  const first = slots[0]!;
+  const last = slots.at(-1)!;
+  return (
+    <section aria-labelledby="horarios-exterior" className="mt-10">
+      <SectionTitle id="horarios-exterior" title="Quando cada lugar vota" />
+      <Panel className="p-4 sm:p-5">
+        <p className="max-w-3xl text-[14px] leading-relaxed text-ink-2">
+          No exterior a votação vai das 8h às 17h no horário de cada lugar. Abaixo, os horários de Brasília,
+          na ordem em que as urnas abrem: as primeiras urnas abrem{' '}
+          <strong className="font-semibold text-ink">{brasilia(first.opens)}</strong> e as últimas fecham{' '}
+          <strong className="font-semibold text-ink">{brasilia(last.closes)}</strong>. O TSE só começa a
+          divulgar os resultados às 17h de Brasília, quando termina a votação no Brasil.
+        </p>
+        <ol className="mt-4 divide-y divide-line border-t border-line">
+          {slots.map((slot) => {
+            const voting = now >= slot.opens.getTime() && now < slot.closes.getTime();
+            const over = now >= slot.closes.getTime();
+            return (
+              <li
+                key={slot.opens.getTime()}
+                className="grid gap-x-4 gap-y-1 py-3 sm:grid-cols-[11.5rem_minmax(0,1fr)]"
+              >
+                <p className="text-[14.5px]">
+                  <span className="numeral font-semibold">
+                    {brasilia(slot.opens)} – {brasilia(slot.closes)}
+                  </span>
+                  <span className="block text-[12.5px] text-muted">
+                    {voting && <span className="font-medium text-live">Votando agora · </span>}
+                    {over && 'Encerrada · '}
+                    {slot.voters > 0 &&
+                      `${fmtCompact(slot.voters)} ${slot.voters === 1 ? 'eleitor' : 'eleitores'}`}
+                  </span>
+                </p>
+                <p className="text-[14px] leading-relaxed text-ink-2">
+                  {slot.places.map((place, i) => (
+                    <span key={place.country}>
+                      {i > 0 && ' · '}
+                      <span className="font-medium text-ink">{place.country}</span>
+                      {/* A country with a single place of the same name needs no list. */}
+                      {!(place.cities.length === 1 && sameName(place.cities[0]!, place.country)) &&
+                        ` (${place.cities.join(', ')})`}
+                    </span>
+                  ))}
+                </p>
+              </li>
+            );
+          })}
+        </ol>
+        {unknown.length > 0 && (
+          <p className="mt-3 text-[12.5px] text-muted">Sem horário nesta lista: {unknown.join(', ')}.</p>
+        )}
+        <p className="mt-3 text-[12.5px] text-muted">
+          Cidades e eleitores: TSE. Os horários são calculados pelo site a partir do fuso de cada lugar.
         </p>
       </Panel>
     </section>

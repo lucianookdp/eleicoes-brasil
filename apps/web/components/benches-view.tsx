@@ -134,8 +134,12 @@ function Bench({ bench, groups }: { bench: BenchDTO; groups: Group[] }) {
   const senate = bench.office.slug === 'senador';
   const majority = Math.floor(bench.seats / 2) + 1;
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-12 [&>*]:min-w-0">
-      <Panel className="p-4 sm:p-5 lg:col-span-7">
+    // Side by side with the same height (the chart centred in its card); with the whole list open,
+    // which is much longer, the chart keeps its own height and stays in view.
+    <div className={`grid gap-6 lg:grid-cols-12 [&>*]:min-w-0 ${all ? 'items-start' : 'items-stretch'}`}>
+      <Panel
+        className={`flex flex-col justify-center p-4 sm:p-5 lg:col-span-7 ${all ? 'lg:sticky lg:top-20' : ''}`}
+      >
         <Hemicycle groups={groups} total={bench.seats} active={active} />
         <p className="mt-3 text-center text-[13.5px] text-ink-2">
           {senate ? (
