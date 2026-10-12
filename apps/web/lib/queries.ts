@@ -69,6 +69,28 @@ export const useCities = (
     placeholderData: keepPreviousData,
   });
 
+/**
+ * Every city abroad, by name: the list itself never changes during a round, so it is asked once
+ * (outside the round's key: a live update does not fetch it again).
+ */
+export const useAbroadCities = (round: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ['abroad-cities', round],
+    queryFn: async () => {
+      const all: CityRowDTO[] = [];
+      for (let page = 1; page <= 5; page++) {
+        const res = await api<Paginated<CityRowDTO>>(
+          `${base(round)}/states/zz/cities?page=${page}&pageSize=100&sort=name`,
+        );
+        all.push(...res.items);
+        if (all.length >= res.total || res.items.length === 0) break;
+      }
+      return all;
+    },
+    enabled,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
 export const useCity = (round: string, uf: string, city: string, initialData?: CityDetailDTO | null) =>
   useQuery({
     queryKey: [round, 'city', uf, city],

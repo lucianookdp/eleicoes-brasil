@@ -30,11 +30,11 @@
 }
 
 :root[data-theme="light"] {
-  --ground: #f4f5f7;
+  --ground: #eff1f4;
   --surface: #ffffff;
-  --surface-2: #eef0f3;
-  --line: #dfe2e7;
-  --line-strong: #c8cdd5;
+  --surface-2: #f1f3f6;
+  --line: #dce0e6;
+  --line-strong: #c2c8d1;
   --ink: #111317;
   --ink-2: #3c414a;
   /* Dark enough for small text on the second surface too (4.5:1). */
@@ -117,6 +117,19 @@ h3 {
 }
 
 /* A row that just changed after a realtime event. Answers "what moved?" */
+/*
+ * Light theme only: the bars are white (not the page's grey), and cards sit on the page with a
+ * soft shadow. In the dark theme the surface colour alone separates them.
+ */
+:root[data-theme="light"] :where(header.sticky, nav.fixed) {
+  background-color: rgb(255 255 255 / 0.92);
+}
+:root[data-theme="light"] :where(.rounded-xl, .rounded-2xl).border.bg-surface {
+  box-shadow:
+    0 1px 2px rgb(17 24 39 / 0.05),
+    0 4px 12px -6px rgb(17 24 39 / 0.08);
+}
+
 @keyframes flash {
   from {
     background-color: var(--flash);
