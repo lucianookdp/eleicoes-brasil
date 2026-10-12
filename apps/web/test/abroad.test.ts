@@ -202,7 +202,7 @@ const brasilia = (at: Date) =>
   }).format(at);
 
 describe('voting hours abroad', () => {
-  const { slots, unknown } = votingSchedule(
+  const { slots, unknown, noPolls, elsewhere, away } = votingSchedule(
     CITIES.map((name) => ({ name, voters: 10 })),
     '2026-10-25',
   );
@@ -219,7 +219,58 @@ describe('voting hours abroad', () => {
         zone,
       ).toBeTruthy();
     }
-    expect(slots.reduce((n, sl) => n + sl.voters, 0)).toBe(1870);
+    // Every city is either in a slot or among those with no polling station.
+    expect(slots.reduce((n, sl) => n + sl.voters, 0)).toBe((187 - noPolls.length) * 10);
+  });
+
+  it('leaves out the cities where no polling station is set up (fewer than 30 voters)', () => {
+    // TRE-DF, Editais 46 e 50/2026: 46 places, 41 of them in the list of cities.
+    expect(noPolls).toHaveLength(41);
+    for (const city of ['Tbilisi', 'Chuy', 'Rivera', 'Islamabade', 'Astana', 'Pyongyang', 'Vaticano']) {
+      expect(noPolls).toContain(city);
+      expect(slotOf(city)).toBeUndefined();
+    }
+    // 30 voters is enough: Tripoli's vote, but at the embassy in Tunis and on its time.
+    expect(noPolls).not.toContain('Trípoli');
+    expect(slotOf('Trípoli')).toBe(slotOf('Tunis'));
+    expect(brasilia(slotOf('Trípoli').opens)).toBe('dom., 04:00');
+    expect(away).toEqual([
+      { city: 'Ciudad Guayana', votesIn: 'Caracas' },
+      { city: 'Trípoli', votesIn: 'Túnis' },
+    ]);
+  });
+
+  it('gives the polling stations in another time zone their own hours', () => {
+    expect(elsewhere).toEqual([
+      { place: 'Brisbane', city: 'Sydney' },
+      { place: 'Calgary', city: 'Vancouver' },
+      { place: 'Perth', city: 'Camberra' },
+      { place: 'Salt Lake City', city: 'Los Angeles' },
+      { place: 'Winnipeg', city: 'Toronto' },
+    ]);
+    // Sydney and Canberra are on daylight saving time (UTC+11); Brisbane (UTC+10) and Perth
+    // (UTC+8) are not.
+    expect(brasilia(slotOf('Sydney').opens)).toBe('sáb., 18:00');
+    expect(slotOf('Camberra')).toBe(slotOf('Sydney'));
+    expect(brasilia(slotOf('Brisbane').opens)).toBe('sáb., 19:00');
+    expect(brasilia(slotOf('Perth').opens)).toBe('sáb., 21:00');
+    expect(slotOf('Perth')).toBe(slotOf('Pequim'));
+    // The Rockies are an hour ahead of the Pacific coast, the prairies an hour behind Toronto.
+    expect(brasilia(slotOf('Salt Lake City').opens)).toBe('dom., 11:00');
+    expect(slotOf('Calgary')).toBe(slotOf('Salt Lake City'));
+    expect(slotOf('Winnipeg')).toBe(slotOf('Chicago'));
+    // Listed under the city's own country.
+    expect(slotOf('Perth').places.find((p) => p.country === 'Austrália')!.cities).toEqual(['Perth']);
+  });
+
+  it('splits the voters of a city between its stations, and never invents any', () => {
+    const real = votingSchedule([{ name: 'Camberra', voters: 6261 }], '2026-10-25');
+    expect(real.slots.map((sl) => [sl.places[0]!.cities[0], sl.voters])).toEqual([
+      ['Camberra', 4383],
+      ['Perth', 1878],
+    ]);
+    const small = votingSchedule([{ name: 'Camberra', voters: 500 }, { name: 'Sydney' }], '2026-10-25');
+    expect(small.slots.reduce((n, sl) => n + sl.voters, 0)).toBe(500);
   });
 
   it('goes round the world in order: New Zealand first, the Pacific coast of North America last', () => {
