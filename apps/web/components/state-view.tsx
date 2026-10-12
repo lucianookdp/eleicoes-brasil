@@ -426,7 +426,8 @@ function brasilia(at: Date) {
 /**
  * When Brazilians abroad vote: 8h to 17h in each place's own time, shown here in Brasília time and
  * in the order the polls open round the world (New Zealand first, the west coast of North America
- * last). The time zones are ours (lib/abroad.ts); the cities and electorates are the TSE's.
+ * last). The time zones are ours (lib/abroad.ts); the cities, electorates and polling stations are
+ * the electoral courts' (TSE and TRE-DF).
  */
 function AbroadHours() {
   const { round } = useRound();
@@ -438,7 +439,7 @@ function AbroadHours() {
     return () => clearInterval(t);
   }, []);
   if (!cities || cities.length === 0) return null;
-  const { slots, unknown } = votingSchedule(
+  const { slots, unknown, noPolls, elsewhere, away } = votingSchedule(
     cities.map((c) => ({ name: c.name, voters: c.progress?.electorateTotal })),
     round.date,
   );
@@ -494,8 +495,24 @@ function AbroadHours() {
         {unknown.length > 0 && (
           <p className="mt-3 text-[12.5px] text-muted">Sem horário nesta lista: {unknown.join(', ')}.</p>
         )}
+        {(elsewhere.length > 0 || away.length > 0) && (
+          <p className="mt-3 text-[12.5px] text-muted">
+            {elsewhere.length > 0 &&
+              `Ficam em outro fuso, mas o TSE divulga os votos junto com os da cidade entre parênteses: ${elsewhere
+                .map((far) => `${far.place} (${far.city})`)
+                .join(', ')}. `}
+            {away.length > 0 &&
+              `Votam em outra cidade: ${away.map((a) => `${a.city} (em ${a.votesIn})`).join(', ')}.`}
+          </p>
+        )}
+        {noPolls.length > 0 && (
+          <p className="mt-3 text-[12.5px] text-muted">
+            Sem votação nesta eleição, por terem menos de 30 eleitores: {noPolls.join(', ')}.
+          </p>
+        )}
         <p className="mt-3 text-[12.5px] text-muted">
-          Cidades e eleitores: TSE. Os horários são calculados pelo site a partir do fuso de cada lugar.
+          Cidades, eleitores e locais de votação: TSE e TRE-DF. Os horários são calculados pelo site a partir
+          do fuso de cada local.
         </p>
       </Panel>
     </section>

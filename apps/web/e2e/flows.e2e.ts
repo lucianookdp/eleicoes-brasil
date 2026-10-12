@@ -642,13 +642,17 @@ test('votes abroad: when each place votes, in Brasília time, earliest first', a
   await page.goto('/eleicao/estado/?e=demo&t=2&uf=zz');
   const hours = page.getByRole('region', { name: 'Quando cada lugar vota' });
   await expect(hours).toBeVisible();
-  // The demo votes in Lisbon, Miami and Vancouver: three places, three opening times, in that order.
+  // The demo votes in Lisbon, Miami and Vancouver, whose polling station in Calgary opens an hour
+  // earlier: four opening times, in that order.
   const rows = hours.getByRole('listitem');
-  await expect(rows).toHaveCount(3);
+  await expect(rows).toHaveCount(4);
   await expect(rows.nth(0)).toContainText('Portugal');
   await expect(rows.nth(1)).toContainText('Estados Unidos');
-  await expect(rows.nth(2)).toContainText('Canadá');
+  await expect(rows.nth(2)).toContainText('Canadá (Calgary)');
+  await expect(rows.nth(3)).toContainText('Canadá (Vancouver)');
   // Europe is back on winter time that morning: 8h in Lisbon is 5h in Brasília.
   await expect(rows.nth(0)).toContainText('dom. 5h – dom. 14h');
-  await expect(rows.nth(2)).toContainText('dom. 12h – dom. 21h');
+  await expect(rows.nth(2)).toContainText('dom. 11h – dom. 20h');
+  await expect(rows.nth(3)).toContainText('dom. 12h – dom. 21h');
+  await expect(hours).toContainText('Calgary (Vancouver)');
 });
