@@ -19,16 +19,31 @@ export function MyCityCard({ headlineOffice }: { headlineOffice?: string }) {
   const [picking, setPicking] = useState(false);
   if (city && !picking)
     return <Chosen headlineOffice={headlineOffice} onChange={() => setPicking(true)} clear={clear} />;
-  // After "Agora não": a single quiet line, so the city can still be picked later.
+  // After "Agora não": still a card like the others (never a stray line), one row high, so the
+  // city can be picked later with one tap.
   if (dismissed && !picking)
     return (
-      <button
-        type="button"
-        onClick={() => setPicking(true)}
-        className="flex min-h-11 items-center gap-2 text-[14px] text-ink-2 hover:text-ink"
+      <section
+        aria-label="Minha cidade"
+        className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface p-3 sm:p-4"
       >
-        <IconPin className="text-live" /> Escolher minha cidade
-      </button>
+        <span className="flex min-w-0 items-center gap-2.5">
+          <IconPin className="shrink-0 text-live" />
+          <span className="min-w-0">
+            <span className="block text-[14.5px] font-medium">Minha cidade</span>
+            <span className="block truncate text-[12.5px] text-muted">
+              Veja o resultado da sua cidade aqui
+            </span>
+          </span>
+        </span>
+        <button
+          type="button"
+          onClick={() => setPicking(true)}
+          className="h-9 shrink-0 rounded-full border border-line px-3.5 text-[13.5px] font-medium text-ink-2 hover:border-live hover:text-ink"
+        >
+          Escolher
+        </button>
+      </section>
     );
   return (
     <Picker

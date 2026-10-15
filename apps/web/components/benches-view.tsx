@@ -17,16 +17,18 @@ type Mode = 'party' | 'federation';
  * once every state is final: a partial count would be a projection, and the site never shows one.
  * Parties are ordered by size; no left/right grouping, since there is no official classification.
  */
-export function BenchesView() {
+/** `embedded`: shown as the "Congresso" tab of Poderes, which has the page heading. */
+export function BenchesView({ embedded = false }: { embedded?: boolean }) {
   const { round, href } = useRound();
   // Deputies and senators are elected in the 1st round; the runoff has none.
   const { data, error, refetch } = useBenches(`${round.electionSlug}-1`);
   const params = useSearchParams();
   const router = useRouter();
-  // The STF used to be a tab here (?casa=stf); it now lives with governors and senators.
+  // The old Bancadas page (and its ?casa=stf links) now lives in Poderes: Congresso and STF tabs.
   useEffect(() => {
-    if (params.get('casa') === 'stf') router.replace(href('/offices', { cargo: 'stf' }));
-  }, [params, router, href]);
+    if (!embedded)
+      router.replace(href('/offices', { cargo: params.get('casa') === 'stf' ? 'stf' : 'congresso' }));
+  }, [embedded, params, router, href]);
   const [chamber, setChamber] = useState('deputado-federal');
   const [mode, setMode] = useState<Mode | null>(null);
   const bench = data?.chambers.find((c) => c.office.slug === chamber) ?? data?.chambers[0];
@@ -40,12 +42,11 @@ export function BenchesView() {
 
   return (
     <>
-      <div className="mb-4">
-        <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Bancadas eleitas</h1>
-        <p className="text-[13.5px] text-muted">
-          Quantos deputados federais e senadores cada partido elegeu. Dados oficiais do TSE.
-        </p>
-      </div>
+      {!embedded && (
+        <div className="mb-4">
+          <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Bancadas eleitas</h1>
+        </div>
+      )}
 
       {ready && bench && (
         <div className="mb-4 flex flex-wrap items-center gap-3">

@@ -220,7 +220,6 @@ export function HeadToHead({ result }: { result: ResultDTO }) {
   const firstRound = `${round.electionSlug}-1`;
   const first = useResult(firstRound, result.areaKey, result.office.slug).data;
   const inFirst = (c: CandidateDTO) => first?.candidates.find((f) => f.number === c.number);
-  const firstPct = (c: CandidateDTO) => inFirst(c)?.percent;
   // Fixed sides for the whole count: whoever came first in the 1st round on the left. The lead
   // can change during the count; the photos never swap places.
   const [a, b] = (inFirst(y)?.votes ?? -1) > (inFirst(x)?.votes ?? -1) ? [y, x] : [x, y];
@@ -256,13 +255,8 @@ export function HeadToHead({ result }: { result: ResultDTO }) {
       <p className="text-[13px] text-ink-2">
         {result.votesPublishable ? `${fmtInt(c.votes)} votos` : 'não divulgado'}
       </p>
-      {/* The line is there from the start in a runoff (empty while the 1st round loads), so the
-          bar under it does not jump down when the number arrives. */}
-      {(firstPct(c) != null || (round.round === 2 && first === undefined)) && (
-        <p className="min-h-[1.5em] text-[12.5px] text-muted">
-          {firstPct(c) != null ? `1º turno: ${fmtPct(firstPct(c))}` : ''}
-        </p>
-      )}
+      {/* No "1º turno: X%" here: during the runoff count a second percentage next to the live one
+          reads like a result and confuses (author's call). The 1st round only fixes the sides. */}
     </div>
   );
   return (
@@ -482,11 +476,14 @@ export function ResultPanel({
   offices,
   initial,
   areaPct,
+  collapsed,
 }: {
   roundSlug: string;
   areaKey: string;
   offices: OfficeInfo[];
   initial?: ResultDTO | null;
+  /** Show only the first N candidates until the reader asks for all (busy pages, e.g. abroad). */
+  collapsed?: number;
   /** Share of this area's polling stations the TSE has already counted (counting file). */
   areaPct?: number | null;
 }) {
@@ -562,7 +559,7 @@ export function ResultPanel({
               ) : (
                 <>
                   {result.office.kind === 'majoritarian' && <RaceBar result={result} />}
-                  <CandidateList result={result} />
+                  <CandidateList result={result} collapsed={collapsed} />
                 </>
               )}
               {result.candidatesTotal > result.candidates.length && (

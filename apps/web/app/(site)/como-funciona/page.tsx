@@ -1,7 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { IconChevron, IconData, IconPulse } from '@/components/icons';
+import {
+  IconChevron,
+  IconData,
+  IconHistory,
+  IconInfo,
+  IconOverview,
+  IconPulse,
+  IconStates,
+} from '@/components/icons';
 
 export const metadata: Metadata = {
   title: 'Como funciona',
@@ -84,6 +92,81 @@ const OURS: Step[] = [
   },
 ];
 
+const IconLock = () => (
+  <svg
+    viewBox="0 0 24 24"
+    width={18}
+    height={18}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.75}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <rect x="5" y="11" width="14" height="10" rx="2" />
+    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+  </svg>
+);
+
+const SECTIONS: { title: string; icon: ReactNode; body: string[] }[] = [
+  {
+    title: 'De onde vêm os dados',
+    icon: <IconData />,
+    body: [
+      'Todos os números vêm dos arquivos públicos de divulgação de resultados do Tribunal Superior Eleitoral (TSE), em resultados.tse.jus.br.',
+      'Nosso sistema lê esses arquivos a cada poucos segundos, respeitando os limites de acesso definidos pelo TSE, e guarda cada mudança. O seu navegador consulta apenas os nossos servidores, nunca o TSE diretamente.',
+    ],
+  },
+  {
+    title: 'Este site não é oficial',
+    icon: <IconInfo />,
+    body: [
+      'O Eleições Brasil é um projeto independente. Não é um serviço da Justiça Eleitoral e não substitui o aplicativo Resultados nem o site do TSE, que são as fontes oficiais.',
+      'Não publicamos opinião política, análise partidária, pesquisas nem previsões na apuração. Mostramos apenas os dados divulgados pelo TSE.',
+    ],
+  },
+  {
+    title: 'Como ler os horários',
+    icon: <IconHistory />,
+    body: [
+      'Todos os horários são de Brasília. O horário ao lado de “TSE” é o da última atualização informada pelo tribunal para aquele local; passe o dedo ou o mouse sobre ele para ver também quando o nosso sistema recebeu o dado.',
+      'Se a coleta atrasar ou o TSE ficar fora do ar, mantemos os últimos dados recebidos e avisamos na tela, com o horário da última atualização.',
+    ],
+  },
+  {
+    title: 'Resultados parciais podem mudar',
+    icon: <IconOverview />,
+    body: [
+      'Durante a apuração, os percentuais consideram apenas as urnas já apuradas. Eles podem mudar bastante até o fim, porque cada região apura em um ritmo diferente.',
+      'Situações como “Eleito” ou “2º turno” só aparecem quando o próprio TSE as informa.',
+    ],
+  },
+  {
+    title: 'Cálculos feitos por nós',
+    icon: <IconPulse />,
+    body: [
+      'A variação de cada candidato, em pontos percentuais (pp), é calculada por nós, comparando a atualização atual com a anterior do mesmo local. O ritmo da apuração e as atualizações recentes também são calculados a partir das mudanças que registramos.',
+      'Quando um dado não existe na fonte, mostramos “—”, nunca zero.',
+    ],
+  },
+  {
+    title: 'Privacidade',
+    icon: <IconLock />,
+    body: [
+      'Não usamos contas, cookies de rastreamento nem anúncios. Seus favoritos e a escolha de tema ficam apenas no seu navegador.',
+    ],
+  },
+  {
+    title: 'Créditos',
+    icon: <IconStates />,
+    body: [
+      'Fotos dos candidatos: divulgadas pelo TSE junto com os resultados. Baixamos cada foto uma vez e a exibimos a partir dos nossos servidores.',
+      'Desenho do mapa: “Map of Brazil”, de Victor Cazanave (svg-maps), licença CC BY 4.0. O código-fonte está no GitHub apenas para consulta, com todos os direitos reservados.',
+    ],
+  },
+];
+
 const QUESTIONS = [
   {
     q: 'Por que não mostrar direto do site do TSE?',
@@ -151,7 +234,36 @@ export default function HowItWorksPage() {
         </section>
       </div>
 
-      {/* Computers: the questions and the links side by side, as wide as the diagram above. */}
+      {/* What used to be "Sobre os dados": where the numbers come from and how to read them. One
+          column on phones; two columns of cards on computers. /sobre/ lands here (#dados). */}
+      <section id="dados" aria-labelledby="dados-titulo" className="mt-12 scroll-mt-24">
+        <h2 id="dados-titulo" className="text-[20px] font-semibold">
+          Sobre os dados
+        </h2>
+        <p className="mt-1 text-[14.5px] text-ink-2">De onde vêm, como ler e o que calculamos.</p>
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+          {SECTIONS.map((sec) => (
+            <section
+              key={sec.title}
+              className="flex gap-3 rounded-2xl border border-line bg-surface p-4 sm:gap-4 sm:p-5 lg:odd:last:col-span-2"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface-2 text-ink-2">
+                {sec.icon}
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-[16px] font-semibold leading-9">{sec.title}</h3>
+                {sec.body.map((para) => (
+                  <p key={para.slice(0, 24)} className="mt-1.5 text-[14.5px] leading-relaxed text-ink-2">
+                    {para}
+                  </p>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </section>
+
+      {/* Computers: the questions and the link side by side, as wide as the diagram above. */}
       <div className="mt-12 grid items-start gap-x-6 gap-y-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <section>
           <h2 className="text-[20px] font-semibold">Perguntas comuns</h2>
@@ -175,9 +287,6 @@ export default function HowItWorksPage() {
         <div className="grid gap-2 sm:grid-cols-2 lg:mt-[44px] lg:grid-cols-1">
           <MoreLink href="/eleicao/bastidores/" icon={<IconPulse />} title="Transparência da apuração">
             Se os números estão chegando e tudo o que registramos de anormal
-          </MoreLink>
-          <MoreLink href="/sobre" icon={<IconData />} title="Sobre os dados">
-            De onde vêm, como ler os horários e o que calculamos
           </MoreLink>
         </div>
       </div>

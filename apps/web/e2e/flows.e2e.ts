@@ -122,13 +122,16 @@ test('runoff: head-to-head card with the vote difference', async ({ page, reques
     page.getByText(/(está à frente|venceu) por [\d.]+ votos|Aguardando os primeiros votos/),
   ).toBeVisible();
   await expect(page.getByText(/faltam .* das urnas|venceu por/)).toBeVisible();
-  // Each finalist's share in the 1st round, same place.
-  await expect(page.getByText(/^1º turno: [\d,]+%$/).first()).toBeVisible();
+  // No 1st-round percentage next to the live one: it read like a result during the count.
+  await expect(page.getByText(/^1º turno: [\d,]+%$/)).toHaveCount(0);
   // Fixed sides: whoever came first in the 1st round is on the left, whatever the current lead.
-  const firsts = await page.getByText(/^1º turno: [\d,]+%$/).allTextContents();
-  const pct = (t: string) => Number(t.replace(/[^\d,]/g, '').replace(',', '.'));
-  expect(firsts).toHaveLength(2);
-  expect(pct(firsts[0]!)).toBeGreaterThanOrEqual(pct(firsts[1]!));
+  const first = await (await request.get('http://localhost:4000/api/elections/demo-1/overview')).json();
+  const [winner, runnerUp] = (first.headline.candidates as { ballotName: string }[])
+    .slice(0, 2)
+    .map((c) => c.ballotName.toLowerCase());
+  const text = (await page.locator('main').innerText()).toLowerCase();
+  expect(text.indexOf(winner!)).toBeGreaterThanOrEqual(0);
+  expect(text.indexOf(winner!)).toBeLessThan(text.indexOf(runnerUp!));
   // A runoff never shows the 1st-round list of candidates.
   await expect(page.getByRole('button', { name: /Ver todos os/ })).toHaveCount(0);
   await page.getByRole('tab', { name: 'Evolução' }).click();
@@ -170,8 +173,10 @@ test('minha cidade: "Agora não" keeps a way back to pick it later', async ({ pa
   await openDemo(page);
   await page.getByRole('region', { name: 'Minha cidade' }).getByRole('button', { name: 'Agora não' }).click();
   await page.reload();
-  await page.getByRole('button', { name: 'Escolher minha cidade' }).click();
+  // Still a card like the others, with a button to pick the city later.
   const card = page.getByRole('region', { name: 'Minha cidade' });
+  await expect(card).toBeVisible();
+  await card.getByRole('button', { name: 'Escolher' }).click();
   await card.getByPlaceholder('Digite o nome da cidade').fill('campinas');
   await card.getByRole('button', { name: /Campinas/ }).click();
   await expect(card.getByRole('link', { name: 'Campinas' })).toBeVisible();
@@ -223,8 +228,10 @@ test('bancadas: seats per party, one dot per seat, and the votes each decision n
   page,
   request,
 }) => {
+  // The old Bancadas address lands on the Congresso tab of Poderes.
   await page.goto('/eleicao/bancadas/?e=demo&t=1');
-  await expect(page.getByRole('heading', { level: 1, name: 'Bancadas eleitas' })).toBeVisible();
+  await expect(page).toHaveURL(/\/eleicao\/cargos\/.*cargo=congresso/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Bancadas no Congresso' })).toBeVisible();
   // The Constitution's numbers are always there; the seats only once every state is final.
   await expect(page.getByRole('rowheader', { name: /Mudar a Constituição/ })).toBeVisible();
   const { chambers } = await (await request.get('http://localhost:4000/api/elections/demo-1/benches')).json();
@@ -237,7 +244,7 @@ test('bancadas: seats per party, one dot per seat, and the votes each decision n
   const label = (await chart.getAttribute('aria-label')) ?? '';
   const total = Number(/^(\d+) cadeiras/.exec(label)?.[1]);
   expect(await chart.locator('circle').count()).toBe(total);
-  await page.getByRole('radio', { name: 'Senado' }).click();
+  await page.getByRole('radio', { name: 'Senado', exact: true }).click();
   await expect(page.getByText(/senadores eleitos em 2026/)).toBeVisible();
 });
 
@@ -314,7 +321,19 @@ test('Poderes in the nav, and the runoff governors listed low on the home page',
     ? page.getByRole('navigation', { name: 'Navegação principal' })
     : page.getByRole('navigation', { name: 'Seções' });
   await expect(nav.getByRole('link', { name: 'Poderes', exact: true })).toBeVisible();
-  await expect(nav.getByRole('link', { name: 'Polymarket' })).toBeVisible();
+  if (isMobile) {
+    // Phones: search sits in the middle of the bar; Polymarket is the first item of "Mais".
+    await expect(nav.getByRole('button', { name: 'Buscar' })).toBeVisible();
+    await nav.getByRole('button', { name: 'Mais' }).click();
+    await expect(
+      page.getByRole('dialog', { name: 'Mais opções' }).getByRole('link', { name: 'Polymarket' }),
+    ).toBeVisible();
+    await page
+      .getByRole('dialog', { name: 'Mais opções' })
+      .getByRole('button', { name: 'Fechar' })
+      .last()
+      .click();
+  } else await expect(nav.getByRole('link', { name: 'Polymarket' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Governadores no 2º turno' })).toHaveCount(0);
 
   // The runoff part needs the demo runoff (DEMO_ROUND=2, ELECTION_ROUND=demo-2); CI runs round 1 only.
@@ -642,6 +661,9 @@ test('votes abroad: when each place votes, in Brasília time, earliest first', a
   await page.goto('/eleicao/estado/?e=demo&t=2&uf=zz');
   const hours = page.getByRole('region', { name: 'Quando cada lugar vota' });
   await expect(hours).toBeVisible();
+  // The answer in two lines; the list of places folds out.
+  await expect(hours).toContainText('as primeiras urnas abrem dom. 5h e as últimas fecham dom. 21h');
+  await hours.getByText('Ver os horários de cada país').click();
   // The demo votes in Lisbon, Miami and Vancouver: three places, three opening times, in that order.
   const rows = hours.getByRole('listitem');
   await expect(rows).toHaveCount(3);

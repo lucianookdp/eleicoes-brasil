@@ -21,7 +21,6 @@ const PAGES = [
   '/polymarket/',
   '/eleicao/telao/',
   '/como-funciona/',
-  '/sobre/',
   '/pagina-que-nao-existe/',
 ];
 const WIDTHS = [320, 375, 430, 768, 1024, 1280, 1440];

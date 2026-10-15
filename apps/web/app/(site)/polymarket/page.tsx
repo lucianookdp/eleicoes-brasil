@@ -2,7 +2,7 @@
 
 import { formatClock } from '@eleicoes/election-core';
 import { useEffect, useRef, useState } from 'react';
-import { ErrorNotice, Segmented, Skeleton, StateFlag } from '@/components/ui';
+import { ErrorNotice, Segmented, Skeleton } from '@/components/ui';
 import { fmtCompact } from '@/lib/format';
 import {
   eventUrl,
@@ -62,7 +62,7 @@ function colorOf(name: string, i: number) {
  * Polymarket in the reader's browser. Prices are shown, never offered: there is nothing to click.
  */
 export default function PolymarketPage() {
-  const { data, error, refetch } = usePolymarket();
+  const { data, error, refetch, isRefetchError } = usePolymarket();
   return (
     <div className="max-w-4xl pb-8 pt-3 lg:max-w-none">
       {/* Polymarket's own mark and links: the data is theirs, the page points readers to them. */}
@@ -83,11 +83,21 @@ export default function PolymarketPage() {
             </p>
             {data && (
               <p className="mt-1 flex items-center gap-1.5 text-[12.5px]" role="status">
-                <span className="flex items-center gap-1.5 font-medium text-bad">
-                  <span className="pulse-dot inline-block size-2 rounded-full bg-current" aria-hidden />
-                  Ao vivo
-                </span>
-                <span className="text-muted">· atualizado às {formatClock(data.at)}</span>
+                {isRefetchError ? (
+                  // Polymarket stopped answering after the page loaded: the last numbers stay, said plainly.
+                  <span className="flex items-center gap-1.5 font-medium text-warn">
+                    <span className="inline-block size-2 rounded-full bg-current" aria-hidden />
+                    Sem atualização desde {formatClock(data.at).slice(0, 5)} · tentando de novo
+                  </span>
+                ) : (
+                  <>
+                    <span className="flex items-center gap-1.5 font-medium text-bad">
+                      <span className="pulse-dot inline-block size-2 rounded-full bg-current" aria-hidden />
+                      Ao vivo
+                    </span>
+                    <span className="text-muted">· atualizado às {formatClock(data.at)}</span>
+                  </>
+                )}
               </p>
             )}
           </div>
@@ -113,14 +123,35 @@ export default function PolymarketPage() {
         </a>
       </div>
 
-      {error && (
-        <div className="mt-6">
+      {error && !data && (
+        <div className="mt-6 grid gap-2">
           <ErrorNotice error={error} retry={() => refetch()} />
+          <p className="text-[13px] text-muted">
+            O Polymarket não respondeu agora; a página tenta de novo sozinha. Enquanto isso, veja direto{' '}
+            <a href={POLYMARKET_URL} target="_blank" rel="noopener nofollow" className="text-info underline">
+              no site do Polymarket
+            </a>
+            .
+          </p>
         </div>
       )}
       {!data && !error && <Skeleton className="mt-6 h-96" />}
-      {data && (
+      {data?.closed && (
+        <p className="mt-6 rounded-xl border border-line bg-surface p-4 text-[14px] text-ink-2">
+          Este mercado foi encerrado no Polymarket.{' '}
+          <a href={POLYMARKET_URL} target="_blank" rel="noopener nofollow" className="text-info underline">
+            Ver o resultado das apostas lá
+          </a>
+          . O resultado oficial da eleição é o do TSE.
+        </p>
+      )}
+      {data && !data.closed && (
         <>
+          {data.partial && (
+            <p className="mt-4 text-[13px] text-warn">
+              Parte dos mercados do Polymarket não respondeu agora; tentando de novo.
+            </p>
+          )}
           {/* Computers: the two markets side by side, using the width; phones: one under the other. */}
           <div
             className={`lg:grid lg:items-stretch lg:gap-6 ${data.margin.length > 0 ? 'lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]' : ''}`}
@@ -153,37 +184,7 @@ export default function PolymarketPage() {
               <h2 id="estados" className="mt-0.5 text-[19px] font-semibold">
                 Quem fica em 1º em cada estado?
               </h2>
-              <ul className="mt-3 grid gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
-                {[...data.states]
-                  .sort((a, b) =>
-                    (STATE_NAMES[a.uf] ?? a.uf).localeCompare(STATE_NAMES[b.uf] ?? b.uf, 'pt-BR'),
-                  )
-                  .map((s) => {
-                    const top = s.outcomes[0]!;
-                    return (
-                      <li key={s.uf} className="border-b border-line">
-                        <a
-                          href={eventUrl(s.slug)}
-                          target="_blank"
-                          rel="noopener nofollow"
-                          className="grid min-h-11 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2.5 py-1.5 text-[14.5px] hover:bg-surface-2/60"
-                        >
-                          <StateFlag uf={s.uf} size={20} />
-                          <span className="flex min-w-0 items-center gap-1.5 truncate">
-                            <span className="text-muted">{STATE_NAMES[s.uf] ?? s.uf} ·</span>
-                            <span
-                              className="size-2 shrink-0 rounded-full"
-                              style={{ background: colorOf(top.name, 0) }}
-                              aria-hidden
-                            />
-                            <span className="truncate">{top.name}</span>
-                          </span>
-                          <span className="numeral font-semibold">{pct(top.price)}</span>
-                        </a>
-                      </li>
-                    );
-                  })}
-              </ul>
+              <StatesGrid states={data.states} />
             </section>
           )}
 
@@ -283,6 +284,7 @@ function Market({
           Abrir este mercado no Polymarket ↗
         </a>
       </p>
+      {chart && outcomes.length >= 2 && <Split a={outcomes[0]!} b={outcomes[1]!} />}
       {chart && <Chart outcomes={outcomes} />}
       {/* Beside a taller card, the rows share the height left: no empty band under the list. */}
       <ul className="mt-3 flex flex-1 flex-col divide-y divide-line border-t border-line">
@@ -293,16 +295,7 @@ function Market({
           >
             <span className="flex min-w-0 items-center gap-2">
               {photos && o.image ? (
-                // biome-ignore lint/performance/noImgElement: Polymarket's own small thumbnail
-                <img
-                  src={o.image}
-                  alt=""
-                  width={32}
-                  height={32}
-                  loading="lazy"
-                  className="size-8 shrink-0 rounded-full bg-surface-2 object-cover"
-                  style={{ boxShadow: `0 0 0 2px var(--surface), 0 0 0 3.5px ${colorOf(o.name, i)}` }}
-                />
+                <Photo src={o.image} color={colorOf(o.name, i)} />
               ) : (
                 <span
                   className="size-2.5 shrink-0 rounded-full"
@@ -350,7 +343,7 @@ function LivePct({ value }: { value: number }) {
 function Chart({ outcomes }: { outcomes: Outcome[] }) {
   const [range, setRange] = useState<Range>('1m');
   const shown = outcomes.slice(0, 3).filter((o) => o.token);
-  const { data } = usePriceHistory(
+  const { data, isError, isPending } = usePriceHistory(
     shown.map((o) => o.token),
     range,
   );
@@ -414,7 +407,15 @@ function Chart({ outcomes }: { outcomes: Outcome[] }) {
         />
       </div>
       {series.length === 0 ? (
-        <Skeleton className="h-[220px]" />
+        isPending ? (
+          <Skeleton className="h-[220px]" />
+        ) : (
+          <p className="flex h-[180px] items-center justify-center rounded-xl bg-surface-2/50 px-4 text-center text-[13.5px] text-muted">
+            {isError
+              ? 'O gráfico do Polymarket não respondeu agora. Tentando de novo.'
+              : 'Sem negociações neste período.'}
+          </p>
+        )
       ) : (
         <svg
           viewBox={`0 0 ${w} ${h}`}
@@ -461,6 +462,112 @@ function Chart({ outcomes }: { outcomes: Outcome[] }) {
           </text>
         </svg>
       )}
+    </div>
+  );
+}
+
+/**
+ * Who leads each state's market, as one tile per state (UF and %), tinted with that candidate's
+ * colour: 28 states in a few rows on a phone instead of a long list. Each tile opens its market.
+ */
+function StatesGrid({ states }: { states: { uf: string; slug: string; outcomes: Outcome[] }[] }) {
+  const sorted = [...states].sort((a, b) =>
+    (STATE_NAMES[a.uf] ?? a.uf).localeCompare(STATE_NAMES[b.uf] ?? b.uf, 'pt-BR'),
+  );
+  const leads = new Map<string, { color: string; n: number }>();
+  for (const s of sorted) {
+    const top = s.outcomes[0]!;
+    const l = leads.get(top.name) ?? { color: colorOf(top.name, 0), n: 0 };
+    l.n++;
+    leads.set(top.name, l);
+  }
+  return (
+    <>
+      <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-ink-2">
+        {[...leads.entries()]
+          .sort((a, b) => b[1].n - a[1].n)
+          .map(([name, l]) => (
+            <span key={name} className="flex items-center gap-1.5">
+              <span className="size-2.5 rounded-full" style={{ background: l.color }} aria-hidden />
+              {name} <span className="numeral text-muted">{l.n}</span>
+            </span>
+          ))}
+      </p>
+      <ul className="mt-3 grid grid-cols-4 gap-1.5 min-[400px]:grid-cols-5 sm:grid-cols-7 lg:grid-cols-10">
+        {sorted.map((s) => {
+          const top = s.outcomes[0]!;
+          const color = colorOf(top.name, 0);
+          return (
+            <li key={s.uf}>
+              <a
+                href={eventUrl(s.slug)}
+                target="_blank"
+                rel="noopener nofollow"
+                title={`${STATE_NAMES[s.uf] ?? s.uf}: ${top.name} ${pct(top.price)}`}
+                aria-label={`${STATE_NAMES[s.uf] ?? s.uf}: ${top.name}, ${pct(top.price)}`}
+                className="flex h-12 flex-col items-center justify-center rounded-lg border text-center leading-tight hover:brightness-110"
+                style={{
+                  background: `color-mix(in oklab, ${color} 22%, var(--surface))`,
+                  borderColor: `color-mix(in oklab, ${color} 45%, var(--surface))`,
+                }}
+              >
+                <span className="text-[13px] font-semibold">{s.uf === 'ZZ' ? 'Ext.' : s.uf}</span>
+                <span className="numeral text-[11.5px] text-ink-2">{pct(top.price)}</span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
+/** Polymarket's photo of the candidate; if it does not load, the colour dot instead. */
+function Photo({ src, color }: { src: string; color: string }) {
+  const [broken, setBroken] = useState(false);
+  if (broken)
+    return <span className="size-2.5 shrink-0 rounded-full" style={{ background: color }} aria-hidden />;
+  return (
+    // biome-ignore lint/performance/noImgElement: Polymarket's own small thumbnail
+    <img
+      src={src}
+      alt=""
+      width={32}
+      height={32}
+      loading="lazy"
+      onError={() => setBroken(true)}
+      className="size-8 shrink-0 rounded-full bg-surface-2 object-cover"
+      style={{ boxShadow: `0 0 0 2px var(--surface), 0 0 0 3.5px ${color}` }}
+    />
+  );
+}
+
+/** The two favourites at a glance, before the chart: names, chances and one split bar. */
+function Split({ a, b }: { a: Outcome; b: Outcome }) {
+  const ca = colorOf(a.name, 0);
+  const cb = colorOf(b.name, 1);
+  const left = (a.price / Math.max(0.0001, a.price + b.price)) * 100;
+  return (
+    <div className="mt-3">
+      {/* The number on top, the name under it: a long name never pushes a percentage off a phone. */}
+      <div className="grid grid-cols-2 gap-4">
+        <p className="min-w-0">
+          <span className="numeral block text-[24px] font-semibold leading-none" style={{ color: ca }}>
+            {pct(a.price)}
+          </span>
+          <span className="mt-1 block truncate text-[13.5px] text-ink-2">{a.name}</span>
+        </p>
+        <p className="min-w-0 text-right">
+          <span className="numeral block text-[24px] font-semibold leading-none" style={{ color: cb }}>
+            {pct(b.price)}
+          </span>
+          <span className="mt-1 block truncate text-[13.5px] text-ink-2">{b.name}</span>
+        </p>
+      </div>
+      <div className="mt-2 flex h-2.5 overflow-hidden rounded-full" aria-hidden>
+        <div className="bar h-full" style={{ width: `${left}%`, background: ca }} />
+        <div className="h-full flex-1" style={{ background: cb }} />
+      </div>
     </div>
   );
 }

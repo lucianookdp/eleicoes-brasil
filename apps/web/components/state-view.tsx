@@ -56,8 +56,7 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
       <FreshnessNotice ingestion={data.ingestion} progress={data.progress} roundStatus={data.round.status} />
       {abroad && (
         <p className="mt-3 text-[13.5px] text-muted">
-          No exterior só se vota para presidente, das 8h às 17h no horário local de cada país. Por isso os
-          resultados de cada cidade chegam em horários diferentes.
+          No exterior só se vota para presidente, das 8h às 17h no horário de cada país.
         </p>
       )}
 
@@ -73,6 +72,7 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
                 areaKey={key}
                 offices={offices}
                 areaPct={data.progress?.countedPct}
+                collapsed={abroad ? 4 : undefined}
               />
             </div>
             <div className="lg:col-span-5">
@@ -91,6 +91,8 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
         )}
       </section>
 
+      {/* Abroad, readers look for their city: the list comes right after the results. */}
+      {abroad && <Cities uf={uf} total={data.cityCount} abroad />}
       {abroad && <AbroadHours />}
       {abroad && result.data && <AbroadVsBrazil abroad={result.data} cities={data.cityCount} />}
 
@@ -104,7 +106,7 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
         />
       </section>
 
-      <Cities uf={uf} total={data.cityCount} abroad={abroad} />
+      {!abroad && <Cities uf={uf} total={data.cityCount} abroad={false} />}
     </>
   );
 }
@@ -445,55 +447,69 @@ function AbroadHours() {
   if (slots.length === 0) return null;
   const first = slots[0]!;
   const last = slots.at(-1)!;
+  const votingNow = slots.filter((s) => now >= s.opens.getTime() && now < s.closes.getTime()).length;
   return (
     <section aria-labelledby="horarios-exterior" className="mt-10">
       <SectionTitle id="horarios-exterior" title="Quando cada lugar vota" />
       <Panel className="p-4 sm:p-5">
-        <p className="max-w-3xl text-[14px] leading-relaxed text-ink-2">
-          No exterior a votação vai das 8h às 17h no horário de cada lugar. Abaixo, os horários de Brasília,
-          na ordem em que as urnas abrem: as primeiras urnas abrem{' '}
+        {/* The answer in two lines; the 20-odd time zones fold out for whoever wants them. */}
+        <p className="max-w-3xl text-[14.5px] leading-relaxed text-ink-2">
+          Em horário de Brasília, as primeiras urnas abrem{' '}
           <strong className="font-semibold text-ink">{brasilia(first.opens)}</strong> e as últimas fecham{' '}
-          <strong className="font-semibold text-ink">{brasilia(last.closes)}</strong>. O TSE só começa a
-          divulgar os resultados às 17h de Brasília, quando termina a votação no Brasil.
+          <strong className="font-semibold text-ink">{brasilia(last.closes)}</strong>. Os resultados saem a
+          partir das 17h, junto com os do Brasil.
         </p>
-        <ol className="mt-4 divide-y divide-line border-t border-line">
-          {slots.map((slot) => {
-            const voting = now >= slot.opens.getTime() && now < slot.closes.getTime();
-            const over = now >= slot.closes.getTime();
-            return (
-              <li
-                key={slot.opens.getTime()}
-                className="grid gap-x-4 gap-y-1 py-3 sm:grid-cols-[11.5rem_minmax(0,1fr)]"
-              >
-                <p className="text-[14.5px]">
-                  <span className="numeral font-semibold">
-                    {brasilia(slot.opens)} – {brasilia(slot.closes)}
-                  </span>
-                  <span className="block text-[12.5px] text-muted">
-                    {voting && <span className="font-medium text-live">Votando agora · </span>}
-                    {over && 'Encerrada · '}
-                    {slot.voters > 0 &&
-                      `${fmtCompact(slot.voters)} ${slot.voters === 1 ? 'eleitor' : 'eleitores'}`}
-                  </span>
-                </p>
-                <p className="text-[14px] leading-relaxed text-ink-2">
-                  {slot.places.map((place, i) => (
-                    <span key={place.country}>
-                      {i > 0 && ' · '}
-                      <span className="font-medium text-ink">{place.country}</span>
-                      {/* A country with a single place of the same name needs no list. */}
-                      {!(place.cities.length === 1 && sameName(place.cities[0]!, place.country)) &&
-                        ` (${place.cities.join(', ')})`}
-                    </span>
-                  ))}
-                </p>
-              </li>
-            );
-          })}
-        </ol>
-        {unknown.length > 0 && (
-          <p className="mt-3 text-[12.5px] text-muted">Sem horário nesta lista: {unknown.join(', ')}.</p>
+        {votingNow > 0 && (
+          <p className="mt-2 text-[14px] font-medium text-live">
+            Votando agora em {votingNow} {votingNow === 1 ? 'faixa de horário' : 'faixas de horário'}
+          </p>
         )}
+        <details className="group mt-3">
+          <summary className="flex min-h-10 cursor-pointer list-none items-center gap-1.5 text-[14px] font-medium text-info">
+            Ver os horários de cada país
+            <span aria-hidden className="transition-transform group-open:rotate-180">
+              ▾
+            </span>
+          </summary>
+          <ol className="mt-2 divide-y divide-line border-t border-line">
+            {slots.map((slot) => {
+              const voting = now >= slot.opens.getTime() && now < slot.closes.getTime();
+              const over = now >= slot.closes.getTime();
+              return (
+                <li
+                  key={slot.opens.getTime()}
+                  className="grid gap-x-4 gap-y-1 py-3 sm:grid-cols-[11.5rem_minmax(0,1fr)]"
+                >
+                  <p className="text-[14.5px]">
+                    <span className="numeral font-semibold">
+                      {brasilia(slot.opens)} – {brasilia(slot.closes)}
+                    </span>
+                    <span className="block text-[12.5px] text-muted">
+                      {voting && <span className="font-medium text-live">Votando agora · </span>}
+                      {over && 'Encerrada · '}
+                      {slot.voters > 0 &&
+                        `${fmtCompact(slot.voters)} ${slot.voters === 1 ? 'eleitor' : 'eleitores'}`}
+                    </span>
+                  </p>
+                  <p className="text-[14px] leading-relaxed text-ink-2">
+                    {slot.places.map((place, i) => (
+                      <span key={place.country}>
+                        {i > 0 && ' · '}
+                        <span className="font-medium text-ink">{place.country}</span>
+                        {/* A country with a single place of the same name needs no list. */}
+                        {!(place.cities.length === 1 && sameName(place.cities[0]!, place.country)) &&
+                          ` (${place.cities.join(', ')})`}
+                      </span>
+                    ))}
+                  </p>
+                </li>
+              );
+            })}
+          </ol>
+          {unknown.length > 0 && (
+            <p className="mt-3 text-[12.5px] text-muted">Sem horário nesta lista: {unknown.join(', ')}.</p>
+          )}
+        </details>
         <p className="mt-3 text-[12.5px] text-muted">
           Cidades e eleitores: TSE. Os horários são calculados pelo site a partir do fuso de cada lugar.
         </p>

@@ -13,7 +13,6 @@ import {
   IconChevron,
   IconClose,
   IconCompare,
-  IconData,
   IconGlobe,
   IconHelp,
   IconHistory,
@@ -25,7 +24,6 @@ import {
   IconPolymarket,
   IconPulse,
   IconSearch,
-  IconSeats,
   IconStar,
   IconStates,
   IconSun,
@@ -165,13 +163,6 @@ function useMoreItems() {
           },
         ]),
     {
-      to: href('/benches'),
-      path: '/benches',
-      label: 'Bancadas',
-      hint: 'Cadeiras de cada partido no Congresso',
-      icon: IconSeats,
-    },
-    {
       to: href('/historico'),
       path: '/historico',
       label: 'Linha do tempo',
@@ -186,12 +177,6 @@ function useMoreItems() {
       icon: IconStar,
     },
   ];
-  // Runoff night: the seats in Congress are a 1st-round result, so they go last (and the bar's
-  // room goes to what changes tonight).
-  if (round.round === 2) {
-    const i = tiles.findIndex((t) => t.path === '/benches');
-    if (i >= 0) tiles.push(...tiles.splice(i, 1));
-  }
   // Sharing the site comes last, after these (see MoreContent).
   const links: MoreItem[] = [
     { to: href('/tv'), path: '/tv', label: 'Modo telão', phoneLabel: 'Painel ao vivo', icon: IconTv },
@@ -201,8 +186,7 @@ function useMoreItems() {
           {
             to: href('/states/zz'),
             path: '/states/zz',
-            label: 'Votos no exterior',
-            short: 'Exterior',
+            label: 'Exterior',
             icon: IconGlobe,
           },
         ]
@@ -215,7 +199,6 @@ function useMoreItems() {
       icon: IconPulse,
     },
     { to: '/como-funciona', label: 'Como funciona', icon: IconHelp },
-    { to: '/sobre', label: 'Sobre os dados', icon: IconData },
   ];
   return { tiles, links };
 }
@@ -292,7 +275,11 @@ function MoreContent({
   const active = useActive();
   const all = useMoreItems();
   const tiles = all.tiles.filter((t) => !skip?.has(t.label));
-  const links = all.links.filter((l) => !skip?.has(l.label));
+  const links = [
+    // On phones Polymarket left the bar so search could sit in its middle: first in the list here.
+    ...(phone ? [{ to: '/polymarket', label: 'Polymarket', icon: IconPolymarket } as MoreItem] : []),
+    ...all.links.filter((l) => !skip?.has(l.label)),
+  ];
   const current = (i: MoreItem) => (i.path && active(i.path) ? 'page' : undefined);
   return (
     <div className="grid gap-3">
@@ -664,10 +651,9 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
 
 function BottomNav({ onSearch }: { onSearch: () => void }) {
   const { href } = useRound();
-  const pathname = usePathname();
   const active = useActive();
   const [more, setMore] = useState(false);
-  // Search and Mais have short names: their slots give a little room to the others.
+  // Five equal slots with search in the middle: two sections on each side.
   const item =
     'group flex min-h-16 min-w-0 flex-col items-center justify-center gap-0.5 truncate text-[10.5px] text-muted min-[360px]:text-[11.5px] aria-[current=page]:font-medium aria-[current=page]:text-ink';
   return (
@@ -689,9 +675,14 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             {n.short}
           </Link>
         ))}
-        <button type="button" onClick={onSearch} className={`${item} flex-[0.8]`}>
-          <span className="flex size-8 items-center justify-center rounded-full bg-live text-ground">
-            <IconSearch />
+        {/* The one action everybody looks for: centred, bigger and raised above the bar. */}
+        <button
+          type="button"
+          onClick={onSearch}
+          className={`${item} flex-1 overflow-visible font-medium text-ink`}
+        >
+          <span className="-mt-4 flex size-12 items-center justify-center rounded-full bg-live text-ground shadow-md shadow-black/25 ring-[3px] ring-ground">
+            <IconSearch width={21} height={21} strokeWidth={2.1} />
           </span>
           Buscar
         </button>
@@ -708,23 +699,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             {n.short}
           </Link>
         ))}
-        {/* Polymarket last but one: it is not the count; "Mais" closes the bar. */}
-        <Link
-          href="/polymarket"
-          aria-current={pathname.startsWith('/polymarket') ? 'page' : undefined}
-          className={`${item} flex-1`}
-        >
-          <span className="flex size-8 items-center justify-center">
-            <IconPolymarket />
-          </span>
-          Polymarket
-        </Link>
-        <button
-          type="button"
-          onClick={() => setMore(true)}
-          className={`${item} flex-[0.8]`}
-          aria-expanded={more}
-        >
+        <button type="button" onClick={() => setMore(true)} className={`${item} flex-1`} aria-expanded={more}>
           <span className="flex size-8 items-center justify-center">
             <IconMore />
           </span>
@@ -809,10 +784,6 @@ function SiteFooter({ version }: { version?: string }) {
     <>
       <Link href="/como-funciona" className="text-ink-2 underline underline-offset-2 hover:text-ink">
         Como funciona
-      </Link>
-      {' · '}
-      <Link href="/sobre" className="text-ink-2 underline underline-offset-2 hover:text-ink">
-        Sobre os dados
       </Link>
     </>
   );

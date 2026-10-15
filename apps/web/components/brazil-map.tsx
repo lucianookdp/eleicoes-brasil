@@ -277,7 +277,9 @@ function StateCard({ state, pinned }: { state: StateRowDTO | undefined; pinned: 
       aria-hidden={state ? true : undefined}
       className={`mt-2 text-center text-[12.5px] text-muted ${state ? 'hidden sm:invisible sm:block' : ''}`}
     >
-      Toque ou passe o mouse sobre um estado (ou o exterior) para ver os detalhes.
+      {/* As short as possible, in the words of the device in hand. */}
+      <span className="[@media(hover:hover)]:hidden">Toque num estado</span>
+      <span className="hidden [@media(hover:hover)]:inline">Passe o mouse num estado</span>
     </p>
   );
   if (!state) return hint;
