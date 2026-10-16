@@ -2,7 +2,8 @@
 
 import { formatClock } from '@eleicoes/election-core';
 import { useEffect, useRef, useState } from 'react';
-import { ErrorNotice, Segmented, Skeleton } from '@/components/ui';
+import { OddsSplit, PriceChart } from '@/components/polymarket-chart';
+import { ErrorNotice, Skeleton } from '@/components/ui';
 import { fmtCompact } from '@/lib/format';
 import {
   colorOf,
@@ -10,9 +11,7 @@ import {
   MARGIN_SLUG,
   type Outcome,
   POLYMARKET_URL,
-  type Range,
   usePolymarket,
-  usePriceHistory,
 } from '@/lib/polymarket';
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
@@ -278,8 +277,8 @@ function Market({
           Abrir este mercado no Polymarket ↗
         </a>
       </p>
-      {chart && outcomes.length >= 2 && <Split a={outcomes[0]!} b={outcomes[1]!} />}
-      {chart && <Chart outcomes={outcomes} />}
+      {chart && outcomes.length >= 2 && <OddsSplit a={outcomes[0]!} b={outcomes[1]!} />}
+      {chart && <PriceChart outcomes={outcomes} />}
       {/* Beside a taller card, the rows share the height left: no empty band under the list. */}
       <ul className="mt-3 flex flex-1 flex-col divide-y divide-line border-t border-line">
         {outcomes.map((o, i) => (
@@ -330,133 +329,6 @@ function LivePct({ value }: { value: number }) {
     >
       {pct(value)}
     </span>
-  );
-}
-
-/** Each outcome's chance over time, one line each, like the chart on Polymarket's page. */
-function Chart({ outcomes }: { outcomes: Outcome[] }) {
-  const [range, setRange] = useState<Range>('1m');
-  const shown = outcomes.slice(0, 3).filter((o) => o.token);
-  const { data, isError, isPending } = usePriceHistory(
-    shown.map((o) => o.token),
-    range,
-  );
-  // Drawn at the real width, so labels stay 11px on a phone and on a wide screen alike.
-  const box = useRef<HTMLDivElement>(null);
-  const [w, setW] = useState(640);
-  useEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([e]) => setW(Math.max(280, Math.round(e!.contentRect.width))));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  const h = w < 500 ? 180 : 220;
-  const pad = { l: 8, r: 44, t: 10, b: 22 };
-  // Each line ends at the latest price, so the chart moves with every refresh.
-  const now = Math.floor(Date.now() / 1000);
-  const series = (data ?? [])
-    .map((s) => {
-      const o = shown.find((x) => x.token === s.token);
-      return o ? { ...s, points: [...s.points, { t: now, p: o.price }] } : s;
-    })
-    .filter((s) => s.points.length > 1);
-  const ts = series.flatMap((s) => s.points.map((p) => p.t));
-  const t0 = Math.min(...ts);
-  const t1 = Math.max(...ts);
-  const x = (t: number) => pad.l + ((t - t0) / Math.max(1, t1 - t0)) * (w - pad.l - pad.r);
-  const y = (p: number) => pad.t + (1 - p) * (h - pad.t - pad.b);
-  // The axis says hours for the short periods, the date for the long ones (and the year past a few months).
-  const span = t1 - t0;
-  const day = (t: number) =>
-    span < 2 * 86_400
-      ? new Date(t * 1000).toLocaleString('pt-BR', {
-          // A day crosses midnight: with the date, "16:45 → 16:32" reads the right way round.
-          ...(span > 12 * 3600 ? { day: '2-digit', month: '2-digit' } : {}),
-          hour: '2-digit',
-          minute: '2-digit',
-          timeZone: 'America/Sao_Paulo',
-        })
-      : new Date(t * 1000).toLocaleDateString('pt-BR', {
-          day: 'numeric',
-          month: 'short',
-          ...(span > 150 * 86_400 ? { year: 'numeric' } : {}),
-          timeZone: 'America/Sao_Paulo',
-        });
-  return (
-    <div className="mt-3" ref={box}>
-      <div className="mb-2 flex justify-end">
-        <Segmented
-          label="Período"
-          value={range}
-          onChange={setRange}
-          options={[
-            { value: '1h', label: '1H' },
-            { value: '6h', label: '6H' },
-            { value: '1d', label: '1D' },
-            { value: '1w', label: '1S' },
-            { value: '1m', label: '1M' },
-            { value: 'max', label: 'Tudo' },
-          ]}
-        />
-      </div>
-      {series.length === 0 ? (
-        isPending ? (
-          <Skeleton className="h-[220px]" />
-        ) : (
-          <p className="flex h-[180px] items-center justify-center rounded-xl bg-surface-2/50 px-4 text-center text-[13.5px] text-muted">
-            {isError
-              ? 'O gráfico do Polymarket não respondeu agora. Tentando de novo.'
-              : 'Sem negociações neste período.'}
-          </p>
-        )
-      ) : (
-        <svg
-          viewBox={`0 0 ${w} ${h}`}
-          width={w}
-          height={h}
-          className="block max-w-full"
-          role="img"
-          aria-label="Chance de cada candidato ao longo do tempo, segundo os preços do Polymarket"
-        >
-          {[0, 0.25, 0.5, 0.75, 1].map((g) => (
-            <g key={g}>
-              <line
-                x1={pad.l}
-                x2={w - pad.r}
-                y1={y(g)}
-                y2={y(g)}
-                stroke="var(--line)"
-                strokeDasharray={g === 0.5 ? '0' : '3 4'}
-              />
-              <text x={w - pad.r + 6} y={y(g) + 4} fontSize="11" fill="var(--muted)">
-                {Math.round(g * 100)}%
-              </text>
-            </g>
-          ))}
-          {series.map((s) => {
-            const o = shown.find((x) => x.token === s.token)!;
-            const color = colorOf(o.name, shown.indexOf(o));
-            const d = s.points
-              .map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.p).toFixed(1)}`)
-              .join('');
-            const last = s.points.at(-1)!;
-            return (
-              <g key={s.token}>
-                <path d={d} fill="none" stroke={color} strokeWidth="2.2" strokeLinejoin="round" />
-                <circle cx={x(last.t)} cy={y(last.p)} r="3.5" fill={color} />
-              </g>
-            );
-          })}
-          <text x={pad.l} y={h - 4} fontSize="11" fill="var(--muted)">
-            {day(t0)}
-          </text>
-          <text x={w - pad.r} y={h - 4} fontSize="11" fill="var(--muted)" textAnchor="end">
-            {day(t1)}
-          </text>
-        </svg>
-      )}
-    </div>
   );
 }
 
@@ -533,35 +405,5 @@ function Photo({ src, color }: { src: string; color: string }) {
       className="size-8 shrink-0 rounded-full bg-surface-2 object-cover"
       style={{ boxShadow: `0 0 0 2px var(--surface), 0 0 0 3.5px ${color}` }}
     />
-  );
-}
-
-/** The two favourites at a glance, before the chart: names, chances and one split bar. */
-function Split({ a, b }: { a: Outcome; b: Outcome }) {
-  const ca = colorOf(a.name, 0);
-  const cb = colorOf(b.name, 1);
-  const left = (a.price / Math.max(0.0001, a.price + b.price)) * 100;
-  return (
-    <div className="mt-3">
-      {/* The number on top, the name under it: a long name never pushes a percentage off a phone. */}
-      <div className="grid grid-cols-2 gap-4">
-        <p className="min-w-0">
-          <span className="numeral block text-[24px] font-semibold leading-none" style={{ color: ca }}>
-            {pct(a.price)}
-          </span>
-          <span className="mt-1 block truncate text-[13.5px] text-ink-2">{a.name}</span>
-        </p>
-        <p className="min-w-0 text-right">
-          <span className="numeral block text-[24px] font-semibold leading-none" style={{ color: cb }}>
-            {pct(b.price)}
-          </span>
-          <span className="mt-1 block truncate text-[13.5px] text-ink-2">{b.name}</span>
-        </p>
-      </div>
-      <div className="mt-2 flex h-2.5 overflow-hidden rounded-full" aria-hidden>
-        <div className="bar h-full" style={{ width: `${left}%`, background: ca }} />
-        <div className="h-full flex-1" style={{ background: cb }} />
-      </div>
-    </div>
   );
 }

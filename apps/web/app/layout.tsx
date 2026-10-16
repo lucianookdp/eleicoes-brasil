@@ -35,6 +35,10 @@ export const metadata: Metadata = {
   description:
     'Apuração das eleições 2026 em tempo real, com os dados oficiais do Tribunal Superior Eleitoral (TSE).',
   applicationName: 'Eleições Brasil',
+  // Who made it, for search engines (nothing on screen): searches for the author lead here.
+  authors: [{ name: 'lucianookdp', url: 'https://lucianookdp.dev' }],
+  creator: 'lucianookdp',
+  publisher: 'lucianookdp',
   // Link previews (WhatsApp, X, Telegram) need absolute URLs.
   metadataBase: new URL('https://eleicoes.lucianookdp.dev'),
   openGraph: {
@@ -97,6 +101,15 @@ const themeScript = `try{var t=localStorage.getItem('eleicoes:theme');if(!t)t=ma
  */
 const earlyScript = `try{(function(){var a=${JSON.stringify(api)},w=window,g=function(u){var p=fetch(a+u).then(function(r){if(!r.ok)throw 0;return r.json()});p.catch(function(){});return p};w.__early={'/api/elections':g('/api/elections')};var q=new URLSearchParams(location.search),e=q.get('e'),t=q.get('t');if(/^[a-z0-9-]{1,30}$/.test(e||'')&&/^[12]$/.test(t||'')&&/^\\/(eleicao\\/)?$/.test(location.pathname)){var u='/api/elections/'+e+'-'+t+'/overview';w.__early[u]=g(u)}})()}catch(e){}`;
 
+const SITE_JSON_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'Eleições Brasil',
+  url: 'https://eleicoes.lucianookdp.dev/',
+  inLanguage: 'pt-BR',
+  creator: { '@type': 'Person', name: 'lucianookdp', url: 'https://lucianookdp.dev' },
+};
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR" className={`${archivo.variable} ${mono.variable}`} suppressHydrationWarning>
@@ -111,6 +124,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: earlyScript }} />
       </head>
       <body>
+        {/* The same, as structured data (JSON-LD): the site and its author. Not executed. */}
+        <script
+          type="application/ld+json"
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: static JSON from constants
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(SITE_JSON_LD) }}
+        />
         <Providers>{children}</Providers>
       </body>
     </html>

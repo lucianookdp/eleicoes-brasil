@@ -11,7 +11,7 @@ import { decision } from './overview';
 import { FacePhoto } from './results';
 import { useRound } from './shell';
 import { catalogFor, SCENE_SECONDS, TvScenes, useSceneChoice } from './tv-scenes';
-import { EmptyState, ErrorNotice, Skeleton } from './ui';
+import { EmptyState, ErrorNotice, Skeleton, useTseStall } from './ui';
 
 const LYING_KEY = 'eleicoes:painel-deitado';
 const CLOCK = new Intl.DateTimeFormat('pt-BR', {
@@ -28,6 +28,13 @@ const CLOCK = new Intl.DateTimeFormat('pt-BR', {
 export function TvView() {
   const { round } = useRound();
   const { data, error, refetch } = useOverview(round.slug);
+  // The same "TSE has gone quiet" rule as the header and the notices (see useTseStall).
+  const stall = useTseStall({
+    ingestion: data?.ingestion,
+    progress: data?.progress,
+    roundStatus: data?.round.status,
+    votesAt: data?.headline?.provenance?.retrievedAt ?? null,
+  });
   const myCity = useMyCity();
   const choice = useSceneChoice(round.round);
   const box = useRef<HTMLDivElement>(null);
@@ -250,7 +257,15 @@ export function TvView() {
             <div
               className={`flex shrink-0 items-center ${panel ? 'gap-2.5 text-[13px]' : 'gap-4 text-[clamp(14px,1.3vmax,24px)]'}`}
             >
-              {live ? (
+              {live && stall ? (
+                // Not a red "Ao vivo" while nothing arrives: the screen says the TSE is late.
+                <span className="flex items-center gap-2 font-semibold text-warn">
+                  <span className="inline-block size-[0.6em] rounded-full bg-current" aria-hidden />
+                  {panel
+                    ? 'Aguardando o TSE'
+                    : `Aguardando o TSE desde ${CLOCK.format(new Date(stall.since))}`}
+                </span>
+              ) : live ? (
                 <span className="flex items-center gap-2 font-semibold text-bad">
                   <span className="pulse-dot inline-block size-[0.6em] rounded-full bg-current" aria-hidden />
                   Ao vivo
@@ -423,7 +438,9 @@ export function TvView() {
             className={`flex-wrap justify-between gap-2 text-[clamp(12px,1vmax,18px)] text-muted ${panel ? 'hidden' : 'flex'}`}
           >
             <span>Dados oficiais do TSE</span>
-            <span className="font-medium text-ink-2">eleicoes.lucianookdp.dev</span>
+            <span>
+              <span className="font-medium text-ink-2">eleicoes.lucianookdp.dev</span> · by lucianookdp
+            </span>
           </footer>
         </div>
       </div>

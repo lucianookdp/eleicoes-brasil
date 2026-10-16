@@ -7,9 +7,12 @@ import { usePolymarket } from '@/lib/polymarket';
 import { useEvents, useOfficeStates } from '@/lib/queries';
 import { ActivityFeed } from './activity';
 import { BrazilMap } from './brazil-map';
+import { OddsSplit, PriceChart } from './polymarket-chart';
 import { StatusPill } from './results';
 import { useRound } from './shell';
 import { StateFlag } from './ui';
+
+const base = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 /** Seconds each scene stays on screen. */
 export const SCENE_SECONDS = 12;
@@ -471,44 +474,35 @@ function Turnout({ data }: { data: OverviewDTO }) {
  */
 function PolymarketScene() {
   const { data, error } = usePolymarket();
-  const top = data?.winner.slice(0, 4) ?? [];
+  const [a, b] = data?.winner ?? [];
   return (
     <div>
-      <p className="text-[clamp(12px,2.6cqi,18px)] font-medium text-warn">
-        Polymarket · apostas, não é resultado oficial
-      </p>
-      <p className="mt-0.5 text-[clamp(15px,3.6cqi,24px)] font-semibold">
-        Quem vence a eleição presidencial?
-      </p>
-      {error && <p className="mt-3 text-[14px] text-muted">Polymarket indisponível agora.</p>}
+      {/* Like Polymarket's own page: its mark, the question, the two chances, the chart. */}
+      <div className="flex items-center gap-2.5">
+        {/* biome-ignore lint/performance/noImgElement: static export, small brand icon */}
+        <img
+          src={`${base}/brands/pm-icon.png`}
+          alt=""
+          width={36}
+          height={36}
+          className="size-[clamp(24px,5cqi,36px)] rounded-lg"
+        />
+        <div className="min-w-0">
+          <p className="text-[clamp(15px,3.6cqi,24px)] font-semibold leading-tight">
+            Quem vence a eleição presidencial?
+          </p>
+          <p className="text-[clamp(11px,2.3cqi,15px)] font-medium text-warn">
+            Polymarket · apostas, não é resultado oficial
+          </p>
+        </div>
+      </div>
+      {error && !data && <p className="mt-3 text-[14px] text-muted">Polymarket indisponível agora.</p>}
       {!data && !error && <p className="mt-3 text-[14px] text-muted">Carregando…</p>}
-      <ul className="mt-3 grid gap-[clamp(8px,1.6cqi,14px)]">
-        {top.map((o) => (
-          <li key={o.name} className="flex items-center gap-3">
-            {o.image ? (
-              // biome-ignore lint/performance/noImgElement: Polymarket's own small thumbnail
-              <img
-                src={o.image}
-                alt=""
-                width={40}
-                height={40}
-                className="size-[clamp(32px,7cqi,52px)] shrink-0 rounded-full object-cover"
-              />
-            ) : (
-              <span className="size-[clamp(32px,7cqi,52px)] shrink-0 rounded-full bg-surface-2" aria-hidden />
-            )}
-            <span className="min-w-0 flex-1 truncate text-[clamp(14px,3.6cqi,26px)] font-semibold">
-              {o.name}
-            </span>
-            <span className="numeral text-[clamp(18px,5.5cqi,40px)] font-bold">
-              {Math.round(o.price * 100)}%
-            </span>
-          </li>
-        ))}
-      </ul>
+      {a && b && <OddsSplit a={a} b={b} tv />}
+      {data && data.winner.length > 0 && <PriceChart outcomes={data.winner.slice(0, 2)} tv />}
       {data && (
-        <p className="mt-3 text-[clamp(11px,2.2cqi,15px)] text-muted">
-          Chance dada pelos apostadores · US$ {fmtCompact(data.volume)} apostados · polymarket.com
+        <p className="mt-2 text-[clamp(11px,2.2cqi,15px)] text-muted">
+          Últimos 7 dias · US$ {fmtCompact(data.volume)} apostados · polymarket.com
         </p>
       )}
     </div>

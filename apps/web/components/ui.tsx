@@ -118,6 +118,46 @@ export function ErrorNotice({ error, retry }: { error: unknown; retry?: () => vo
 }
 
 /**
+ * The one rule for "the TSE has gone quiet": the count is live, our collection is healthy, nothing
+ * is left to wait for at 100%, and the TSE has published nothing new for over 5 minutes (counting
+ * file, or the headline votes). Shared by the header, the notices and the TV mode so they never
+ * disagree. Re-checked every 30 s, since nothing else re-renders when the TSE stops publishing.
+ */
+export function useTseStall({
+  ingestion,
+  progress,
+  roundStatus,
+  votesAt,
+}: {
+  ingestion?: IngestionStatus;
+  progress?: ProgressDTO | null;
+  roundStatus?: string;
+  votesAt?: string | null;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  const stale = (at: string | null | undefined) => !!at && now - Date.parse(at) > 5 * 60_000;
+  const done = progress?.status === 'finished' || (progress?.countedPct ?? 0) >= 100;
+  if (roundStatus !== 'live' || ingestion?.state !== 'healthy' || done) return null;
+  if (stale(progress?.updatedAt))
+    return {
+      since: progress!.updatedAt,
+      minutes: Math.floor((now - Date.parse(progress!.updatedAt)) / 60_000),
+      what: 'números novos' as const,
+    };
+  if (stale(votesAt))
+    return {
+      since: votesAt!,
+      minutes: Math.floor((now - Date.parse(votesAt!)) / 60_000),
+      what: 'votos' as const,
+    };
+  return null;
+}
+
+/**
  * Tells the reader when what they see is not fresh: the collector is failing, the browser is
  * offline, or counting has not started. Never hides the last good data.
  */
@@ -135,12 +175,7 @@ export function FreshnessNotice({
 }) {
   const { connection } = useRealtime();
   const last = ingestion.lastSuccessAt ?? progress?.updatedAt ?? null;
-  // Re-check every 30 s: when the TSE stops publishing nothing else re-renders this.
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(t);
-  }, []);
+  const stall = useTseStall({ ingestion, progress, roundStatus, votesAt });
   if (connection === 'offline') {
     return (
       <Notice tone="muted" title="Você está sem conexão">
@@ -159,31 +194,40 @@ export function FreshnessNotice({
   }
   // Our collection is healthy but the TSE has published nothing new for a while: say so, so the
   // pause is not mistaken for a problem with this site.
-  const stale = (at: string | null | undefined) => !!at && now - Date.parse(at) > 5 * 60_000;
-  // At 100% there is nothing left to wait for, even before the TSE marks the count final.
-  const done = progress?.status === 'finished' || (progress?.countedPct ?? 0) >= 100;
-  if (roundStatus === 'live' && ingestion.state === 'healthy' && !done) {
-    const what = stale(progress?.updatedAt)
-      ? `não divulga números novos desde as ${formatClock(progress!.updatedAt).slice(0, 5)}`
-      : stale(votesAt)
-        ? `não atualiza os votos desde as ${formatClock(votesAt).slice(0, 5)}`
-        : null;
-    if (what)
-      return (
-        <Notice tone="warn" title="Aguardando o TSE">
-          O TSE {what}. O atraso é do TSE: assim que ele enviar novas informações, o site atualiza sozinho.
-        </Notice>
-      );
-  }
+  if (stall)
+    return (
+      <Notice tone="warn" title={`Aguardando o TSE · há ${stall.minutes} min`}>
+        O TSE {stall.what === 'votos' ? 'não atualiza os votos' : 'não divulga números novos'} desde as{' '}
+        {formatClock(stall.since).slice(0, 5)}. O atraso é do TSE: assim que ele enviar novas informações, o
+        site atualiza sozinho.
+      </Notice>
+    );
   return null;
 }
 
 function Notice({ tone, title, children }: { tone: 'warn' | 'muted'; title: string; children: ReactNode }) {
-  const cls = tone === 'warn' ? 'border-warn/40 bg-warn-soft' : 'border-line-strong bg-surface-2';
+  const cls = tone === 'warn' ? 'border-warn/60 bg-warn-soft' : 'border-line-strong bg-surface-2';
   return (
-    <div role="status" className={`mb-4 rounded-xl border px-4 py-2.5 text-[14px] ${cls}`}>
-      <span className={`font-medium ${tone === 'warn' ? 'text-warn' : ''}`}>{title}.</span>{' '}
-      <span className="text-ink-2">{children}</span>
+    <div role="status" className={`mb-4 flex gap-3 rounded-xl border px-4 py-3 ${cls}`}>
+      {/* A clock: something is late, not broken. */}
+      <svg
+        viewBox="0 0 24 24"
+        width={22}
+        height={22}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        aria-hidden
+        className={`mt-0.5 shrink-0 ${tone === 'warn' ? 'text-warn' : 'text-muted'}`}
+      >
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </svg>
+      <div className="min-w-0">
+        <p className={`text-[15px] font-semibold ${tone === 'warn' ? 'text-warn' : ''}`}>{title}</p>
+        <p className="mt-0.5 text-[14px] leading-snug text-ink-2">{children}</p>
+      </div>
     </div>
   );
 }

@@ -148,3 +148,35 @@ test('live count: the numbers update on their own, without reloading', async ({ 
   await expect.poll(() => counted.innerText(), { timeout: 60_000, intervals: [2_000] }).not.toBe(first);
   await expectNoBrokenText(page);
 });
+
+test('the TSE goes quiet mid-count: header, notices and TV mode all say so', async ({ page, request }) => {
+  const elections = await (await request.get(`${API}/api/elections`)).json();
+  test.skip(
+    !elections.some((e: { rounds: { slug: string }[] }) => e.rounds.some((r) => r.slug === 'demo-2')),
+    'needs the demo runoff',
+  );
+  // The overview of a live count whose last TSE numbers are 12 minutes old (our collection healthy).
+  const old = new Date(Date.now() - 12 * 60_000).toISOString();
+  await page.route(`${API}/api/elections/demo-2/overview*`, async (route) => {
+    const res = await route.fetch();
+    const d = await res.json();
+    d.round.status = 'live';
+    d.ingestion.state = 'healthy';
+    d.progress = { ...d.progress, status: 'in-progress', countedPct: 42, updatedAt: old };
+    if (d.headline?.provenance) d.headline.provenance.retrievedAt = old;
+    await route.fulfill({ response: res, json: d });
+  });
+  await page.goto('/eleicao/?e=demo&t=2');
+  // Header (every page): no red "Ao vivo" while nothing arrives.
+  await expect(page.getByRole('status').filter({ hasText: 'Aguardando o TSE' }).first()).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: /^Ao vivo/ })).toHaveCount(0);
+  // The notice: how long, since when, and whose delay it is.
+  await expect(page.getByText(/Aguardando o TSE · há 1[12] min/)).toBeVisible();
+  await expect(page.getByText(/O atraso é do TSE/)).toBeVisible();
+  // A page without its own notice gets the country-wide one.
+  await page.goto('/eleicao/estados/?e=demo&t=2');
+  await expect(page.getByText(/Aguardando o TSE · há 1[12] min/)).toBeVisible();
+  // The TV mode says it too.
+  await page.goto('/eleicao/telao/?e=demo&t=2');
+  await expect(page.getByText(/Aguardando o TSE( desde)?/).first()).toBeVisible();
+});

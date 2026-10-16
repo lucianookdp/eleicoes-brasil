@@ -242,6 +242,10 @@ export async function shareImage(result: ResultDTO, siteLabel: string): Promise<
   ctx.fillStyle = INK;
   ctx.font = `600 30px ${font}`;
   ctx.fillText(siteLabel, size - pad, size - 78);
+  // Every shared result carries who made the site, small and under the address.
+  ctx.fillStyle = MUTED;
+  ctx.font = `500 24px ${font}`;
+  ctx.fillText('por lucianookdp', size - pad, size - 42);
   ctx.textAlign = 'left';
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));
 }

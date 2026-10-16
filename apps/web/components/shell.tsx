@@ -33,6 +33,7 @@ import {
 } from './icons';
 import { SearchPalette } from './search';
 import { shareSite } from './share-button';
+import { FreshnessNotice, useTseStall } from './ui';
 
 interface RoundContextValue {
   round: RoundSummary;
@@ -107,6 +108,7 @@ export function ElectionShell({
           id="conteudo"
           className="mx-auto min-h-dvh w-full max-w-[1320px] px-4 pb-28 pt-5 sm:px-6 xl:pb-12"
         >
+          <GlobalFreshness />
           {children}
         </main>
         <Footer />
@@ -639,6 +641,23 @@ function MoreMenu({ skip }: { skip: ReadonlySet<string> }) {
   );
 }
 
+/** Pages that show their own, more specific notice (their state's numbers, the headline votes). */
+const OWN_NOTICE = ['/eleicao', '/eleicao/estado', '/eleicao/bastidores', '/eleicao/telao'];
+
+/**
+ * Every other election page (cities, states list, Poderes, Comparar…) gets the country-wide notice
+ * too: "Aguardando o TSE", "Dados atrasados" or "sem conexão" must never depend on the page.
+ */
+function GlobalFreshness() {
+  const { round } = useRound();
+  const { data } = useOverview(round.slug);
+  const pathname = usePathname().replace(/\/$/, '');
+  if (!data || !pathname.startsWith('/eleicao') || OWN_NOTICE.includes(pathname)) return null;
+  return (
+    <FreshnessNotice ingestion={data.ingestion} progress={data.progress} roundStatus={data.round.status} />
+  );
+}
+
 /** The header status: what the data is doing right now, in words and colour. */
 function LiveStatus() {
   const { round } = useRound();
@@ -649,6 +668,12 @@ function LiveStatus() {
   const isReplay = round.environment === 'replay';
   // The overview follows the live stream; the election list only refreshes every minute.
   const status = data?.round.status ?? round.status;
+  const stall = useTseStall({
+    ingestion: data?.ingestion,
+    progress: data?.progress,
+    roundStatus: status,
+    votesAt: data?.headline?.provenance?.retrievedAt ?? null,
+  });
 
   let tone: 'live' | 'warn' | 'muted' | 'ink' = 'muted';
   let label = 'Aguardando';
@@ -665,6 +690,10 @@ function LiveStatus() {
     } else if (ingestion === 'degraded' || ingestion === 'offline') {
       tone = 'warn';
       label = 'Dados atrasados';
+    } else if (stall) {
+      // The TSE has gone quiet: not "Ao vivo" in red while nothing arrives (see useTseStall).
+      tone = 'warn';
+      label = 'Aguardando o TSE';
     } else {
       tone = 'live';
       label = isReplay ? 'Reprodução' : 'Ao vivo';
