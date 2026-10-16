@@ -43,7 +43,7 @@ export function CountingHero({
         {title}
       </h2>
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
-        <p className="numeral text-[clamp(48px,14vw,84px)] leading-[0.95]" aria-live="polite">
+        <p className="numeral text-[clamp(40px,11vw,84px)] leading-[0.95]" aria-live="polite">
           {started ? fmtPct(progress.countedPct) : progress ? fmtPct(0) : '—'}
         </p>
         {started && progress.totalizedAt && (

@@ -241,7 +241,14 @@ export function StateCard({ result }: { result: ResultDTO }) {
               <FacePhoto c={c} fallbackRound={firstRound} sizeClass="size-8 text-[11px]" />
               <span className="size-2.5 shrink-0 rounded-full" style={{ background: c.color }} aria-hidden />
               <span className="truncate text-[14px]">{displayName(c.ballotName)}</span>
-              <span className="shrink-0 text-[12px] text-muted">{c.party.abbreviation}</span>
+              {/* The name has priority: a long party code ("REPUBLICANOS") gives way first on phones,
+                  and on the narrowest (under 360 px) the code stays on the state page only. */}
+              <span
+                className="min-w-0 max-w-[4.5rem] shrink-[3] truncate text-[12px] text-muted max-[359px]:hidden sm:max-w-none"
+                title={c.party.abbreviation}
+              >
+                {c.party.abbreviation}
+              </span>
               {/* "Não eleito" next to every runner-up is noise in a card this small. */}
               {!/^n[aã]o eleit/i.test(c.status ?? '') && <StatusPill c={c} result={result} rank={i + 1} />}
             </span>

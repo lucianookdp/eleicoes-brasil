@@ -73,7 +73,11 @@ export function StatusPill({ c, result, rank }: { c: CandidateDTO; result: Resul
       : /2º|segundo/i.test(text)
         ? 'bg-surface-2 text-info'
         : 'bg-surface-2 text-muted';
-  return <span className={`rounded px-1.5 py-0.5 text-[11.5px] font-medium ${tone}`}>{text}</span>;
+  return (
+    <span className={`shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[11.5px] font-medium ${tone}`}>
+      {text}
+    </span>
+  );
 }
 
 /** Official photo when the TSE publishes one (served by our API), initials otherwise. */
@@ -163,9 +167,16 @@ export function CandidateRow({ c, result, rank }: { c: CandidateDTO; result: Res
             </span>
           )}
         </p>
-        <p className="truncate text-[12.5px] text-muted">
+        <p
+          className="truncate text-[12.5px] text-muted"
+          title={c.coalition && c.coalition !== c.party.abbreviation ? c.coalition : undefined}
+        >
           {c.number} · {c.party.abbreviation}
-          {c.coalition && c.coalition !== c.party.abbreviation && <> · {c.coalition}</>}
+          {/* Phones: the party only; the coalition ("PSB / PDT / …") is on computers and the
+              candidate's page. */}
+          {c.coalition && c.coalition !== c.party.abbreviation && (
+            <span className="hidden sm:inline"> · {c.coalition}</span>
+          )}
           {mates.length > 0 && (
             <span className="hidden sm:inline">
               {' '}
@@ -559,7 +570,12 @@ export function ResultPanel({
               ) : (
                 <>
                   {result.office.kind === 'majoritarian' && <RaceBar result={result} />}
-                  <CandidateList result={result} collapsed={collapsed} />
+                  {/* Lists of deputies have their own "Mostrar todos" (loaded in pages): collapse only
+                      the races for one seat (president, governor, senator, mayor). */}
+                  <CandidateList
+                    result={result}
+                    collapsed={result.office.kind === 'majoritarian' ? collapsed : undefined}
+                  />
                 </>
               )}
               {result.candidatesTotal > result.candidates.length && (

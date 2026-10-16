@@ -37,7 +37,7 @@ const html = `<!doctype html>
   .glow.c { width: 380px; height: 380px; left: -160px; bottom: -220px; background: ${YELLOW}; opacity: .10; }
   .stripe { position: absolute; inset: 0 0 auto 0; height: 10px; display: flex; }
   .stripe i { flex: 1; }
-  .left { position: absolute; left: 72px; top: 58px; bottom: 54px; width: 620px; display: flex; flex-direction: column; }
+  .left { position: absolute; left: 72px; top: 58px; bottom: 50px; width: 690px; display: flex; flex-direction: column; }
   .brand { display: flex; align-items: center; gap: 16px; font-size: 30px; font-weight: 700; letter-spacing: -.01em; }
   .brand small { display: block; font-size: 17px; font-weight: 500; color: #8b93a1; letter-spacing: 0; }
   .chip {
@@ -48,13 +48,23 @@ const html = `<!doctype html>
   .dot { width: 13px; height: 13px; border-radius: 50%; background: #ff4d4d; box-shadow: 0 0 0 6px rgb(255 77 77 / .22); }
   .chip b { color: #ff6b6b; font-weight: 700; letter-spacing: .04em; }
   .chip span { color: #c9ced6; }
-  h1 { margin-top: 20px; font-size: 118px; line-height: .93; font-weight: 800; letter-spacing: -.035em; font-stretch: 96%; }
+  h1 { white-space: nowrap; margin-top: 16px; font-size: 86px; line-height: .93; font-weight: 800; letter-spacing: -.035em; font-stretch: 96%; }
   h1 em { font-style: normal; background: linear-gradient(100deg, ${GREEN}, ${YELLOW} 52%, #4f8bff); -webkit-background-clip: text; color: transparent; }
-  p.sub { margin-top: 20px; font-size: 29px; line-height: 1.25; color: #b8bec8; font-weight: 450; white-space: nowrap; }
-  p.sub strong { color: #eceef1; font-weight: 650; }
+  /* The main features, big enough to read in a chat's small preview. */
+  .features { margin-top: 26px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .feature {
+    display: flex; align-items: center; gap: 16px; padding: 14px 18px 14px 14px; border-radius: 18px;
+    background: rgb(255 255 255 / .06); border: 1px solid rgb(255 255 255 / .13);
+  }
+  .feature .icon {
+    flex: none; width: 54px; height: 54px; border-radius: 14px; display: flex; align-items: center;
+    justify-content: center; color: #0e1013;
+  }
+  .feature b { display: block; font-size: 26px; white-space: nowrap; font-weight: 700; letter-spacing: -.01em; line-height: 1.1; }
+  .feature span { display: block; margin-top: 3px; font-size: 19px; color: #aab1bc; white-space: nowrap; }
   .foot { margin-top: auto; display: flex; align-items: center; gap: 14px; font-size: 24px; font-weight: 600; }
-  .foot .url { padding: 9px 18px; border-radius: 12px; background: #eceef1; color: #0e1013; }
-    .map { position: absolute; right: 44px; top: 62px; width: 470px; height: 520px; }
+  .foot .url { padding: 8px 16px; border-radius: 12px; background: #eceef1; color: #0e1013; font-size: 22px; }
+  .map { position: absolute; right: 34px; top: 84px; width: 400px; height: 450px; }
   .map svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 24px 50px rgb(0 0 0 / .55)); }
   .map path { fill: url(#brand); stroke: #0e1013; stroke-width: 1.6; stroke-linejoin: round; }
 </style>
@@ -73,7 +83,12 @@ const html = `<!doctype html>
     </div>
     <div class="chip"><i class="dot"></i><b>AO VIVO</b><span>2º turno · 25 de outubro</span></div>
     <h1>Eleições <em>2026</em></h1>
-    <p class="sub">Apuração em <strong>tempo real</strong> · dados oficiais do TSE</p>
+    <div class="features">
+      <div class="feature"><div class="icon" style="background:${GREEN}"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div><div><b>Resultado ao vivo</b><span>Sem recarregar</span></div></div>
+      <div class="feature"><div class="icon" style="background:${YELLOW}"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg></div><div><b>Sua cidade</b><span>Em destaque</span></div></div>
+      <div class="feature"><div class="icon" style="background:#4f8bff"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div><div><b>Modo telão</b><span>TV e transmissão</span></div></div>
+      <div class="feature"><div class="icon" style="background:#c9ced6"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8 18 4v16L6 16V8Z"/><path d="m6 8 12 4-12 4"/></svg></div><div><b>Polymarket</b><span>Apostas ao vivo</span></div></div>
+    </div>
     <div class="foot"><span class="url">eleicoes.lucianookdp.dev</span></div>
   </div>
   <div class="map">

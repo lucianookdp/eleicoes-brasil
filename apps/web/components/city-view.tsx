@@ -67,6 +67,7 @@ export function CityView({ uf, city, initial }: { uf: string; city: string; init
           offices={offices}
           initial={initialResult}
           areaPct={data.progress?.countedPct}
+          collapsed={4}
         />
       </section>
     </>
