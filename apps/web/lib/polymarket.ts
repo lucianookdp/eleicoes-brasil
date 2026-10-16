@@ -11,6 +11,16 @@ const GAMMA = 'https://gamma-api.polymarket.com';
 export const POLYMARKET_URL = 'https://polymarket.com/event/brazil-presidential-election';
 export const eventUrl = (slug: string) => `https://polymarket.com/event/${slug}`;
 export const LIVE_MS = 30_000;
+
+/** The same party colours as everywhere on the site (PL blue, PT red); neutral for anyone else. */
+export function colorOf(name: string, i: number) {
+  if (/bolsonaro/i.test(name)) return '#2F6BFF';
+  if (/lula/i.test(name)) return '#E5383B';
+  return ['#8a909a', '#f2b33d', '#2fbf71'][i % 3]!;
+}
+
+/** Short enough for a one-line summary: "Luiz Inácio Lula da Silva" is "Lula". */
+export const shortName = (name: string) => (/\blula\b/i.test(name) ? 'Lula' : name);
 export const MARGIN_SLUG = 'brazil-presidential-election-second-round-margin-of-victory';
 
 export interface Outcome {

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ErrorNotice, Segmented, Skeleton } from '@/components/ui';
 import { fmtCompact } from '@/lib/format';
 import {
+  colorOf,
   eventUrl,
   MARGIN_SLUG,
   type Outcome,
@@ -48,13 +49,6 @@ const STATE_NAMES: Record<string, string> = {
   TO: 'Tocantins',
   ZZ: 'Exterior',
 };
-
-/** The same party colours as everywhere on the site (PL blue, PT red); neutral for anyone else. */
-function colorOf(name: string, i: number) {
-  if (/bolsonaro/i.test(name)) return '#2F6BFF';
-  if (/lula/i.test(name)) return '#E5383B';
-  return ['#8a909a', '#f2b33d', '#2fbf71'][i % 3]!;
-}
 
 /**
  * Polymarket on the 2nd round, laid out like Polymarket's own event page (chart, % chance, Yes/No
