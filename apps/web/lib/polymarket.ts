@@ -42,27 +42,50 @@ interface GammaEvent {
   markets: GammaMarket[];
 }
 
+/** Polymarket sends some lists as JSON inside a string; a malformed one is just empty. */
+function list(raw: string | undefined): string[] {
+  try {
+    const v = JSON.parse(raw ?? '[]');
+    return Array.isArray(v) ? v.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** A price between 0 and 1, or null: never NaN on screen. */
+const price = (v: string | undefined) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 && n <= 1 ? n : null;
+};
+
 const outcomes = (e: GammaEvent | undefined): Outcome[] =>
   (e?.markets ?? [])
     .filter((m) => !m.closed)
     .map((m) => {
-      const prices = JSON.parse(m.outcomePrices ?? '[]') as string[];
+      const [yes, no] = list(m.outcomePrices);
+      const p = price(yes);
       return {
         name: m.groupItemTitle || m.question || '',
-        price: Number(prices[0] ?? 0),
-        no: Number(prices[1] ?? 0),
-        token: (JSON.parse(m.clobTokenIds ?? '[]') as string[])[0] ?? '',
-        volume: Number(m.volume ?? 0),
+        price: p ?? 0,
+        no: price(no) ?? (p == null ? 0 : 1 - p),
+        token: list(m.clobTokenIds)[0] ?? '',
+        volume: Number.isFinite(Number(m.volume)) ? Number(m.volume) : 0,
         image: m.icon?.startsWith('https://polymarket-upload.s3.us-east-2.amazonaws.com/') ? m.icon : null,
       };
     })
     .filter((o) => o.name && o.price > 0)
     .sort((a, b) => b.price - a.price);
 
+/** GET with a time limit: a slow Polymarket must never leave the page waiting forever. */
+async function getJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+  if (!res.ok) throw new Error(`Polymarket respondeu ${res.status}`);
+  return (await res.json()) as T;
+}
+
 async function event(slug: string): Promise<GammaEvent | undefined> {
-  const res = await fetch(`${GAMMA}/events?slug=${slug}`);
-  if (!res.ok) throw new Error(`Polymarket ${res.status}`);
-  return ((await res.json()) as GammaEvent[])[0];
+  const events = await getJson<GammaEvent[]>(`${GAMMA}/events?slug=${slug}`);
+  return Array.isArray(events) ? events[0] : undefined;
 }
 
 /** Polymarket's state names (slug suffix) → UF. */
@@ -103,17 +126,25 @@ export function usePolymarket() {
     // the reader's browser asking Polymarket, so none of it reaches our API, database or the TSE.
     staleTime: 20_000,
     refetchInterval: LIVE_MS,
-    retry: 1,
+    retry: 2,
     queryFn: async () => {
       const prefix = 'brazil-presidential-election-second-round-1st-place-';
-      const [winner, margin, search] = await Promise.all([
+      // The main market is required; the margin and the states are extras: if one of them fails,
+      // the rest still shows (and `partial` says so).
+      const [winnerRes, marginRes, searchRes] = await Promise.allSettled([
         event('brazil-presidential-election'),
-        event('brazil-presidential-election-second-round-margin-of-victory'),
-        fetch(
+        event(MARGIN_SLUG),
+        getJson<{ events?: GammaEvent[] }>(
           `${GAMMA}/public-search?q=${encodeURIComponent('Brazil Presidential Election Second Round 1st Place')}&limit_per_type=50&events_status=active`,
-        ).then((r) => (r.ok ? (r.json() as Promise<{ events?: GammaEvent[] }>) : { events: [] })),
+        ),
       ]);
-      const places = (search.events ?? []).filter((e) => e.slug.startsWith(prefix));
+      if (winnerRes.status === 'rejected') throw winnerRes.reason;
+      const winner = winnerRes.value;
+      const margin = marginRes.status === 'fulfilled' ? marginRes.value : undefined;
+      const search = searchRes.status === 'fulfilled' ? searchRes.value : { events: [] };
+      const places = (search.events ?? []).filter(
+        (e) => typeof e.slug === 'string' && e.slug.startsWith(prefix),
+      );
       const states = places
         .map((e) => {
           const key = e.slug.slice(prefix.length).replace(/^in-/, '');
@@ -124,9 +155,12 @@ export function usePolymarket() {
         );
       return {
         winner: outcomes(winner),
-        volume: Number(winner?.volume ?? 0),
+        /** The main market exists but has no open outcome left (resolved after the election). */
+        closed: !!winner && outcomes(winner).length === 0,
+        volume: Number.isFinite(Number(winner?.volume)) ? Number(winner?.volume) : 0,
         margin: outcomes(margin),
         states,
+        partial: marginRes.status === 'rejected' || searchRes.status === 'rejected',
         at: new Date().toISOString(),
       };
     },
@@ -145,16 +179,23 @@ export function usePriceHistory(tokens: string[], range: Range) {
     enabled: tokens.length > 0,
     staleTime: 50_000,
     refetchInterval: 60_000,
-    queryFn: () =>
-      Promise.all(
+    retry: 2,
+    // One line failing does not hide the others; only when all fail is the chart unavailable.
+    queryFn: async () => {
+      const results = await Promise.allSettled(
         tokens.map(async (token) => {
-          const res = await fetch(
+          const { history } = await getJson<{ history?: { t: number; p: number }[] }>(
             `https://clob.polymarket.com/prices-history?market=${token}&interval=${range}&fidelity=${FIDELITY[range]}`,
           );
-          if (!res.ok) throw new Error(`Polymarket ${res.status}`);
-          const { history } = (await res.json()) as { history: { t: number; p: number }[] };
-          return { token, points: history };
+          const points = (Array.isArray(history) ? history : []).filter(
+            (pt) => Number.isFinite(pt?.t) && Number.isFinite(pt?.p),
+          );
+          return { token, points };
         }),
-      ),
+      );
+      const ok = results.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
+      if (ok.length === 0 && results.length > 0) throw (results[0] as PromiseRejectedResult).reason;
+      return ok;
+    },
   });
 }

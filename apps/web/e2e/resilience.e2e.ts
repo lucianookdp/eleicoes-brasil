@@ -101,3 +101,50 @@ test('runoff in its first minutes (0 votes): no broken numbers', async ({ page, 
   }
   expect(errors).toEqual([]);
 });
+
+test.describe('Polymarket failures never break its page', () => {
+  test('Polymarket down: a clear message and a link to it', async ({ page }) => {
+    await page.route('https://gamma-api.polymarket.com/**', (r) => r.abort('connectionrefused'));
+    await page.goto('/polymarket/');
+    await expect(page.getByText('O Polymarket não respondeu agora', { exact: false })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByRole('link', { name: 'no site do Polymarket' })).toBeVisible();
+  });
+
+  test('one market down: the rest shows, with a note', async ({ page }) => {
+    await page.route('https://gamma-api.polymarket.com/public-search**', (r) =>
+      r.fulfill({ status: 500, body: 'x' }),
+    );
+    await page.goto('/polymarket/');
+    await expect(page.getByRole('heading', { name: 'Quem vence a eleição presidencial?' })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText('Parte dos mercados do Polymarket não respondeu agora')).toBeVisible();
+    await expectNoBrokenText(page);
+  });
+
+  test('price history down: the chart says so instead of loading forever', async ({ page }) => {
+    await page.route('https://clob.polymarket.com/**', (r) => r.fulfill({ status: 503, body: 'x' }));
+    await page.goto('/polymarket/');
+    await expect(
+      page.getByText('O gráfico do Polymarket não respondeu agora. Tentando de novo.'),
+    ).toBeVisible({
+      timeout: 30_000,
+    });
+  });
+});
+
+test('live count: the numbers update on their own, without reloading', async ({ page, request }) => {
+  const overview = await (await request.get(`${API}/api/elections/demo-2/overview`)).json();
+  test.skip(overview.progress?.status !== 'in-progress', 'demo runoff count not in progress');
+  test.setTimeout(90_000);
+  await page.goto('/eleicao/?e=demo&t=2');
+  await expect(page.getByRole('status').filter({ hasText: 'Ao vivo' }).first()).toBeVisible();
+  // "votos de 12,34% das urnas" above the race: it must move as the TSE (demo) publishes.
+  const counted = page.getByText(/^votos de [\d,]+% das urnas$/).first();
+  await expect(counted).toBeVisible();
+  const first = await counted.innerText();
+  await expect.poll(() => counted.innerText(), { timeout: 60_000, intervals: [2_000] }).not.toBe(first);
+  await expectNoBrokenText(page);
+});

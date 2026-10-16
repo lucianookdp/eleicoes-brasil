@@ -188,8 +188,12 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
               )}
             </section>
           </Panel>
-          {/* In the order a reader asks on election night (one column on a phone): who leads, how
-              much is counted, their city, their governor, their saved places; then turnout. */}
+          {/* In the order a reader asks on election night (one column on a phone): who leads, their
+              city, how much is counted, their governor, their saved places; then turnout. Big
+              screens show the city under the map instead, fixed with it (see the right column). */}
+          <div className="lg:hidden">
+            <MyCityCard headlineOffice={headlineOffice?.slug} />
+          </div>
           <Panel className="p-4 sm:p-5">
             <CountingHero
               progress={data.progress}
@@ -198,10 +202,6 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
               votesFor={headlineOffice?.name}
             />
           </Panel>
-          {/* Big screens show it under the map, fixed with it (see the right column). */}
-          <div className="lg:hidden">
-            <MyCityCard headlineOffice={headlineOffice?.slug} />
-          </div>
           <GovernorRunoffs data={data} />
           <Favorites data={data} />
           {/* Runoff: the face-off above already names both; here only turnout, blank and null. */}

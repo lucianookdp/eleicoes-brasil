@@ -12,14 +12,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ['/eleicao/', 1],
     ['/eleicao/estados/', 0.9],
     ['/eleicao/cargos/', 0.8],
-    ['/eleicao/bancadas/', 0.7],
     ['/eleicao/cargos/?cargo=stf', 0.6],
     ['/polymarket/', 0.6],
     ['/eleicao/historico/', 0.5],
     ['/eleicao/comparar/', 0.5],
     ['/eleicao/bastidores/', 0.3],
     ['/como-funciona/', 0.3],
-    ['/sobre/', 0.3],
   ] as const;
   const now = new Date();
   return [

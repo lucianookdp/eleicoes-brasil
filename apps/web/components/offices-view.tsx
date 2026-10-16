@@ -7,7 +7,8 @@ import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { displayName, fmtPct } from '@/lib/format';
 import { useOfficeStates, useOverview } from '@/lib/queries';
-import { IconCourt, IconFlag, IconSeats } from './icons';
+import { BenchesView } from './benches-view';
+import { IconCourt, IconFlag, IconPerson, IconSeats } from './icons';
 import { FacePhoto, StatusPill, useOfficeParam } from './results';
 import { useRound } from './shell';
 import { StfView } from './stf-view';
@@ -21,9 +22,15 @@ export function OfficesView() {
     (o) => o.scope === 'state' && o.kind === 'majoritarian',
   );
   const [office, setOffice] = useOfficeParam(offices);
-  // The Supreme Court lives here too, as the last tab (?cargo=stf).
-  const stf = useSearchParams().get('cargo') === 'stf';
-  const { data, error, refetch, isFetching } = useOfficeStates(round.slug, stf ? undefined : office?.slug);
+  // The Congress seats by party (?cargo=congresso) and the Supreme Court (?cargo=stf) live here
+  // too: Poderes = the executive, the legislative and the judiciary in one place.
+  const cargo = useSearchParams().get('cargo');
+  const stf = cargo === 'stf';
+  const congress = cargo === 'congresso';
+  const { data, error, refetch, isFetching } = useOfficeStates(
+    round.slug,
+    stf || congress ? undefined : office?.slug,
+  );
   // Filter by the TSE's status of each race (elected, runoff, counting); reset with the office.
   const [status, setStatus] = useState<Status | null>(null);
   const [statusFor, setStatusFor] = useState(office?.slug);
@@ -33,15 +40,21 @@ export function OfficesView() {
   }
   const shown = data?.results.filter((r) => !status || statusOf(r) === status) ?? [];
   const officeTitle = office?.name === 'Senador' ? 'Senadores' : 'Governadores';
-  const current = stf ? 'stf' : (office?.slug ?? 'stf');
+  const current = stf ? 'stf' : congress ? 'congresso' : (office?.slug ?? 'stf');
   const choices: PowerChoice[] = [
     ...offices.map((o) =>
       o.name === 'Senador'
-        ? { value: o.slug, label: 'Senadores', hint: 'Vagas no Senado em cada estado', icon: IconSeats }
+        ? { value: o.slug, label: 'Senadores', hint: 'Vagas no Senado em cada estado', icon: IconPerson }
         : o.name === 'Governador'
           ? { value: o.slug, label: 'Governadores', hint: 'Quem governa cada estado', icon: IconFlag }
           : { value: o.slug, label: o.name, hint: 'Em cada estado', icon: IconFlag },
     ),
+    {
+      value: 'congresso',
+      label: 'Congresso',
+      hint: 'Cadeiras de cada partido na Câmara e no Senado',
+      icon: IconSeats,
+    },
     { value: 'stf', label: 'STF', hint: 'Os ministros do Supremo', icon: IconCourt },
   ];
 
@@ -52,26 +65,33 @@ export function OfficesView() {
           <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">
             {stf
               ? 'Supremo Tribunal Federal'
-              : round.round === 2
-                ? `${officeTitle} no 2º turno`
-                : officeTitle}
+              : congress
+                ? 'Bancadas no Congresso'
+                : round.round === 2
+                  ? `${officeTitle} no 2º turno`
+                  : officeTitle}
           </h1>
           <p className="text-[13.5px] text-muted">
             {stf
               ? 'Quem são os ministros, quem indicou cada um e até quando ficam no tribunal.'
-              : round.round === 2
-                ? 'Os estados onde a disputa para governador foi ao 2º turno. Toque em um estado para ver tudo.'
-                : 'Quem lidera em cada estado. Toque em um estado para ver tudo.'}
+              : congress
+                ? `Quantos deputados federais e senadores cada partido elegeu${round.round === 2 ? ' no 1º turno' : ''}. Dados oficiais do TSE.`
+                : round.round === 2
+                  ? 'Os estados onde a disputa para governador foi ao 2º turno. Toque em um estado para ver tudo.'
+                  : 'Quem lidera em cada estado. Toque em um estado para ver tudo.'}
           </p>
         </div>
-        {/* Phones: the compact switch; computers get the big one below. */}
-        <div className="sm:hidden">
+        {/* Phones: the compact switch (four options: it scrolls sideways on the narrowest ones);
+            computers get the big one below. */}
+        <div className="scroll-x -mx-4 w-[calc(100%+2rem)] px-4 sm:hidden">
           <Segmented label="Cargo" value={current} onChange={setOffice} options={choices} />
         </div>
       </div>
       <PowersSwitch value={current} onChange={setOffice} options={choices} />
       {stf ? (
         <StfView />
+      ) : congress ? (
+        <BenchesView embedded />
       ) : (
         <>
           {overview.data && offices.length === 0 && (
