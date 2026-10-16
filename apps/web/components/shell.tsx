@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { countVisit } from '@/lib/api';
+import { colorOf, shortName, usePolymarket } from '@/lib/polymarket';
 import { useOverview } from '@/lib/queries';
 import { RealtimeProvider, useRealtime } from '@/lib/realtime';
 import { electionHref, pickRound, SECTION_ROUTES } from '@/lib/rounds';
@@ -144,63 +145,84 @@ type MoreItem = {
   phoneLabel?: string;
   /** Name in the computer's bar, when shorter than the one in "Mais". */
   short?: string;
+  /** Description on phones, when it differs ("Painel ao vivo" is not for a TV). */
+  phoneHint?: string;
 };
 
-/** What "Mais" holds, by importance: the most used as big tiles, then a list. */
+/**
+ * What "Mais" holds, in two groups of same-size rows (the author's order inside each): what to
+ * follow tonight, then the pages about the site. Polymarket has its own card on top (MoreContent).
+ */
 function useMoreItems() {
   const { href, meta, round } = useRound();
-  // The order the author chose: the big tiles first, then the list.
-  const tiles: MoreItem[] = [
-    ...(meta?.features.comparison === false
-      ? []
-      : [
-          {
-            to: href('/compare'),
-            path: '/compare',
-            label: 'Comparar',
-            hint: 'Estados lado a lado',
-            icon: IconCompare,
-          },
-        ]),
+  const groups: { title: string; items: MoreItem[] }[] = [
     {
-      to: href('/historico'),
-      path: '/historico',
-      label: 'Linha do tempo',
-      hint: 'A apuração passo a passo',
-      icon: IconHistory,
+      title: 'Acompanhe',
+      items: [
+        ...(meta?.features.comparison === false
+          ? []
+          : [
+              {
+                to: href('/compare'),
+                path: '/compare',
+                label: 'Comparar',
+                hint: 'Estados lado a lado',
+                icon: IconCompare,
+              },
+            ]),
+        {
+          to: href('/historico'),
+          path: '/historico',
+          label: 'Linha do tempo',
+          hint: 'A apuração hora a hora',
+          icon: IconHistory,
+        },
+        {
+          to: href('/favorites'),
+          path: '/favorites',
+          label: 'Favoritos',
+          hint: 'Seus estados e cidades',
+          icon: IconStar,
+        },
+        {
+          to: href('/tv'),
+          path: '/tv',
+          label: 'Modo telão',
+          phoneLabel: 'Painel ao vivo',
+          hint: 'Para TV e transmissão',
+          phoneHint: 'Tela cheia, sem distrações',
+          icon: IconTv,
+        },
+        // Brazilians abroad vote for president only: a general election has that page.
+        ...(round.kind === 'general'
+          ? [
+              {
+                to: href('/states/zz'),
+                path: '/states/zz',
+                label: 'Exterior',
+                hint: 'Votos de quem mora fora',
+                icon: IconGlobe,
+              },
+            ]
+          : []),
+      ],
     },
     {
-      to: href('/favorites'),
-      path: '/favorites',
-      label: 'Favoritos',
-      hint: 'Seus estados e cidades, ao vivo',
-      icon: IconStar,
+      title: 'Sobre o site',
+      items: [
+        {
+          to: href('/operations'),
+          path: '/operations',
+          label: 'Transparência da apuração',
+          short: 'Transparência',
+          hint: 'Se os dados estão chegando',
+          icon: IconPulse,
+        },
+        { to: '/como-funciona', label: 'Como funciona', hint: 'De onde vêm os números', icon: IconHelp },
+      ],
     },
   ];
-  // Sharing the site comes last, after these (see MoreContent).
-  const links: MoreItem[] = [
-    { to: href('/tv'), path: '/tv', label: 'Modo telão', phoneLabel: 'Painel ao vivo', icon: IconTv },
-    // Brazilians abroad vote for president only: a general election has that page.
-    ...(round.kind === 'general'
-      ? [
-          {
-            to: href('/states/zz'),
-            path: '/states/zz',
-            label: 'Exterior',
-            icon: IconGlobe,
-          },
-        ]
-      : []),
-    {
-      to: href('/operations'),
-      path: '/operations',
-      label: 'Transparência da apuração',
-      short: 'Transparência',
-      icon: IconPulse,
-    },
-    { to: '/como-funciona', label: 'Como funciona', icon: IconHelp },
-  ];
-  return { tiles, links };
+  return { groups, items: groups.flatMap((g) => g.items) };
 }
 
 /** Room always left free between the bar and search/status, so a longer status ("Dados atrasados")
@@ -216,8 +238,7 @@ let lastShown = 0;
  * many are shown (adding one moves "Mais" by exactly its width), so it cannot flicker.
  */
 function useBarItems() {
-  const { tiles, links } = useMoreItems();
-  const items = [...tiles, ...links];
+  const { items } = useMoreItems();
   const pathname = usePathname();
   const [shown, setShown] = useState(lastShown);
   const row = useRef<HTMLDivElement>(null);
@@ -269,60 +290,105 @@ function MoreContent({
 }: {
   onPick: () => void;
   skip?: ReadonlySet<string>;
-  /** The phone's sheet: some items have a phone name. */
+  /** The phone's sheet: some items have a phone name, and Polymarket (not in its bar) leads. */
   phone?: boolean;
 }) {
   const active = useActive();
-  const all = useMoreItems();
-  const tiles = all.tiles.filter((t) => !skip?.has(t.label));
-  const links = [
-    // On phones Polymarket left the bar so search could sit in its middle: first in the list here.
-    ...(phone ? [{ to: '/polymarket', label: 'Polymarket', icon: IconPolymarket } as MoreItem] : []),
-    ...all.links.filter((l) => !skip?.has(l.label)),
-  ];
+  const groups = useMoreItems()
+    .groups.map((g) => ({ ...g, items: g.items.filter((i) => !skip?.has(i.label)) }))
+    .filter((g) => g.items.length > 0);
   const current = (i: MoreItem) => (i.path && active(i.path) ? 'page' : undefined);
+  const row =
+    'flex min-h-14 items-center gap-3 px-3 py-2 hover:bg-surface-2 aria-[current=page]:bg-surface-2/60';
   return (
-    <div className="grid gap-3">
-      <ul className={`grid grid-cols-2 gap-2 ${tiles.length === 0 ? 'hidden' : ''}`}>
-        {tiles.map((t) => (
-          <li key={t.label} className="odd:last:col-span-2">
-            <Link
-              href={t.to}
-              onClick={onPick}
-              aria-current={current(t)}
-              className="flex h-full flex-col gap-2.5 rounded-xl border border-line bg-surface-2/50 p-3 transition-colors hover:border-line-strong hover:bg-surface-2 aria-[current=page]:border-live/60"
-            >
-              <span className="flex size-8 items-center justify-center rounded-lg border border-line bg-surface text-ink-2">
-                <t.icon />
-              </span>
-              <span>
-                <span className="block text-[14.5px] font-medium leading-tight text-ink">{t.label}</span>
-                <span className="mt-0.5 block text-[12px] leading-snug text-muted">{t.hint}</span>
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line">
-        {links.map((l) => (
-          <li key={l.label}>
-            <Link
-              href={l.to}
-              onClick={onPick}
-              aria-current={current(l)}
-              className="flex min-h-11 items-center gap-3 px-3 text-[14.5px] text-ink-2 hover:bg-surface-2 hover:text-ink aria-[current=page]:font-medium aria-[current=page]:text-ink"
-            >
-              <l.icon className="shrink-0 text-muted" />
-              <span className="flex-1">{(phone && l.phoneLabel) || l.label}</span>
-              <IconChevron width={15} height={15} className="text-muted" />
-            </Link>
-          </li>
-        ))}
-        <li>
-          <ShareSiteItem />
-        </li>
-      </ul>
+    <div className="grid gap-4 [&>*]:min-w-0">
+      {phone && <PolymarketCard onPick={onPick} />}
+      {groups.map((g, gi) => (
+        <section key={g.title} aria-label={g.title}>
+          <p className="mb-1.5 px-1 text-[11.5px] font-medium uppercase tracking-wider text-muted">
+            {g.title}
+          </p>
+          <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line">
+            {g.items.map((item) => (
+              <li key={item.label}>
+                <Link href={item.to} onClick={onPick} aria-current={current(item)} className={row}>
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-ink-2">
+                    <item.icon />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-medium leading-tight">
+                      {(phone && item.phoneLabel) || item.label}
+                    </span>
+                    {item.hint && (
+                      <span className="block truncate text-[12.5px] text-muted">
+                        {(phone && item.phoneHint) || item.hint}
+                      </span>
+                    )}
+                  </span>
+                  <IconChevron width={15} height={15} className="shrink-0 text-muted" />
+                </Link>
+              </li>
+            ))}
+            {/* Sharing the site closes the last group. */}
+            {gi === groups.length - 1 && (
+              <li>
+                <ShareSiteItem />
+              </li>
+            )}
+          </ul>
+        </section>
+      ))}
     </div>
+  );
+}
+
+/**
+ * Polymarket's own card at the top of the phone's "Mais", in its blue, with the two chances live
+ * (read from Polymarket in the reader's browser; without them, the card is still there).
+ */
+function PolymarketCard({ onPick }: { onPick: () => void }) {
+  const { data } = usePolymarket();
+  const [a, b] = data?.winner ?? [];
+  return (
+    <Link
+      href="/polymarket"
+      onClick={onPick}
+      className="flex items-center gap-3 rounded-xl border border-[#1652f0]/40 bg-[#1652f0]/10 p-3 hover:bg-[#1652f0]/15"
+    >
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#1652f0] text-white">
+        <IconPolymarket width={22} height={22} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2 text-[15.5px] font-semibold leading-tight">
+          Polymarket
+          <span className="rounded bg-bad/15 px-1.5 py-px text-[10.5px] font-semibold uppercase tracking-wide text-bad">
+            ao vivo
+          </span>
+        </span>
+        {a && b ? (
+          <span className="mt-0.5 flex min-w-0 items-center gap-2 text-[13px] text-ink-2">
+            {[a, b].map((o, i) => (
+              // The shorter name never gives way first ("Lula" stays whole on a small phone).
+              <span
+                key={o.name}
+                className={`flex items-center gap-1 ${shortName(o.name).length > shortName((i ? a : b).name).length ? 'min-w-0' : 'shrink-0'}`}
+              >
+                <span
+                  className="size-2 shrink-0 rounded-full"
+                  style={{ background: colorOf(o.name, i) }}
+                  aria-hidden
+                />
+                <span className="truncate">{shortName(o.name)}</span>
+                <span className="numeral font-semibold text-ink">{Math.round(o.price * 100)}%</span>
+              </span>
+            ))}
+          </span>
+        ) : (
+          <span className="block text-[12.5px] text-muted">As apostas da eleição</span>
+        )}
+      </span>
+      <IconChevron width={15} height={15} className="shrink-0 text-muted" />
+    </Link>
   );
 }
 
@@ -531,9 +597,7 @@ const SHORT_DATE = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'sh
 /** "Mais ▾" on computers: the same panel as the phone's sheet, as a dropdown. */
 function MoreMenu({ skip }: { skip: ReadonlySet<string> }) {
   const active = useActive();
-  const all = useMoreItems();
-  const tiles = all.tiles.filter((t) => !skip.has(t.label));
-  const links = all.links.filter((l) => !skip.has(l.label));
+  const items = useMoreItems().items.filter((i) => !skip.has(i.label));
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   // Closes on any tap or click outside, and on Esc.
@@ -550,7 +614,7 @@ function MoreMenu({ skip }: { skip: ReadonlySet<string> }) {
       document.removeEventListener('keydown', esc);
     };
   }, [open]);
-  const current = [...tiles, ...links].some((i) => i.path && active(i.path));
+  const current = items.some((i) => i.path && active(i.path));
   return (
     <div ref={box} className="relative">
       <button
@@ -719,7 +783,7 @@ function BottomNav({ onSearch }: { onSearch: () => void }) {
             aria-label="Fechar"
             onClick={() => setMore(false)}
           />
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-line-strong bg-surface px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-2 shadow-2xl">
+          <div className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-line-strong bg-surface px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-2 shadow-2xl">
             <div aria-hidden className="mx-auto mb-1 h-1 w-10 rounded-full bg-line-strong" />
             <div className="mb-2 flex items-center justify-between">
               <span className="text-[17px] font-semibold">Mais</span>
@@ -750,25 +814,29 @@ function ShareSiteItem() {
         if (r === 'copied') setLabel('Link copiado');
         if (r === 'failed') setLabel('Não foi possível compartilhar');
       }}
-      className="flex min-h-11 w-full items-center gap-3 px-3 text-left text-[14.5px] text-ink-2 hover:bg-surface-2 hover:text-ink"
+      className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left hover:bg-surface-2"
     >
-      <svg
-        className="shrink-0 text-muted"
-        viewBox="0 0 24 24"
-        width={18}
-        height={18}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.75}
-        aria-hidden
-      >
-        <path
-          d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      {label}
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-ink-2">
+        <svg
+          viewBox="0 0 24 24"
+          width={18}
+          height={18}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.75}
+          aria-hidden
+        >
+          <path
+            d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-medium leading-tight">{label}</span>
+        <span className="block truncate text-[12.5px] text-muted">Mande o link para alguém</span>
+      </span>
     </button>
   );
 }

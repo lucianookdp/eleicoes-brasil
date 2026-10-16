@@ -72,7 +72,7 @@ export function StateView({ uf, initial }: { uf: string; initial: StateDetailDTO
                 areaKey={key}
                 offices={offices}
                 areaPct={data.progress?.countedPct}
-                collapsed={abroad ? 4 : undefined}
+                collapsed={4}
               />
             </div>
             <div className="lg:col-span-5">
