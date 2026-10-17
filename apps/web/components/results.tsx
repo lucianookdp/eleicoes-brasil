@@ -248,7 +248,7 @@ export function HeadToHead({ result }: { result: ResultDTO }) {
   const leader = (a.votes ?? 0) >= (b.votes ?? 0) ? a : b;
   const side = (c: CandidateDTO) => (
     <div className="flex min-w-0 flex-col items-center gap-2 text-center">
-      <FacePhoto c={c} fallbackRound={firstRound} />
+      <FacePhoto c={c} fallbackRound={firstRound} priority />
       <p className="flex w-full items-center justify-center gap-1.5 text-[16px] font-semibold">
         <span className="size-2.5 shrink-0 rounded-full" style={{ background: c.color }} aria-hidden />
         {page(c) ? (
@@ -329,12 +329,15 @@ export function FacePhoto({
   fallbackRound,
   small = false,
   sizeClass,
+  priority = false,
 }: {
   c: CandidateDTO;
   fallbackRound: string;
   small?: boolean;
   /** Overrides the two built-in sizes (the TV mode wants a bigger face). */
   sizeClass?: string;
+  /** The biggest thing on the first screen (the runoff faces): fetched before anything else. */
+  priority?: boolean;
 }) {
   const { round } = useRound();
   const sources = [...new Set([round.slug, fallbackRound])].map(
@@ -359,6 +362,7 @@ export function FacePhoto({
           src={sources[i]}
           alt=""
           decoding="async"
+          fetchPriority={priority ? 'high' : undefined}
           onError={() => setI((n) => n + 1)}
           className="absolute inset-0 size-full rounded-full object-cover object-[center_22%]"
         />

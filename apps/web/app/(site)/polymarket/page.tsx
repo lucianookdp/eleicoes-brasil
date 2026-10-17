@@ -370,7 +370,7 @@ function StatesGrid({ states }: { states: { uf: string; slug: string; outcomes: 
                 target="_blank"
                 rel="noopener nofollow"
                 title={`${STATE_NAMES[s.uf] ?? s.uf}: ${top.name} ${pct(top.price)}`}
-                aria-label={`${STATE_NAMES[s.uf] ?? s.uf}: ${top.name}, ${pct(top.price)}`}
+                aria-label={`${s.uf === 'ZZ' ? 'Ext.' : s.uf} ${pct(top.price)}: ${STATE_NAMES[s.uf] ?? s.uf}, ${top.name}`}
                 className="flex h-12 flex-col items-center justify-center rounded-lg border text-center leading-tight hover:brightness-110"
                 style={{
                   background: `color-mix(in oklab, ${color} 22%, var(--surface))`,
