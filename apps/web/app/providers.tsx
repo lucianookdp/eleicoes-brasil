@@ -1,7 +1,7 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -18,5 +18,13 @@ export function Providers({ children }: { children: ReactNode }) {
         },
       }),
   );
+  // A signature for whoever opens the developer tools (recruiters, other developers).
+  useEffect(() => {
+    console.info(
+      '%cEleições Brasil%c feito por lucianookdp · https://lucianookdp.dev',
+      'font-weight:700;color:#28b870',
+      'color:inherit',
+    );
+  }, []);
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }

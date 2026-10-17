@@ -288,6 +288,26 @@ export default function HowItWorksPage() {
           <MoreLink href="/eleicao/bastidores/" icon={<IconPulse />} title="Transparência da apuração">
             Se os números estão chegando e tudo o que registramos de anormal
           </MoreLink>
+          {/* Who made the site: at the end of the page that explains it, never in the way. */}
+          <a
+            href="https://lucianookdp.dev"
+            target="_blank"
+            rel="noopener"
+            className="flex items-center gap-3 rounded-xl border border-line bg-surface p-3 hover:border-line-strong hover:bg-surface-2"
+          >
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-line text-[13px] font-semibold text-live">
+              lk
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-medium">Quem fez</span>
+              <span className="block text-[12.5px] leading-snug text-muted">
+                Projeto independente de lucianookdp. Veja outros trabalhos
+              </span>
+            </span>
+            <span aria-hidden className="shrink-0 text-[15px] text-muted">
+              ↗
+            </span>
+          </a>
         </div>
       </div>
     </div>

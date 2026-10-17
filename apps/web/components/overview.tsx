@@ -132,7 +132,7 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
   return (
     <>
       <RoundTitle />
-      {headline && <DecidedBanner result={headline} />}
+      {/* First thing under the title: whether what follows is fresh. */}
       <FreshnessNotice
         ingestion={data.ingestion}
         progress={data.progress}
@@ -140,6 +140,7 @@ export function OverviewView({ initial }: { initial: OverviewDTO | null }) {
         // When the new votes reached us: the TSE's own stamp on the file can be 20 minutes older.
         votesAt={headline?.provenance?.retrievedAt ?? null}
       />
+      {headline && <DecidedBanner result={headline} />}
       <div className="grid items-start gap-4 lg:grid-cols-12 [&>*]:min-w-0 lg:gap-6">
         <div className="grid gap-4 lg:col-span-7 lg:gap-6 [&>*]:min-w-0">
           {/* 1st round over: the summary (finalists' photos when there is a runoff) leads. */}
