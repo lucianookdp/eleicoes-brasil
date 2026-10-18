@@ -505,13 +505,24 @@ function Header({ onSearch }: { onSearch: () => void }) {
           <LiveStatus key={round.slug} />
           <span aria-hidden className="hidden h-5 w-px bg-line md:block" />
           <div className="flex items-center gap-1.5">
+            {/* Search looks like a search field, as on big sites: the green glass, what it finds
+                (in full where there is room) and its shortcut. Phones have the green button below. */}
             <button
               type="button"
               onClick={onSearch}
-              aria-label="Buscar"
-              className="hidden size-9 items-center justify-center rounded-full border border-line text-muted hover:border-line-strong hover:text-ink md:flex"
+              aria-label="Buscar candidato, cidade ou estado"
+              aria-keyshortcuts="/ Control+K Meta+K"
+              className="group hidden h-10 items-center gap-2.5 rounded-full border border-live/35 bg-surface-2/60 pl-3.5 pr-2 text-[14px] font-medium text-ink-2 transition-colors hover:border-live/70 hover:text-ink md:flex"
             >
-              <IconSearch />
+              <IconSearch width={18} height={18} strokeWidth={2.1} className="text-live" />
+              <span className="min-[1680px]:hidden">Buscar</span>
+              <span className="hidden min-[1680px]:inline">Buscar candidato ou cidade</span>
+              <kbd
+                aria-hidden
+                className="ml-1 flex h-6 min-w-6 items-center justify-center rounded-md border border-line bg-surface px-1.5 font-sans text-[12px] text-muted"
+              >
+                /
+              </kbd>
             </button>
             <ThemeToggle className="flex" />
           </div>
