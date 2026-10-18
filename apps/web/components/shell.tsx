@@ -411,34 +411,17 @@ function PolymarketCard({ onPick }: { onPick: () => void }) {
   );
 }
 
-/**
- * Logo and name, with the author's credit ("by lucianookdp") as a small second line under the name: seen on every
- * page, but taking no room of its own (the header is the same height with or without it).
- */
+/** Logo and name. The author's credit lives at the end of every page (AuthorCard), not up here. */
 function Brand({ to }: { to: string }) {
   return (
-    <div className="flex shrink-0 items-center gap-2">
-      <Link href={to} tabIndex={-1} aria-hidden>
-        <Logo size={24} />
-      </Link>
-      <div className="flex flex-col leading-none">
-        <Link
-          href={to}
-          aria-label="Eleições Brasil — resultados"
-          className="whitespace-nowrap text-[16px] font-semibold tracking-tight"
-        >
-          Eleições Brasil
-        </Link>
-        <a
-          href={AUTHOR}
-          target="_blank"
-          rel="noopener"
-          className="mt-[3px] flex items-center gap-[3px] whitespace-nowrap text-[9.5px] text-muted hover:text-ink"
-        >
-          by <AuthorLogo className="text-[10px] font-medium text-ink-2" />
-        </a>
-      </div>
-    </div>
+    <Link
+      href={to}
+      aria-label="Eleições Brasil — resultados"
+      className="flex shrink-0 items-center gap-2 whitespace-nowrap text-[16px] font-semibold tracking-tight"
+    >
+      <Logo size={24} />
+      Eleições Brasil
+    </Link>
   );
 }
 
