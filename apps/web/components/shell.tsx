@@ -934,13 +934,9 @@ function AuthorCard() {
           ))}
         </span>
       </span>
-      <span className="hidden text-[14px] font-medium text-ink-2 transition-colors group-hover:text-ink md:inline">
-        lucianookdp.dev
-      </span>
-      <span
-        aria-hidden
-        className="flex size-11 shrink-0 items-center justify-center rounded-full border border-line text-ink-2 transition-colors group-hover:border-ink group-hover:bg-ink group-hover:text-ground"
-      >
+      {/* The one thing to press, in the site's green: a round arrow on phones, a pill on computers. */}
+      <span className="flex h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-full bg-live text-[14.5px] font-semibold text-ground shadow-md shadow-black/20 transition group-hover:brightness-110 md:px-5">
+        <span className="hidden md:inline">Visitar site</span>
         <svg
           aria-hidden
           viewBox="0 0 24 24"
@@ -948,7 +944,7 @@ function AuthorCard() {
           height={18}
           fill="none"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={2.2}
           strokeLinecap="round"
           strokeLinejoin="round"
           className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
