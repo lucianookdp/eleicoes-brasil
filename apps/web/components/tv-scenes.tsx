@@ -479,14 +479,10 @@ function PolymarketScene() {
           height={36}
           className="size-[clamp(24px,5cqi,36px)] rounded-lg"
         />
-        <div className="min-w-0">
-          <p className="text-[clamp(15px,3.6cqi,24px)] font-semibold leading-tight">
-            Quem vence a eleição presidencial?
-          </p>
-          <p className="text-[clamp(11px,2.3cqi,15px)] font-medium text-warn">
-            Polymarket · apostas, não é resultado oficial
-          </p>
-        </div>
+        {/* That these are bets is said where the scene is picked and in the line under the chart. */}
+        <p className="min-w-0 text-[clamp(15px,3.6cqi,24px)] font-semibold leading-tight">
+          Quem vence a eleição presidencial?
+        </p>
       </div>
       {error && !data && <p className="mt-3 text-[14px] text-muted">Polymarket indisponível agora.</p>}
       {!data && !error && <p className="mt-3 text-[14px] text-muted">Carregando…</p>}

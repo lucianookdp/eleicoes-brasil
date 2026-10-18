@@ -500,18 +500,21 @@ function Header({ onSearch }: { onSearch: () => void }) {
             ))}
           </div>
         </div>
-        <div ref={bar.right} className="ml-auto flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={onSearch}
-            aria-label="Buscar"
-            className="hidden h-10 items-center gap-2 rounded-full border border-line px-3.5 text-[14px] text-muted hover:border-line-strong hover:text-ink md:flex"
-          >
-            <IconSearch />
-            <span className="hidden 2xl:inline">Buscar</span>
-          </button>
+        {/* The count's status, then the two tools side by side, alike, apart from it. */}
+        <div ref={bar.right} className="ml-auto flex shrink-0 items-center gap-3">
           <LiveStatus key={round.slug} />
-          <ThemeToggle className="flex" />
+          <span aria-hidden className="hidden h-5 w-px bg-line md:block" />
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={onSearch}
+              aria-label="Buscar"
+              className="hidden size-9 items-center justify-center rounded-full border border-line text-muted hover:border-line-strong hover:text-ink md:flex"
+            >
+              <IconSearch />
+            </button>
+            <ThemeToggle className="flex" />
+          </div>
         </div>
       </div>
       {/* Phones and tablets: the round buttons get their own full-width row. */}
@@ -734,7 +737,7 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
         } catch {}
         setTheme(next);
       }}
-      className={`size-9 items-center justify-center rounded-md border border-line text-muted hover:border-line-strong hover:text-ink ${className}`}
+      className={`size-9 items-center justify-center rounded-full border border-line text-muted hover:border-line-strong hover:text-ink ${className}`}
       aria-label={theme === 'light' ? 'Usar tema escuro' : 'Usar tema claro'}
     >
       {theme === 'light' ? <IconMoon /> : <IconSun />}
