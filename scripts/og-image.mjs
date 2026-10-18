@@ -79,7 +79,7 @@ const html = `<!doctype html>
         <rect x="13" y="11" width="6" height="17" rx="3" fill="${YELLOW}"/>
         <rect x="22" y="4" width="6" height="24" rx="3" fill="${BLUE}"/>
       </svg>
-      <div>Eleições Brasil<small>by lucianookdp</small></div>
+      <div>Eleições Brasil</div>
     </div>
     <div class="chip"><i class="dot"></i><b>AO VIVO</b><span>2º turno · 25 de outubro</span></div>
     <h1>Eleições <em>2026</em></h1>
@@ -89,7 +89,7 @@ const html = `<!doctype html>
       <div class="feature"><div class="icon" style="background:#4f8bff"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div><div><b>Modo telão</b><span>TV e transmissão</span></div></div>
       <div class="feature"><div class="icon" style="background:#c9ced6"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8 18 4v16L6 16V8Z"/><path d="m6 8 12 4-12 4"/></svg></div><div><b>Polymarket</b><span>Apostas ao vivo</span></div></div>
     </div>
-    <div class="foot"><span class="url">eleicoes.lucianookdp.dev</span></div>
+    <div class="foot"><span class="url">by Luciano K. Dal Pai</span></div>
   </div>
   <div class="map">
     <svg viewBox="${brazil.viewBox}" aria-hidden="true">

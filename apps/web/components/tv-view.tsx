@@ -9,7 +9,7 @@ import { BrazilMap } from './brazil-map';
 import { IconPin, Logo } from './icons';
 import { decision } from './overview';
 import { FacePhoto } from './results';
-import { useRound } from './shell';
+import { AuthorLogo, useRound } from './shell';
 import { catalogFor, SCENE_SECONDS, TvScenes, useSceneChoice } from './tv-scenes';
 import { EmptyState, ErrorNotice, Skeleton, useTseStall } from './ui';
 
@@ -178,7 +178,7 @@ export function TvView() {
           Escolha o que passa ao lado do resultado para presidente, que fica sempre na tela. Cada item aparece
           por {SCENE_SECONDS} segundos, um depois do outro.
         </p>
-        <ul className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1 min-[420px]:grid-cols-2 lg:grid-cols-4">
+        <ul className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 min-[420px]:grid-cols-2 lg:grid-cols-3">
           {catalogFor(round.round).map((c) => (
             <li key={c.id}>
               <label className="flex min-h-10 cursor-pointer items-center gap-2.5 text-[14.5px]">
@@ -193,7 +193,11 @@ export function TvView() {
                   {absent.has(c.id) && (
                     <span className="ml-1 text-[12px] text-muted">(não há nesta etapa)</span>
                   )}
-                  {'hint' in c && <span className="block text-[12px] leading-tight text-warn">{c.hint}</span>}
+                  <span
+                    className={`block text-[12px] leading-tight ${'warn' in c ? 'text-warn' : 'text-muted'}`}
+                  >
+                    {c.id === 'governadores' && round.round === 2 ? 'Os estados com 2º turno' : c.hint}
+                  </span>
                 </span>
               </label>
             </li>
@@ -437,10 +441,11 @@ export function TvView() {
           <footer
             className={`flex-wrap justify-between gap-2 text-[clamp(12px,1vmax,18px)] text-muted ${panel ? 'hidden' : 'flex'}`}
           >
-            <span>Dados oficiais do TSE</span>
             <span>
-              <span className="font-medium text-ink-2">eleicoes.lucianookdp.dev</span> · by lucianookdp
+              Dados oficiais do TSE · <span className="font-medium text-ink-2">eleicoes.lucianookdp.dev</span>
             </span>
+            {/* The author's wordmark alone, quiet in the corner. */}
+            <AuthorLogo className="font-medium text-ink-2" />
           </footer>
         </div>
       </div>

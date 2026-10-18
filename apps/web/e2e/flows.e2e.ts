@@ -495,9 +495,9 @@ test('"/" opens the round a link without "t" opens; TV mode on the title line, c
 
   const title = page.getByRole('heading', { level: 1 });
   const tv = page.getByRole('link', { name: 'Assistir no modo telão' });
-  const projects = page.getByRole('contentinfo').getByText('Ver projetos');
+  const projects = page.getByRole('contentinfo').getByRole('link', { name: /^Desenvolvido por/ });
   if (isMobile) {
-    // Phones reach the panel from "Mais"; the credit is the same button as on a computer.
+    // Phones reach the panel from "Mais"; the credit is the same card as on a computer.
     await expect(tv).toBeHidden();
     await expect(projects).toBeVisible();
     return;

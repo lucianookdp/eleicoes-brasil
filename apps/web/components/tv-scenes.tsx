@@ -4,8 +4,7 @@ import { hasValidVotes, type OverviewDTO, type ResultDTO, type StateRowDTO } fro
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { displayName, fmtCompact, fmtPct } from '@/lib/format';
 import { usePolymarket } from '@/lib/polymarket';
-import { useEvents, useOfficeStates } from '@/lib/queries';
-import { ActivityFeed } from './activity';
+import { useOfficeStates } from '@/lib/queries';
 import { BrazilMap } from './brazil-map';
 import { OddsSplit, PriceChart } from './polymarket-chart';
 import { StatusPill } from './results';
@@ -37,18 +36,23 @@ const pagesOf = <T,>(list: T[], size: number) =>
 
 /**
  * Every scene the reader can pick, in this order, and the rounds it belongs to (the 1st round has
- * senators; in the runoff "Governadores" are the states with a governor runoff). Polymarket is not
- * the count: off unless picked.
+ * senators; in the runoff "Governadores" are the states with a governor runoff). Only what someone
+ * watching the count asks: who leads where, where it can still change, their state's races, and
+ * how many voted. Polymarket is not the count: off unless picked.
  */
 export const CATALOG = [
-  { id: 'placar', title: 'Estados', rounds: [1, 2] },
-  { id: 'apuracao', title: 'Apuração por estado', rounds: [1, 2] },
-  { id: 'falta', title: 'Falta apurar', rounds: [1, 2] },
-  { id: 'governadores', title: 'Governadores', rounds: [1, 2] },
-  { id: 'senadores', title: 'Senadores', rounds: [1] },
-  { id: 'comparecimento', title: 'Comparecimento', rounds: [1, 2] },
-  { id: 'atualizacoes', title: 'Últimas atualizações', rounds: [1, 2] },
-  { id: 'polymarket', title: 'Polymarket', rounds: [1, 2], hint: 'apostas, não é resultado oficial' },
+  { id: 'placar', title: 'Estados', rounds: [1, 2], hint: 'Quantos estados cada um lidera' },
+  { id: 'falta', title: 'Falta apurar', rounds: [1, 2], hint: 'Onde ainda há mais votos para contar' },
+  { id: 'governadores', title: 'Governadores', rounds: [1, 2], hint: 'Quem lidera em cada estado' },
+  { id: 'senadores', title: 'Senadores', rounds: [1], hint: 'Quem lidera em cada estado' },
+  { id: 'comparecimento', title: 'Comparecimento', rounds: [1, 2], hint: 'Abstenção, brancos e nulos' },
+  {
+    id: 'polymarket',
+    title: 'Polymarket',
+    rounds: [1, 2],
+    hint: 'Apostas, não é resultado oficial',
+    warn: true,
+  },
 ] as const;
 export type SceneId = (typeof CATALOG)[number]['id'];
 const PICK_KEY = 'eleicoes:telao-cenas';
@@ -120,7 +124,6 @@ export function TvScenes({
   const senator = data.round.offices.find((o) => o.slug === 'senador');
   const governors = useOfficeStates(round.slug, governor?.slug).data;
   const senators = useOfficeStates(round.slug, senator?.slug).data;
-  const events = useEvents(round.slug, 12).data;
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -141,8 +144,6 @@ export function TvScenes({
   };
   // The pages of each scene; none: nothing to show right now (no one left to count, no senate race).
   const bodies: Record<SceneId, ReactNode[]> = {
-    // The most voted only: how far the count went in each state has its own scene.
-    apuracao: states.some((s) => s.progress) ? [<CountByState key="apuracao" states={states} />] : [],
     placar: states.some((s) => s.leader) ? [<Scoreboard key="placar" states={states} />] : [],
     falta: left.length > 0 ? [<Remaining key="falta" rows={left} />] : [],
     governadores: office(round.round === 2 ? 'Governadores no 2º turno' : 'Governadores', governors?.results),
@@ -150,15 +151,6 @@ export function TvScenes({
     comparecimento:
       data.progress?.turnoutPct != null && data.headline ? [<Turnout key="comp" data={data} />] : [],
     polymarket: [],
-    atualizacoes:
-      events && events.length > 0
-        ? [
-            <div key="atualizacoes">
-              <p className={kicker}>Últimas atualizações</p>
-              <ActivityFeed events={events} max={compact ? 6 : 10} />
-            </div>,
-          ]
-        : [],
   };
   // Only asked from Polymarket when picked (it is the reader's browser that asks, never our API).
   bodies.polymarket = chosen.includes('polymarket') ? [<PolymarketScene key="polymarket" />] : [];
@@ -505,31 +497,6 @@ function PolymarketScene() {
           Últimos 7 dias · US$ {fmtCompact(data.volume)} apostados · polymarket.com
         </p>
       )}
-    </div>
-  );
-}
-
-/** How far the count went in each state: every state, its share of ballot boxes counted. */
-function CountByState({ states }: { states: StateRowDTO[] }) {
-  return (
-    <div>
-      <p className={kicker}>Apuração por estado · urnas apuradas</p>
-      <ul className="mt-2 grid grid-cols-3 gap-x-3 gap-y-[clamp(4px,1cqi,8px)] @md:grid-cols-4">
-        {states.map((s) => {
-          const pct = s.progress?.countedPct ?? null;
-          return (
-            <li key={s.uf} className="min-w-0">
-              <span className="flex items-baseline justify-between gap-1">
-                <span className="text-[clamp(11px,2.4cqi,16px)] font-semibold text-ink-2">{s.uf}</span>
-                <span className="numeral text-[clamp(11px,2.4cqi,16px)] font-semibold">{fmtPct(pct, 0)}</span>
-              </span>
-              <span className="mt-0.5 block h-[clamp(4px,0.8cqi,7px)] overflow-hidden rounded-full bg-surface-2">
-                <span className="bar block h-full rounded-full bg-live" style={{ width: `${pct ?? 0}%` }} />
-              </span>
-            </li>
-          );
-        })}
-      </ul>
     </div>
   );
 }
