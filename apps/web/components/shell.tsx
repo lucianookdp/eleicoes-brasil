@@ -344,7 +344,7 @@ function MoreContent({
                         Desenvolvido por <AuthorLogo className="text-[15px] font-semibold" />
                       </span>
                       <span className="block truncate text-[12.5px] text-muted">
-                        Sites e sistemas sob medida
+                        Veja mais sobre o meu trabalho
                       </span>
                     </span>
                     <span aria-hidden className="shrink-0 text-[15px] text-muted">
@@ -905,7 +905,7 @@ function AuthorCard() {
       href={AUTHOR}
       target="_blank"
       rel="noopener"
-      aria-label="Desenvolvido por lucianookdp: sites e sistemas sob medida (abre lucianookdp.dev)"
+      aria-label="Desenvolvido por lucianookdp, Luciano K. Dal Pai: veja mais sobre o meu trabalho (abre lucianookdp.dev)"
       className="group flex items-center gap-4 rounded-2xl border border-line bg-surface px-5 py-4 transition-colors hover:border-line-strong sm:px-6 sm:py-5"
     >
       <span className="min-w-0 flex-1">
@@ -913,9 +913,9 @@ function AuthorCard() {
           Desenvolvido por
         </span>
         <AuthorLogo className="mt-1.5 text-[28px] font-semibold text-ink sm:text-[32px]" />
-        <span className="mt-1.5 block text-[13px] text-muted">
-          Sites e sistemas sob medida
-          <span className="hidden sm:inline"> · Luciano K. Dal Pai</span>
+        <span className="mt-0.5 block text-[11.5px] text-muted">Luciano K. Dal Pai</span>
+        <span className="mt-2 block text-[13.5px] font-medium text-ink-2 transition-colors group-hover:text-ink">
+          Veja mais sobre o meu trabalho
         </span>
       </span>
       <span className="hidden text-[14px] font-medium text-ink-2 transition-colors group-hover:text-ink md:inline">
