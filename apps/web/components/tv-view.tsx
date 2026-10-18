@@ -9,7 +9,7 @@ import { BrazilMap } from './brazil-map';
 import { IconPin, Logo } from './icons';
 import { decision } from './overview';
 import { FacePhoto } from './results';
-import { useRound } from './shell';
+import { AuthorLogo, useRound } from './shell';
 import { catalogFor, SCENE_SECONDS, TvScenes, useSceneChoice } from './tv-scenes';
 import { EmptyState, ErrorNotice, Skeleton, useTseStall } from './ui';
 
@@ -444,10 +444,8 @@ export function TvView() {
             <span>
               Dados oficiais do TSE · <span className="font-medium text-ink-2">eleicoes.lucianookdp.dev</span>
             </span>
-            {/* Nobody clicks on a TV: the address is what takes people to the author's work. */}
-            <span>
-              Feito por Luciano K. Dal Pai · <span className="font-medium text-ink-2">lucianookdp.dev</span>
-            </span>
+            {/* The author's wordmark alone, quiet in the corner. */}
+            <AuthorLogo className="font-medium text-ink-2" />
           </footer>
         </div>
       </div>

@@ -1000,7 +1000,7 @@ function AuthorMark() {
 const INFINITY =
   'M 25 10 C 10 10 10 40 25 40 C 35 40 40 30 50 25 C 60 20 65 10 75 10 C 90 10 90 40 75 40 C 65 40 60 30 50 25 C 40 20 35 10 25 10 Z';
 
-function AuthorLogo({ className }: { className: string }) {
+export function AuthorLogo({ className }: { className: string }) {
   return (
     <span
       className={`inline-flex items-center tracking-tight ${className}`}
