@@ -104,10 +104,7 @@ export function ElectionShell({
         <Header onSearch={() => setSearchOpen(true)} />
         {/* At least one screen tall: while the data loads the page is a short skeleton, and a footer
             in view would jump away when the content arrives (the biggest layout shift there was). */}
-        <main
-          id="conteudo"
-          className="mx-auto min-h-dvh w-full max-w-[1320px] px-4 pb-28 pt-5 sm:px-6 xl:pb-12"
-        >
+        <main id="conteudo" className="mx-auto min-h-dvh w-full max-w-[1320px] px-4 pb-6 pt-5 sm:px-6">
           <GlobalFreshness />
           {children}
         </main>
@@ -333,9 +330,29 @@ function MoreContent({
             ))}
             {/* Sharing the site closes the last group. */}
             {gi === groups.length - 1 && (
-              <li>
-                <ShareSiteItem />
-              </li>
+              <>
+                <li>
+                  <ShareSiteItem />
+                </li>
+                <li>
+                  <a href={AUTHOR} target="_blank" rel="noopener" className={row}>
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-2">
+                      <AuthorMark />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-medium leading-tight">
+                        Desenvolvido por <AuthorLogo className="text-[15px] font-semibold" />
+                      </span>
+                      <span className="block truncate text-[12.5px] text-muted">
+                        Sites e sistemas sob medida
+                      </span>
+                    </span>
+                    <span aria-hidden className="shrink-0 text-[15px] text-muted">
+                      ↗
+                    </span>
+                  </a>
+                </li>
+              </>
             )}
           </ul>
         </section>
@@ -413,7 +430,7 @@ function Brand({ to }: { to: string }) {
           Eleições Brasil
         </Link>
         <a
-          href="https://lucianookdp.dev"
+          href={AUTHOR}
           target="_blank"
           rel="noopener"
           className="mt-[3px] flex items-center gap-[3px] whitespace-nowrap text-[9.5px] text-muted hover:text-ink"
@@ -875,7 +892,59 @@ function Footer() {
   return <SiteFooter version={meta?.app.version} />;
 }
 
-/** Quiet footer: the source and the two help pages; the author's credit as one small line. */
+const AUTHOR = 'https://lucianookdp.dev';
+
+/**
+ * The studio credit, as agencies sign the sites they make: "Desenvolvido por" and the author's
+ * wordmark, the whole card one link to his site. At the very end of every page (the page is at
+ * least a screen tall), apart from the data, so it never gets in the way of the results.
+ */
+function AuthorCard() {
+  return (
+    <a
+      href={AUTHOR}
+      target="_blank"
+      rel="noopener"
+      aria-label="Desenvolvido por lucianookdp: sites e sistemas sob medida (abre lucianookdp.dev)"
+      className="group flex items-center gap-4 rounded-2xl border border-line bg-surface px-5 py-4 transition-colors hover:border-line-strong sm:px-6 sm:py-5"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block text-[11px] font-medium uppercase tracking-[0.14em] text-muted">
+          Desenvolvido por
+        </span>
+        <AuthorLogo className="mt-1.5 text-[28px] font-semibold text-ink sm:text-[32px]" />
+        <span className="mt-1.5 block text-[13px] text-muted">
+          Sites e sistemas sob medida
+          <span className="hidden sm:inline"> · Luciano K. Dal Pai</span>
+        </span>
+      </span>
+      <span className="hidden text-[14px] font-medium text-ink-2 transition-colors group-hover:text-ink md:inline">
+        lucianookdp.dev
+      </span>
+      <span
+        aria-hidden
+        className="flex size-11 shrink-0 items-center justify-center rounded-full border border-line text-ink-2 transition-colors group-hover:border-ink group-hover:bg-ink group-hover:text-ground"
+      >
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          width={18}
+          height={18}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+        >
+          <path d="M7 17 17 7M8 7h9v9" />
+        </svg>
+      </span>
+    </a>
+  );
+}
+
+/** Quiet footer: who made the site (AuthorCard), then the source and the help page. */
 function SiteFooter({ version }: { version?: string }) {
   const links = (
     <>
@@ -885,8 +954,11 @@ function SiteFooter({ version }: { version?: string }) {
     </>
   );
   return (
-    <footer className="mt-6 border-t border-line pb-24 xl:pb-0">
-      <div className="mx-auto flex max-w-[1320px] flex-col gap-3 px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between md:gap-4 md:py-6">
+    <footer className="mt-6 pb-24 xl:pb-0">
+      <div className="mx-auto max-w-[1320px] px-4 sm:px-6">
+        <AuthorCard />
+      </div>
+      <div className="mx-auto mt-6 flex max-w-[1320px] flex-col gap-3 border-t border-line px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between md:gap-4 md:py-6">
         <div className="max-w-2xl text-[13px] text-muted">
           {/* Phones: the name at the left, the version at the right, on one line. */}
           <p className="flex items-center justify-between gap-2 font-medium text-ink-2 md:justify-start">
@@ -907,23 +979,6 @@ function SiteFooter({ version }: { version?: string }) {
             Eleitoral. Horários de Brasília. {links}
           </p>
         </div>
-        {/* The author's credit: a button that says what it opens (the author's other projects), on
-            every screen. On phones it takes the whole line, the name at one end and the action at the other. */}
-        <a
-          href="https://lucianookdp.dev"
-          target="_blank"
-          rel="noopener"
-          className="group flex shrink-0 items-center justify-between gap-2 rounded-full border border-line bg-surface py-1.5 pl-3.5 pr-1.5 text-[12px] text-muted transition-colors hover:border-line-strong hover:text-ink md:justify-start md:gap-2.5 md:pl-4 md:text-[13px]"
-        >
-          <span className="flex min-w-0 items-center gap-2 md:gap-2.5">
-            <span className="min-[360px]:hidden">Por</span>
-            <span className="hidden min-[360px]:inline">Desenvolvido por</span>
-            <AuthorLogo className="text-[13.5px] font-medium text-ink md:text-[14.5px]" />
-          </span>
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 text-[12px] font-medium text-ink-2 transition-colors group-hover:bg-ink group-hover:text-ground md:px-3 md:text-[12.5px]">
-            Ver projetos <span aria-hidden>↗</span>
-          </span>
-        </a>
       </div>
     </footer>
   );
@@ -933,6 +988,18 @@ function SiteFooter({ version }: { version?: string }) {
  * The author's wordmark, as on lucianookdp.dev: "lucian", an infinity sign for "oo", "kdp". Toned
  * down here: the text takes the surrounding grey and the infinity a softened site green.
  */
+/** The infinity of the author's wordmark, alone (an icon). */
+function AuthorMark() {
+  return (
+    <svg aria-hidden viewBox="4 4 92 42" width={20} height={10}>
+      <path d={INFINITY} fill="none" stroke="var(--live)" strokeWidth={11} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+const INFINITY =
+  'M 25 10 C 10 10 10 40 25 40 C 35 40 40 30 50 25 C 60 20 65 10 75 10 C 90 10 90 40 75 40 C 65 40 60 30 50 25 C 40 20 35 10 25 10 Z';
+
 function AuthorLogo({ className }: { className: string }) {
   return (
     <span
@@ -943,7 +1010,7 @@ function AuthorLogo({ className }: { className: string }) {
       <span aria-hidden>lucian</span>
       <svg aria-hidden viewBox="4 4 92 42" className="mx-[-0.015em] h-[0.62em] w-auto translate-y-[0.02em]">
         <path
-          d="M 25 10 C 10 10 10 40 25 40 C 35 40 40 30 50 25 C 60 20 65 10 75 10 C 90 10 90 40 75 40 C 65 40 60 30 50 25 C 40 20 35 10 25 10 Z"
+          d={INFINITY}
           fill="none"
           stroke="var(--live)"
           strokeOpacity={0.7}

@@ -441,9 +441,12 @@ export function TvView() {
           <footer
             className={`flex-wrap justify-between gap-2 text-[clamp(12px,1vmax,18px)] text-muted ${panel ? 'hidden' : 'flex'}`}
           >
-            <span>Dados oficiais do TSE</span>
             <span>
-              <span className="font-medium text-ink-2">eleicoes.lucianookdp.dev</span> · by lucianookdp
+              Dados oficiais do TSE · <span className="font-medium text-ink-2">eleicoes.lucianookdp.dev</span>
+            </span>
+            {/* Nobody clicks on a TV: the address is what takes people to the author's work. */}
+            <span>
+              Feito por Luciano K. Dal Pai · <span className="font-medium text-ink-2">lucianookdp.dev</span>
             </span>
           </footer>
         </div>
