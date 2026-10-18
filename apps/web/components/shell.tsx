@@ -893,6 +893,8 @@ function Footer() {
 }
 
 const AUTHOR = 'https://lucianookdp.dev';
+/** As on lucianookdp.dev (Serviços). */
+const SERVICES = ['Landing pages', 'Sites institucionais', 'Sistemas web', 'Soluções sob medida'];
 
 /**
  * The studio credit, as agencies sign the sites they make: "Desenvolvido por" and the author's
@@ -908,7 +910,7 @@ function AuthorCard() {
       aria-label="Desenvolvido por lucianookdp, Luciano K. Dal Pai: veja mais sobre o meu trabalho (abre lucianookdp.dev)"
       className="group flex items-center gap-4 rounded-2xl border border-line bg-surface px-5 py-4 transition-colors hover:border-line-strong sm:px-6 sm:py-5"
     >
-      <span className="min-w-0 flex-1">
+      <span className="min-w-0 flex-1 lg:flex-none">
         <span className="block text-[11px] font-medium uppercase tracking-[0.14em] text-muted">
           Desenvolvido por
         </span>
@@ -916,6 +918,20 @@ function AuthorCard() {
         <span className="mt-0.5 block text-[11.5px] text-muted">Luciano K. Dal Pai</span>
         <span className="mt-2 block text-[13.5px] font-medium text-ink-2 transition-colors group-hover:text-ink">
           Veja mais sobre o meu trabalho
+        </span>
+      </span>
+      {/* Big screens: what he does fills the middle (a phone keeps the card short). */}
+      <span className="mx-4 hidden min-w-0 flex-1 self-stretch border-l border-line pl-8 lg:flex lg:flex-col lg:justify-center">
+        <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted">O que eu faço</span>
+        <span className="mt-2.5 flex flex-wrap gap-2">
+          {SERVICES.map((s) => (
+            <span
+              key={s}
+              className="rounded-full border border-line bg-surface-2/50 px-3 py-1 text-[13px] text-ink-2"
+            >
+              {s}
+            </span>
+          ))}
         </span>
       </span>
       <span className="hidden text-[14px] font-medium text-ink-2 transition-colors group-hover:text-ink md:inline">
