@@ -35,9 +35,9 @@ export function OperationsView() {
     <>
       <div className="mb-5">
         <h1 className="text-[24px] font-semibold tracking-tight sm:text-[28px]">Transparência da apuração</h1>
-        <p className="max-w-3xl text-[13.5px] text-muted">
-          Se os números estão chegando agora e tudo o que registramos de anormal na divulgação dos resultados
-          e na nossa coleta.
+        <p className="max-w-2xl text-[14px] text-ink-2">
+          Aqui você confere se os resultados estão chegando do TSE ao site sem atraso e se houve algum
+          problema na divulgação.
         </p>
       </div>
 
@@ -49,7 +49,13 @@ export function OperationsView() {
           votesAt={overview.headline?.provenance?.retrievedAt ?? null}
         />
       )}
-      <StatusHero data={data} roundFinal={overview?.round.status === 'final'} now={now} />
+      <StatusHero
+        data={data}
+        roundFinal={overview?.round.status === 'final'}
+        notStarted={overview?.progress?.status === 'not-started'}
+        live={overview?.round.status === 'live'}
+        now={now}
+      />
 
       <Occurrences />
 
@@ -169,9 +175,24 @@ const HERO: Record<IngestionStatus['state'], { title: string; text: string; tone
  * collection → the reader's screen) and three facts anyone understands. The jargon lives in
  * "Detalhes técnicos".
  */
-function StatusHero({ data, roundFinal, now }: { data: OperationsDTO; roundFinal: boolean; now: number }) {
+function StatusHero({
+  data,
+  roundFinal,
+  notStarted,
+  live,
+  now,
+}: {
+  data: OperationsDTO;
+  roundFinal: boolean;
+  /** Published by the TSE but nothing counted yet (the days and hours before the vote). */
+  notStarted: boolean;
+  /** Count in progress: only then does "urnas por minuto" say something. */
+  live: boolean;
+  now: number;
+}) {
   const { connection } = useRealtime();
   const state = data.ingestion.state;
+  const ready = notStarted && (state === 'healthy' || state === 'idle');
   const hero =
     roundFinal && (state === 'idle' || state === 'healthy')
       ? {
@@ -179,15 +200,21 @@ function StatusHero({ data, roundFinal, now }: { data: OperationsDTO; roundFinal
           text: 'Todos os números já chegaram. Seguimos conferindo o TSE de tempos em tempos.',
           tone: 'good' as Tone,
         }
-      : HERO[state];
+      : ready
+        ? {
+            title: 'Pronto para a apuração',
+            text: 'O TSE ainda não começou a divulgar. Já estamos conferindo, e os números aparecem aqui sozinhos quando saírem.',
+            tone: 'good' as Tone,
+          }
+        : HERO[state];
   const steps: { name: string; text: string; tone: Tone }[] = [
     {
       name: 'TSE',
-      text: state === 'waiting' ? 'ainda não publicou' : 'publica os números',
-      tone: state === 'waiting' ? 'info' : 'good',
+      text: state === 'waiting' ? 'ainda não publicou' : ready ? 'ainda sem números' : 'publica os números',
+      tone: state === 'waiting' || ready ? 'info' : 'good',
     },
     {
-      name: 'Nossa coleta',
+      name: 'Coleta',
       text:
         state === 'offline'
           ? 'parada'
@@ -195,7 +222,7 @@ function StatusHero({ data, roundFinal, now }: { data: OperationsDTO; roundFinal
             ? 'instável'
             : state === 'idle'
               ? 'em pausa'
-              : 'confere a cada poucos segundos',
+              : 'conferindo',
       tone: state === 'offline' ? 'bad' : state === 'degraded' ? 'warn' : state === 'idle' ? 'muted' : 'good',
     },
     {
@@ -213,7 +240,7 @@ function StatusHero({ data, roundFinal, now }: { data: OperationsDTO; roundFinal
   // from the time written in each file (which does not change when the TSE updates a file).
   const tse = data.freshness.find((f) => f.areaKey === 'br')?.totalizedAt ?? null;
   return (
-    <section aria-labelledby="situacao" className="mb-8 rounded-2xl border border-line bg-surface p-4 sm:p-6">
+    <section aria-labelledby="situacao" className="mb-6 rounded-2xl border border-line bg-surface p-4 sm:p-6">
       <div className="flex flex-wrap items-start gap-3">
         <span
           className={`mt-1 flex size-3 shrink-0 rounded-full bg-current ${TONE[hero.tone].split(' ')[0]}`}
@@ -228,7 +255,7 @@ function StatusHero({ data, roundFinal, now }: { data: OperationsDTO; roundFinal
       </div>
 
       {/* The path of a number, from the TSE to this screen. */}
-      <ol className="mt-5 grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:items-center">
+      <ol className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:items-center">
         {steps.map((step, i) => (
           <li key={step.name} className="contents">
             {i > 0 && (
@@ -236,35 +263,38 @@ function StatusHero({ data, roundFinal, now }: { data: OperationsDTO; roundFinal
                 →
               </span>
             )}
-            <span className="flex items-center gap-3 rounded-xl border border-line bg-surface-2/40 px-3 py-2.5">
-              <span
-                className={`flex size-2.5 shrink-0 rounded-full bg-current ${TONE[step.tone].split(' ')[0]}`}
-              />
-              <span className="min-w-0">
-                <span className="block text-[14.5px] font-semibold">{step.name}</span>
-                <span className="block truncate text-[13px] text-muted">{step.text}</span>
+            <span className="flex min-w-0 flex-col gap-1 rounded-xl border border-line bg-surface-2/40 px-2.5 py-2 sm:flex-row sm:items-center sm:gap-3 sm:px-3 sm:py-2.5">
+              <span className="flex items-center gap-1.5 text-[13.5px] font-semibold sm:text-[14.5px]">
+                <span
+                  className={`flex size-2.5 shrink-0 rounded-full bg-current ${TONE[step.tone].split(' ')[0]}`}
+                />
+                {step.name}
               </span>
+              <span className="text-[12px] leading-tight text-muted sm:text-[13px]">{step.text}</span>
             </span>
           </li>
         ))}
       </ol>
 
-      <dl className="mt-5 grid grid-cols-1 gap-3 border-t border-line pt-5 sm:grid-cols-3">
-        <Fact
-          label="Última totalização do TSE"
-          value={tse ? formatClock(tse) : '—'}
-          detail={tse ? `Brasil, ${sinceText(tse, now)}` : 'o TSE ainda não totalizou'}
-        />
+      {/* Outside the count, "urnas por minuto" is a zero that only raises questions. */}
+      <dl className={`mt-4 grid grid-cols-2 gap-3 border-t border-line pt-4 ${live ? 'sm:grid-cols-3' : ''}`}>
         <Fact
           label="Última conferência no TSE"
           value={sinceText(data.ingestion.lastCycleAt, now)}
           detail={data.ingestion.lastCycleAt ? `às ${formatClock(data.ingestion.lastCycleAt)}` : undefined}
         />
         <Fact
-          label="Urnas apuradas por minuto"
-          value={fmtInt(Math.round(data.processing.sectionsPerMinute))}
-          detail="média dos últimos 5 minutos"
+          label="Último resultado do TSE"
+          value={tse ? formatClock(tse) : '—'}
+          detail={tse ? `Brasil, ${sinceText(tse, now)}` : 'ainda não saiu'}
         />
+        {live && (
+          <Fact
+            label="Urnas apuradas por minuto"
+            value={fmtInt(Math.round(data.processing.sectionsPerMinute))}
+            detail="média dos últimos 5 minutos"
+          />
+        )}
       </dl>
     </section>
   );
@@ -274,7 +304,7 @@ function Fact({ label, value, detail }: { label: string; value: string; detail?:
   return (
     <div>
       <dt className="text-[13px] text-muted">{label}</dt>
-      <dd className="numeral text-[30px] font-semibold leading-tight">{value}</dd>
+      <dd className="numeral text-[24px] font-semibold leading-tight sm:text-[28px]">{value}</dd>
       {detail && <dd className="text-[12.5px] text-muted">{detail}</dd>}
     </div>
   );
