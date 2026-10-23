@@ -64,14 +64,20 @@ test('transparency: the state now, and every occurrence of the round', async ({ 
   await expect(
     page.getByRole('heading', {
       level: 2,
-      name: /^(Tudo funcionando|Um pouco instável|Coleta parada|Coleta em pausa|Aguardando o TSE|Apuração encerrada)$/,
+      name: /^(Tudo funcionando|Um pouco instável|Coleta parada|Coleta em pausa|Aguardando o TSE|Apuração encerrada|Pronto para a apuração)$/,
     }),
   ).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Ocorrências da apuração' })).toBeVisible();
-  // It says what it covers and what it does not.
-  await expect(page.getByText(/não avalia as urnas nem a votação/)).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Quedas e pausas' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Problemas nos arquivos publicados' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Problemas registrados' })).toBeVisible();
+  // One clear line when nothing was recorded; the list when something was.
+  await expect(
+    page
+      .getByText('Nenhum problema registrado', { exact: true })
+      .or(page.getByRole('heading', { name: /^(Quedas e pausas|Problemas nos arquivos do TSE)$/ }))
+      .first(),
+  ).toBeVisible();
+  // It says what it covers and what it does not, folded.
+  await page.getByText('O que conta como problema?').click();
+  await expect(page.getByText(/as urnas e a votação/)).toBeVisible();
   await expect(page.locator('main')).not.toContainText(/NaN|undefined|Infinity/);
 });
 

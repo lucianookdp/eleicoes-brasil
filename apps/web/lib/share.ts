@@ -113,12 +113,14 @@ export async function shareImage(result: ResultDTO, siteLabel: string): Promise<
   ctx.fillText('Eleições Brasil', pad + 62, 116);
   ctx.textAlign = 'right';
   ctx.font = `600 28px ${font}`;
-  const tag = over ? 'Resultado final' : 'Ao vivo';
+  // Before the first vote it is not "Ao vivo" yet (shared the day before, it would mislead).
+  const none = !over && !result.candidates.some((c) => (c.votes ?? 0) > 0);
+  const tag = over ? 'Resultado final' : none ? 'Aguardando' : 'Ao vivo';
   const tagW = ctx.measureText(tag).width + 64;
-  ctx.fillStyle = over ? 'rgba(12,138,78,.1)' : 'rgba(229,56,59,.1)';
+  ctx.fillStyle = over ? 'rgba(12,138,78,.1)' : none ? 'rgba(90,98,110,.12)' : 'rgba(229,56,59,.1)';
   rounded(ctx, size - pad - tagW, 78, tagW, 52, 26);
   ctx.fill();
-  ctx.fillStyle = over ? '#0c8a4e' : '#d93036';
+  ctx.fillStyle = over ? '#0c8a4e' : none ? '#5a626e' : '#d93036';
   ctx.beginPath();
   ctx.arc(size - pad - tagW + 30, 104, 7, 0, Math.PI * 2);
   ctx.fill();

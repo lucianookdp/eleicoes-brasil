@@ -10,7 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 const GAMMA = 'https://gamma-api.polymarket.com';
 export const POLYMARKET_URL = 'https://polymarket.com/event/brazil-presidential-election';
 export const eventUrl = (slug: string) => `https://polymarket.com/event/${slug}`;
-export const LIVE_MS = 30_000;
+export const LIVE_MS = 15_000;
 
 /** The same party colours as everywhere on the site (PL blue, PT red); neutral for anyone else. */
 export function colorOf(name: string, i: number) {
@@ -87,10 +87,35 @@ const outcomes = (e: GammaEvent | undefined): Outcome[] =>
     .sort((a, b) => b.price - a.price);
 
 /** GET with a time limit: a slow Polymarket must never leave the page waiting forever. */
+/** Polymarket answered with an error (its HTTP status kept: 503 is maintenance). */
+export class PolymarketError extends Error {
+  constructor(readonly status: number) {
+    super(`Polymarket respondeu ${status}`);
+  }
+}
+
 async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-  if (!res.ok) throw new Error(`Polymarket respondeu ${res.status}`);
+  if (!res.ok) throw new PolymarketError(res.status);
   return (await res.json()) as T;
+}
+
+/**
+ * Why Polymarket is not showing, in words for anyone: the reader offline, Polymarket under
+ * maintenance (503), busy (429), or simply not answering (down, timeout, blocked).
+ */
+export function polymarketProblem(error: unknown): { title: string; text: string } {
+  if (typeof navigator !== 'undefined' && !navigator.onLine)
+    return { title: 'Sem internet', text: 'Sua conexão caiu. O Polymarket volta quando ela voltar.' };
+  const status = error instanceof PolymarketError ? error.status : null;
+  if (status === 503)
+    return { title: 'Polymarket em manutenção', text: 'O site do Polymarket está em manutenção agora.' };
+  if (status === 429)
+    return {
+      title: 'Polymarket sobrecarregado',
+      text: 'O Polymarket está recusando consultas por excesso de acesso.',
+    };
+  return { title: 'Polymarket fora do ar', text: 'O site do Polymarket não está respondendo agora.' };
 }
 
 async function event(slug: string): Promise<GammaEvent | undefined> {
@@ -132,9 +157,9 @@ const STATE_SLUGS: Record<string, string> = {
 export function usePolymarket() {
   return useQuery({
     queryKey: ['polymarket', 'brazil-2026'],
-    // Live, like the count: every 30 s while the page is open (paused in a background tab). It is
+    // Live, like the count: every 15 s while the page is open (paused in a background tab). It is
     // the reader's browser asking Polymarket, so none of it reaches our API, database or the TSE.
-    staleTime: 20_000,
+    staleTime: 10_000,
     refetchInterval: LIVE_MS,
     retry: 2,
     queryFn: async () => {

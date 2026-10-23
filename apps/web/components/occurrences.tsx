@@ -49,25 +49,32 @@ export function Occurrences() {
   const { round } = useRound();
   const { data, error, refetch } = useOccurrences(round.slug);
   return (
-    <section aria-labelledby="ocorrencias" className="mb-8">
-      <SectionTitle id="ocorrencias" title="Ocorrências da apuração">
-        Registradas automaticamente, na hora em que aconteceram, e guardadas depois do fim.
+    <section aria-labelledby="ocorrencias" className="mb-6">
+      <SectionTitle id="ocorrencias" title="Problemas registrados">
+        Anotados na hora em que acontecem e guardados depois do fim.
       </SectionTitle>
-      <div className="mb-4 rounded-xl border border-line bg-surface-2/40 px-4 py-3 text-[13.5px] leading-relaxed text-ink-2">
-        <p>
-          <strong className="font-semibold text-ink">O que esta lista mostra:</strong> problemas na divulgação
-          dos resultados pelo TSE (arquivos com números incoerentes, fora do formato ou que voltaram no tempo,
-          e o TSE fora do ar) e na nossa coleta.
-        </p>
-        <p className="mt-1">
-          <strong className="font-semibold text-ink">O que ela não mostra:</strong> não avalia as urnas nem a
-          votação. Uma ocorrência aqui é um problema na publicação ou na coleta dos dados; a fonte oficial é
-          sempre o TSE.
-        </p>
-      </div>
       {error && <ErrorNotice error={error} retry={() => refetch()} />}
-      {!data && !error && <Skeleton className="h-64" />}
+      {!data && !error && <Skeleton className="h-24" />}
       {data && <OccurrencesBody data={data} />}
+      <details className="group mt-3 text-[13.5px] text-ink-2">
+        <summary className="flex min-h-10 cursor-pointer list-none items-center gap-1.5 font-medium text-ink">
+          <span aria-hidden className="text-muted transition-transform group-open:rotate-90">
+            ›
+          </span>
+          O que conta como problema?
+        </summary>
+        <div className="mt-1 grid gap-1.5 rounded-xl border border-line bg-surface-2/40 px-4 py-3 leading-relaxed">
+          <p>
+            <strong className="font-semibold text-ink">Conta:</strong> arquivos do TSE com números
+            impossíveis, fora do formato ou que voltaram no tempo; o TSE fora do ar; e falhas na nossa coleta.
+            Um arquivo com problema nunca apaga o que já estava certo.
+          </p>
+          <p>
+            <strong className="font-semibold text-ink">Não conta:</strong> as urnas e a votação. Isto é sobre
+            a publicação e a coleta dos dados; a fonte oficial é sempre o TSE.
+          </p>
+        </div>
+      </details>
     </section>
   );
 }
@@ -82,11 +89,34 @@ function OccurrencesBody({ data }: { data: OccurrencesDTO }) {
   const malformed = sum(data.issues, (i) => i.type === 'source.schema');
   const unavailable =
     data.outages.length + data.gaps.length + sum(data.issues, (i) => i.type === 'source.unavailable');
+  const stops = data.outages.length + data.gaps.length;
+
+  // Nothing recorded: one clear line, not four zeros and two empty lists.
+  if (errors.length === 0 && stops === 0 && unavailable === 0)
+    return (
+      <>
+        <div className="flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3.5">
+          <span
+            aria-hidden
+            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-live-soft text-[16px] text-live"
+          >
+            ✓
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[15px] font-semibold">Nenhum problema registrado</span>
+            <span className="block text-[13px] text-muted">
+              Nem nos arquivos do TSE, nem na nossa coleta.
+            </span>
+          </span>
+        </div>
+        {warnings.length > 0 && <Warnings items={warnings} total={sum(warnings, () => true)} />}
+      </>
+    );
 
   return (
     <>
-      <dl className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Count label="Números incoerentes nos arquivos" value={incoherent} />
+      <dl className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Count label="Números impossíveis nos arquivos" value={incoherent} />
         <Count label="Arquivos que voltaram no tempo" value={regressions} />
         <Count label="Arquivos fora do formato" value={malformed} />
         <Count label="Quedas, instabilidade ou pausas" value={unavailable} />
@@ -95,81 +125,71 @@ function OccurrencesBody({ data }: { data: OccurrencesDTO }) {
       {/* No "delays" here yet: the time the TSE writes in a file does not always change when it
           updates it (the "Eleito" marks come later under the same time), so it would show updates
           as delays. It comes back with a measure that holds. */}
-      <div className="grid items-start gap-6 [&>*]:min-w-0">
-        <section aria-labelledby="quedas">
-          <h3 id="quedas" className="text-[15px] font-semibold">
+      {stops > 0 && (
+        <section aria-labelledby="quedas" className="mb-4">
+          <h3 id="quedas" className="mb-2 text-[15px] font-semibold">
             Quedas e pausas
           </h3>
-          <p className="mb-2 text-[13px] text-muted">
-            Quando o TSE não respondeu ou ficou instável, e quando a nossa coleta ficou sem conferir o TSE.
-          </p>
-          {data.outages.length === 0 && data.gaps.length === 0 ? (
-            <Empty>Nenhuma queda ou pausa registrada.</Empty>
-          ) : (
-            <ul className="divide-y divide-line rounded-xl border border-line bg-surface px-4 text-[13.5px]">
-              {data.outages.map((o) => (
-                <li key={`o-${o.from}`} className="py-2">
-                  <p className="flex justify-between gap-3">
-                    <span
-                      className={o.status === 'failed' ? 'font-medium text-bad' : 'font-medium text-warn'}
-                    >
-                      {o.status === 'failed' ? 'Coleta falhou' : 'Coleta instável'}
-                    </span>
-                    <span className="numeral shrink-0 text-muted">
-                      {duration((Date.parse(o.to) - Date.parse(o.from)) / 1000 || 5)}
-                    </span>
-                  </p>
-                  <p className="text-muted">
-                    {when(o.from)}
-                    {o.reason ? ` · ${o.reason}` : ''}
-                  </p>
-                </li>
-              ))}
-              {data.gaps.map((g) => (
-                <li key={`g-${g.from}`} className="py-2">
-                  <p className="flex justify-between gap-3">
-                    <span className="font-medium text-warn">Coleta sem conferir o TSE</span>
-                    <span className="numeral shrink-0 text-muted">{duration(g.seconds)}</span>
-                  </p>
-                  <p className="text-muted">a partir de {when(g.from)}</p>
-                </li>
-              ))}
-            </ul>
-          )}
+          <ul className="divide-y divide-line rounded-xl border border-line bg-surface px-4 text-[13.5px]">
+            {data.outages.map((o) => (
+              <li key={`o-${o.from}`} className="py-2">
+                <p className="flex justify-between gap-3">
+                  <span className={o.status === 'failed' ? 'font-medium text-bad' : 'font-medium text-warn'}>
+                    {o.status === 'failed' ? 'Coleta falhou' : 'Coleta instável'}
+                  </span>
+                  <span className="numeral shrink-0 text-muted">
+                    {duration((Date.parse(o.to) - Date.parse(o.from)) / 1000 || 5)}
+                  </span>
+                </p>
+                <p className="text-muted">
+                  {when(o.from)}
+                  {o.reason ? ` · ${o.reason}` : ''}
+                </p>
+              </li>
+            ))}
+            {data.gaps.map((g) => (
+              <li key={`g-${g.from}`} className="py-2">
+                <p className="flex justify-between gap-3">
+                  <span className="font-medium text-warn">Coleta sem conferir o TSE</span>
+                  <span className="numeral shrink-0 text-muted">{duration(g.seconds)}</span>
+                </p>
+                <p className="text-muted">a partir de {when(g.from)}</p>
+              </li>
+            ))}
+          </ul>
         </section>
-      </div>
-
-      <section aria-labelledby="arquivos" className="mt-6">
-        <h3 id="arquivos" className="text-[15px] font-semibold">
-          Problemas nos arquivos publicados
-        </h3>
-        <p className="mb-2 text-[13px] text-muted">
-          Números impossíveis, arquivos fora do formato ou que voltaram no tempo. Os dados com problema nunca
-          apagam o que já estava certo; repetições do mesmo problema no mesmo lugar aparecem juntas.
-        </p>
-        {errors.length === 0 ? (
-          <Empty>Nenhum problema registrado nos arquivos.</Empty>
-        ) : (
-          <IssueList items={errors} />
-        )}
-      </section>
-
-      {warnings.length > 0 && (
-        <details className="group mt-6 rounded-xl border border-line bg-surface px-4 py-3">
-          <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between font-medium">
-            Avisos menores ({fmtInt(sum(warnings, () => true))})
-            <span aria-hidden className="text-muted transition-transform group-open:rotate-45">
-              +
-            </span>
-          </summary>
-          <p className="mb-2 text-[13px] text-muted">
-            Detalhes que não mudam os números, como um arquivo sem o horário de totalização ou uma consulta
-            que o TSE recusou e foi repetida.
-          </p>
-          <IssueList items={warnings} />
-        </details>
       )}
+
+      {errors.length > 0 && (
+        <section aria-labelledby="arquivos" className="mb-4">
+          <h3 id="arquivos" className="mb-2 text-[15px] font-semibold">
+            Problemas nos arquivos do TSE
+          </h3>
+          <IssueList items={errors} />
+        </section>
+      )}
+
+      {warnings.length > 0 && <Warnings items={warnings} total={sum(warnings, () => true)} />}
     </>
+  );
+}
+
+/** Small things that do not change the numbers, folded. */
+function Warnings({ items, total }: { items: OccurrencesDTO['issues']; total: number }) {
+  return (
+    <details className="group mt-3 rounded-xl border border-line bg-surface px-4 py-3">
+      <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between font-medium">
+        Avisos menores ({fmtInt(total)})
+        <span aria-hidden className="text-muted transition-transform group-open:rotate-45">
+          +
+        </span>
+      </summary>
+      <p className="mb-2 text-[13px] text-muted">
+        Detalhes que não mudam os números, como um arquivo sem o horário de totalização ou uma consulta que o
+        TSE recusou e foi repetida.
+      </p>
+      <IssueList items={items} />
+    </details>
   );
 }
 
@@ -204,17 +224,6 @@ function Count({ label, value }: { label: string; value: number }) {
         {fmtInt(value)}
       </dd>
     </div>
-  );
-}
-
-function Empty({ children }: { children: string }) {
-  return (
-    <p className="rounded-xl border border-line bg-surface px-4 py-3 text-[13.5px] text-muted">
-      <span aria-hidden className="mr-1.5 text-live">
-        ✓
-      </span>
-      {children}
-    </p>
   );
 }
 
