@@ -366,8 +366,10 @@ function MoreContent({
  * (read from Polymarket in the reader's browser; without them, the card is still there).
  */
 function PolymarketCard({ onPick }: { onPick: () => void }) {
-  const { data } = usePolymarket();
+  const { data, error } = usePolymarket();
   const [a, b] = data?.winner ?? [];
+  // Down (or stopped answering): said on the card, where the "ao vivo" tag would mislead.
+  const down = !!error;
   return (
     <Link
       href="/polymarket"
@@ -380,9 +382,15 @@ function PolymarketCard({ onPick }: { onPick: () => void }) {
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2 text-[15.5px] font-semibold leading-tight">
           Polymarket
-          <span className="rounded bg-bad/15 px-1.5 py-px text-[10.5px] font-semibold uppercase tracking-wide text-bad">
-            ao vivo
-          </span>
+          {down ? (
+            <span className="rounded bg-warn/15 px-1.5 py-px text-[10.5px] font-semibold uppercase tracking-wide text-warn">
+              {data ? 'sem atualização' : 'fora do ar'}
+            </span>
+          ) : (
+            <span className="rounded bg-bad/15 px-1.5 py-px text-[10.5px] font-semibold uppercase tracking-wide text-bad">
+              ao vivo
+            </span>
+          )}
         </span>
         {a && b ? (
           <span className="mt-0.5 flex min-w-0 items-center gap-2 text-[13px] text-ink-2">
@@ -403,7 +411,9 @@ function PolymarketCard({ onPick }: { onPick: () => void }) {
             ))}
           </span>
         ) : (
-          <span className="block text-[12.5px] text-muted">As apostas da eleição</span>
+          <span className={`block text-[12.5px] ${down ? 'text-warn' : 'text-muted'}`}>
+            {down ? 'Tentando de novo sozinho' : 'As apostas da eleição'}
+          </span>
         )}
       </span>
       <IconChevron width={15} height={15} className="shrink-0 text-muted" />

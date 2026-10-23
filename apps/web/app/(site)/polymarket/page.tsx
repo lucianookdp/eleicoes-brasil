@@ -2,15 +2,17 @@
 
 import { formatClock } from '@eleicoes/election-core';
 import { useEffect, useRef, useState } from 'react';
-import { OddsSplit, PriceChart } from '@/components/polymarket-chart';
-import { ErrorNotice, Skeleton } from '@/components/ui';
+import { OddsSplit, PolymarketDown, PriceChart } from '@/components/polymarket-chart';
+import { Skeleton } from '@/components/ui';
 import { fmtCompact } from '@/lib/format';
 import {
   colorOf,
   eventUrl,
+  LIVE_MS,
   MARGIN_SLUG,
   type Outcome,
   POLYMARKET_URL,
+  polymarketProblem,
   usePolymarket,
 } from '@/lib/polymarket';
 
@@ -117,16 +119,20 @@ export default function PolymarketPage() {
       </div>
 
       {error && !data && (
-        <div className="mt-6 grid gap-2">
-          <ErrorNotice error={error} retry={() => refetch()} />
-          <p className="text-[13px] text-muted">
-            O Polymarket não respondeu agora; a página tenta de novo sozinha. Enquanto isso, veja direto{' '}
-            <a href={POLYMARKET_URL} target="_blank" rel="noopener nofollow" className="text-info underline">
-              no site do Polymarket
-            </a>
-            .
-          </p>
+        <div className="mt-6">
+          <PolymarketDown error={error} retry={() => refetch()} />
         </div>
+      )}
+      {/* It stopped answering after the page loaded: the last numbers stay, and it says from when. */}
+      {data && isRefetchError && (
+        <p
+          role="status"
+          className="mt-4 rounded-xl border border-warn/50 bg-warn-soft px-4 py-3 text-[14px] text-ink-2"
+        >
+          <span className="font-semibold text-ink">{polymarketProblem(error).title}.</span> Mostrando os
+          números das {formatClock(data.at).slice(0, 5)}; tentamos de novo a cada {LIVE_MS / 1000} segundos. A
+          apuração do TSE não é afetada.
+        </p>
       )}
       {!data && !error && <Skeleton className="mt-6 h-96" />}
       {data?.closed && (
@@ -235,8 +241,8 @@ export default function PolymarketPage() {
             >
               Polymarket
             </a>
-            , atualizados a cada 30 segundos. “Sim” e “Não” são os preços, em centavos de dólar, de uma aposta
-            que paga US$ 1 se acontecer.
+            , atualizados a cada {LIVE_MS / 1000} segundos. “Sim” e “Não” são os preços, em centavos de dólar,
+            de uma aposta que paga US$ 1 se acontecer.
           </p>
         </>
       )}

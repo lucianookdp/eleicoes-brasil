@@ -1,12 +1,18 @@
 'use client';
 
-import { hasValidVotes, type OverviewDTO, type ResultDTO, type StateRowDTO } from '@eleicoes/election-core';
+import {
+  formatClock,
+  hasValidVotes,
+  type OverviewDTO,
+  type ResultDTO,
+  type StateRowDTO,
+} from '@eleicoes/election-core';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { displayName, fmtCompact, fmtPct } from '@/lib/format';
 import { usePolymarket } from '@/lib/polymarket';
 import { useOfficeStates } from '@/lib/queries';
 import { BrazilMap } from './brazil-map';
-import { OddsSplit, PriceChart } from './polymarket-chart';
+import { OddsSplit, PolymarketDown, PriceChart } from './polymarket-chart';
 import { StatusPill } from './results';
 import { useRound } from './shell';
 import { StateFlag } from './ui';
@@ -465,7 +471,7 @@ function Turnout({ data }: { data: OverviewDTO }) {
  * a betting market, not the count. Shown only when the reader picked it.
  */
 function PolymarketScene() {
-  const { data, error } = usePolymarket();
+  const { data, error, isRefetchError } = usePolymarket();
   const [a, b] = data?.winner ?? [];
   return (
     <div>
@@ -484,13 +490,19 @@ function PolymarketScene() {
           Quem vence a eleição presidencial?
         </p>
       </div>
-      {error && !data && <p className="mt-3 text-[14px] text-muted">Polymarket indisponível agora.</p>}
+      {error && !data && <PolymarketDown error={error} tv />}
       {!data && !error && <p className="mt-3 text-[14px] text-muted">Carregando…</p>}
       {a && b && <OddsSplit a={a} b={b} tv />}
       {data && data.winner.length > 0 && <PriceChart outcomes={data.winner.slice(0, 2)} tv />}
       {data && (
         <p className="mt-2 text-[clamp(11px,2.2cqi,15px)] text-muted">
-          Últimos 7 dias · US$ {fmtCompact(data.volume)} apostados · polymarket.com
+          {isRefetchError ? (
+            <span className="font-medium text-warn">
+              Sem atualização desde {formatClock(data.at).slice(0, 5)} · tentando de novo
+            </span>
+          ) : (
+            <>Últimos 7 dias · US$ {fmtCompact(data.volume)} apostados · polymarket.com</>
+          )}
         </p>
       )}
     </div>

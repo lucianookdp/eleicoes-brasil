@@ -1,7 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { colorOf, type Outcome, type Range, shortName, usePriceHistory } from '@/lib/polymarket';
+import {
+  colorOf,
+  LIVE_MS,
+  type Outcome,
+  POLYMARKET_URL,
+  polymarketProblem,
+  type Range,
+  shortName,
+  usePriceHistory,
+} from '@/lib/polymarket';
 import { Segmented, Skeleton } from './ui';
 
 /**
@@ -12,6 +21,63 @@ import { Segmented, Skeleton } from './ui';
 const pct = (p: number) => `${Math.round(p * 100)}%`;
 
 /** The two favourites at a glance, before the chart: names, chances and one split bar. */
+/**
+ * Polymarket is down (no numbers at all): what happened, that the count is not affected, and that
+ * the page tries again by itself. The TV version has no buttons (nobody touches a TV).
+ */
+export function PolymarketDown({
+  error,
+  retry,
+  tv = false,
+}: {
+  error: unknown;
+  retry?: () => void;
+  tv?: boolean;
+}) {
+  const p = polymarketProblem(error);
+  return (
+    <div
+      role="alert"
+      className={`flex items-start gap-3 rounded-xl border border-warn/50 bg-warn-soft ${tv ? 'mt-3 p-[clamp(12px,3cqi,24px)]' : 'p-4'}`}
+    >
+      <span
+        aria-hidden
+        className={`flex shrink-0 items-center justify-center rounded-full bg-warn/20 font-bold text-warn ${tv ? 'size-[clamp(28px,6cqi,44px)] text-[clamp(16px,3.4cqi,24px)]' : 'size-8 text-[16px]'}`}
+      >
+        !
+      </span>
+      <div className="min-w-0">
+        <p className={`font-semibold ${tv ? 'text-[clamp(16px,3.8cqi,28px)]' : 'text-[16px]'}`}>{p.title}</p>
+        <p className={`mt-0.5 text-ink-2 ${tv ? 'text-[clamp(13px,2.8cqi,20px)]' : 'text-[14px]'}`}>
+          {p.text} Isso não afeta a apuração: os resultados do TSE seguem normais. Tentamos de novo sozinhos a
+          cada {LIVE_MS / 1000} segundos.
+        </p>
+        {!tv && (
+          <p className="mt-2.5 flex flex-wrap gap-2">
+            {retry && (
+              <button
+                type="button"
+                onClick={retry}
+                className="h-9 rounded-full border border-line-strong bg-surface px-3.5 text-[13.5px] font-medium hover:border-ink"
+              >
+                Tentar agora
+              </button>
+            )}
+            <a
+              href={POLYMARKET_URL}
+              target="_blank"
+              rel="noopener nofollow"
+              className="flex h-9 items-center rounded-full px-3 text-[13.5px] text-info underline underline-offset-2"
+            >
+              Abrir o site do Polymarket
+            </a>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function OddsSplit({ a, b, tv = false }: { a: Outcome; b: Outcome; tv?: boolean }) {
   const ca = colorOf(a.name, 0);
   const cb = colorOf(b.name, 1);

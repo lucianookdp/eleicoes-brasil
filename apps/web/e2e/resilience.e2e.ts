@@ -103,13 +103,49 @@ test('runoff in its first minutes (0 votes): no broken numbers', async ({ page, 
 });
 
 test.describe('Polymarket failures never break its page', () => {
-  test('Polymarket down: a clear message and a link to it', async ({ page }) => {
+  test('Polymarket down: a clear message, that the count is not affected, and a link to it', async ({
+    page,
+  }) => {
     await page.route('https://gamma-api.polymarket.com/**', (r) => r.abort('connectionrefused'));
     await page.goto('/polymarket/');
-    await expect(page.getByText('O Polymarket não respondeu agora', { exact: false })).toBeVisible({
+    await expect(page.getByText('Polymarket fora do ar', { exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/não afeta a apuração/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Tentar agora' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Abrir o site do Polymarket' })).toBeVisible();
+  });
+
+  test('Polymarket under maintenance (503): says so', async ({ page }) => {
+    await page.route('https://gamma-api.polymarket.com/**', (r) => r.fulfill({ status: 503, body: 'x' }));
+    await page.goto('/polymarket/');
+    await expect(page.getByText('Polymarket em manutenção', { exact: true })).toBeVisible({
       timeout: 30_000,
     });
-    await expect(page.getByRole('link', { name: 'no site do Polymarket' })).toBeVisible();
+  });
+
+  test('Polymarket stops answering after loading: the last numbers stay, with their time', async ({
+    page,
+  }) => {
+    await page.clock.install();
+    await page.goto('/polymarket/');
+    await expect(page.getByRole('heading', { name: 'Quem vence a eleição presidencial?' })).toBeVisible({
+      timeout: 30_000,
+    });
+    await page.route('https://gamma-api.polymarket.com/**', (r) => r.abort('connectionrefused'));
+    // The next refreshes (every 15 s) and their retries fail.
+    await page.clock.runFor(120_000);
+    await expect(page.getByText(/Mostrando os números das \d\d:\d\d/)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('heading', { name: 'Quem vence a eleição presidencial?' })).toBeVisible();
+  });
+
+  test('Polymarket down: the card in "Mais" says it instead of "ao vivo"', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'the card is in the phone sheet');
+    await page.route('https://gamma-api.polymarket.com/**', (r) => r.abort('connectionrefused'));
+    await page.goto('/eleicao/?e=demo&t=1');
+    await page
+      .getByRole('navigation', { name: 'Navegação principal' })
+      .getByRole('button', { name: 'Mais' })
+      .click();
+    await expect(page.getByText('fora do ar', { exact: true })).toBeVisible({ timeout: 30_000 });
   });
 
   test('one market down: the rest shows, with a note', async ({ page }) => {
