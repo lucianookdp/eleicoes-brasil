@@ -19,11 +19,17 @@ describe('nextWait (how often the collector asks the TSE)', () => {
   });
   it('a round published days ahead, with nothing counted, is checked once a minute', () => {
     expect(nextWait({ ...base, notStarted: true, today: '2026-10-10' })).toBe(60_000);
-    expect(nextWait({ ...base, notStarted: true, today: '2026-10-24' })).toBe(60_000);
+    expect(nextWait({ ...base, notStarted: true, today: '2026-10-23' })).toBe(60_000);
   });
-  it('from midnight of election day it is the configured interval, before the first vote', () => {
+  it('from midnight of the eve of election day it is the configured interval, before the first vote', () => {
+    expect(nextWait({ ...base, notStarted: true, today: '2026-10-24' })).toBe(5000);
     expect(nextWait({ ...base, notStarted: true, today: '2026-10-25' })).toBe(5000);
     expect(nextWait({ ...base, notStarted: true, today: '2026-10-26' })).toBe(5000);
+    // The eve across a month boundary.
+    expect(nextWait({ ...base, notStarted: true, roundDate: '2026-11-01', today: '2026-10-31' })).toBe(5000);
+    expect(nextWait({ ...base, notStarted: true, roundDate: '2026-11-01', today: '2026-10-30' })).toBe(
+      60_000,
+    );
   });
   it('a count that started early is followed at once, whatever the date', () => {
     expect(nextWait({ ...base, notStarted: false, today: '2026-10-10' })).toBe(5000);
