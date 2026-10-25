@@ -144,6 +144,12 @@ function Chosen({
   const top = result?.candidates.filter(hasValidVotes).slice(0, 2) ?? [];
   const gap = top.length === 2 ? (top[0]!.votes ?? 0) - (top[1]!.votes ?? 0) : 0;
   const path = `/states/${city.uf}/cities/${city.code}`;
+  // The city's counting file arrives before its vote file: show the stations counted, and say the
+  // votes are on their way instead of zeros (the same rule as the city page's BehindNotice).
+  const areaPct = data?.progress?.countedPct ?? null;
+  const shownPct = result?.progress.countedPct ?? null;
+  const behind = areaPct != null && shownPct != null && shownPct < 100 && areaPct - shownPct >= 2;
+  const hasVotes = top.some((c) => (c.votes ?? 0) > 0);
 
   return (
     <section aria-label="Minha cidade" className="rounded-xl border border-line bg-surface p-3 sm:p-4">
@@ -158,14 +164,20 @@ function Chosen({
           <p className="flex items-center gap-1.5 text-[12.5px] text-muted">
             <StateFlag uf={city.uf} size={16} />
             {city.state}
-            {result && ` · ${result.office.name} · ${fmtPct(result.progress.countedPct, 1)} das urnas`}
+            {result && ` · ${result.office.name} · ${fmtPct(areaPct ?? shownPct, 1)} das urnas`}
           </p>
         </div>
         <button type="button" onClick={onChange} className="shrink-0 px-1 text-[13px] text-info">
           Trocar
         </button>
       </div>
-      {top.length > 0 ? (
+      {behind && (
+        <p className="mb-2 text-[13px] text-ink-2">
+          <span className="font-medium text-warn">Atualizando:</span> os votos daqui aparecem em alguns
+          minutos.
+        </p>
+      )}
+      {hasVotes ? (
         <ul className="grid gap-1.5">
           {top.map((c) => (
             <li key={c.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
@@ -189,7 +201,11 @@ function Chosen({
           )}
         </ul>
       ) : (
-        <p className="text-[13.5px] text-muted">{data ? 'Ainda sem votos apurados aqui.' : 'Carregando…'}</p>
+        !behind && (
+          <p className="text-[13.5px] text-muted">
+            {data ? 'Ainda sem votos apurados aqui.' : 'Carregando…'}
+          </p>
+        )
       )}
     </section>
   );
