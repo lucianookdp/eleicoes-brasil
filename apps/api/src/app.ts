@@ -154,10 +154,15 @@ export async function buildApp({ sql, env, logger = true }: AppDeps) {
 
   // Live viewers: each instance (2 on Railway) knows only its own realtime connections, so it
   // writes its count every 30 s; the stats sum the rows that are fresh. One tiny upsert per
-  // instance every 30 s, nothing per reader.
+  // instance every 30 s, nothing per reader. With nobody connected it writes the zero once and
+  // then stays quiet, so an idle API can sleep (Railway App Sleeping) between elections.
   const instance = process.env.RAILWAY_REPLICA_ID ?? randomUUID();
+  let lastClients = -1;
   const beat = setInterval(() => {
-    sql`insert into live_clients (instance, clients, updated_at) values (${instance}, ${hub.size}, now())
+    const clients = hub.size;
+    if (clients === 0 && lastClients === 0) return;
+    lastClients = clients;
+    sql`insert into live_clients (instance, clients, updated_at) values (${instance}, ${clients}, now())
       on conflict (instance) do update set clients = excluded.clients, updated_at = now()`.catch((err) =>
       app.log.warn({ err }, 'live viewers heartbeat failed'),
     );
