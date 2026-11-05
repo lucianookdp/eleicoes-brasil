@@ -69,6 +69,23 @@ exportação estática do Next servida por nginx. O worker aplica as migrações
 6. Ensaio completo com dados fictícios: `DEMO_EMBEDDED=true ELECTION_ROUND=demo-2 DEMO_ROUND=2
    DEMO_DURATION_MINUTES=3` no worker local.
 
+## Modo arquivo (entre eleições, desde 05/11/2026)
+
+As eleições de 2026 terminaram; o site fica no ar como arquivo, sem coleta, gastando o mínimo no
+Railway:
+
+- **worker** e **demo** desligados (sem deploy ativo): nada consulta o TSE.
+- **api** com 1 réplica e **Postgres**, os dois com *App Sleeping* (`sleepApplication`): dormem
+  depois de ~10 min sem tráfego e acordam sozinhos na primeira visita (alguns segundos a mais no
+  primeiro carregamento). A API só grava o contador de leitores ao vivo quando há alguém
+  conectado, para conseguir dormir.
+- O workflow `health` roda 1x por dia (cada verificação acorda a API e o banco por alguns minutos).
+
+Para a próxima eleição: desligar o *App Sleeping* da api e do Postgres, voltar a API para 2
+réplicas, cadastrar a nova rodada em `packages/election-core/src/registry.ts`, configurar o worker
+(`ELECTION_ROUND`, `APP_MODE`) e `railway up --service worker --detach`; trazer de volta as
+verificações frequentes do `health.yml` (histórico do git).
+
 ## Plano B (emergências)
 
 Congelamento: de 23/10 (depois do ensaio geral) a 26/10, nada é publicado salvo emergência.

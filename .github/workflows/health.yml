@@ -1,40 +1,24 @@
 # Watchdog: fails (GitHub emails the repository owner) when the site or the API is down.
-# Every hour on normal days; every 5 minutes on the 2nd-round night, when it also checks that the
-# collector keeps bringing fresh data and that the runoff answers fast with valid numbers.
-# Times are UTC: 19:00–02:59 = 16h–23h59 Brasília (from an hour before the polls close).
+# Between elections the site is an archive (no collector) and the API sleeps when idle on
+# Railway, so this runs once a day: each check wakes the API and the database for a few minutes.
+# Times are UTC: 12:17 = 9h17 Brasília. For the next election, bring back the frequent checks
+# and the collector freshness test from git history (commit before "archive mode").
 name: health
 
 on:
   schedule:
-    - cron: '17 * * * *'
-    - cron: '*/5 19-23 25 10 *'
-    - cron: '*/5 0-2 26 10 *'
+    - cron: '17 12 * * *'
   workflow_dispatch:
 
 jobs:
   check:
     runs-on: ubuntu-24.04
-    timeout-minutes: 3
+    timeout-minutes: 5
     env:
       API: https://api-production-39d40.up.railway.app
     steps:
+      # The first request may wake the sleeping API and database: give it time.
       - name: API is up
-        run: curl -fsS --retry 3 --retry-delay 10 "$API/api/health"
+        run: curl -fsS --retry 5 --retry-delay 20 --retry-all-errors --max-time 60 "$API/api/health"
       - name: Site is up
         run: curl -fsS --retry 3 --retry-delay 10 -o /dev/null https://eleicoes.lucianookdp.dev/
-      - name: Collector brings fresh data (election night only)
-        if: github.event_name == 'schedule' && github.event.schedule != '17 * * * *'
-        run: |
-          ops=$(curl -fsS --retry 3 --retry-delay 10 "$API/api/elections/2026-2/operations")
-          echo "$ops" | jq '.ingestion'
-          age=$(echo "$ops" | jq -r '(now - (.ingestion.lastSuccessAt | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) | floor')
-          echo "last successful collection ${age}s ago"
-          test "$age" -lt 180
-      - name: Runoff answers fast, with valid numbers (election night only)
-        if: github.event_name == 'schedule' && github.event.schedule != '17 * * * *'
-        run: |
-          t=$(curl -fsS --retry 3 --retry-delay 10 -o overview.json -w '%{time_total}' "$API/api/elections/2026-2/overview")
-          echo "overview in ${t}s"
-          jq -e '.round.slug == "2026-2" and (.states | length) >= 27' overview.json > /dev/null
-          if grep -qE 'NaN|Infinity' overview.json; then echo 'broken numbers in the overview'; exit 1; fi
-          awk -v t="$t" 'BEGIN { exit !(t < 3) }'
